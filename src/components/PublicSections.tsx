@@ -22,7 +22,7 @@ export function IntroPrograms({courses,classes}:{courses:Course[];classes:ArtCla
 export function Method() {
   return <section className="section method" id="method"><div className="shell method-grid">
     <div className="method-image"><img src="https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&w=1000&q=90" alt="Không gian màu sắc và thử nghiệm hội họa" loading="lazy"/><div className="mini-card"><b>Ý tưởng của con</b><span>là điểm bắt đầu của mỗi tác phẩm</span></div></div>
-    <div className="method-copy"><span className="kicker">CÁCH ARTORA ĐỒNG HÀNH</span><h2>Học kỹ thuật.<br/>Giữ nguyên trí tưởng tượng.</h2><p>Giáo viên không vẽ thay hay đưa một “đáp án đẹp”. Con được hướng dẫn từng kỹ thuật nền tảng, rồi tự chọn câu chuyện, màu sắc và cách thể hiện của mình.</p>
+    <div className="method-copy"><span className="kicker">CÁCH LHL Art ĐỒNG HÀNH</span><h2>Học kỹ thuật.<br/>Giữ nguyên trí tưởng tượng.</h2><p>Giáo viên không vẽ thay hay đưa một “đáp án đẹp”. Con được hướng dẫn từng kỹ thuật nền tảng, rồi tự chọn câu chuyện, màu sắc và cách thể hiện của mình.</p>
       <div className="method-list">{[
         ['Quan sát & khám phá', 'Khởi động bằng câu chuyện, vật thật và trải nghiệm giác quan.'],
         ['Thử nghiệm chất liệu', 'Khám phá màu, cọ, đất sét và kỹ thuật phù hợp với lộ trình học.'],
@@ -40,11 +40,11 @@ export function Gallery() {
 }
 
 export function StudioStory() {
-  return <section className="section testimonials" id="about"><div className="shell"><span className="kicker">ĐIỀU ARTORA HƯỚNG ĐẾN</span><div className="quote">Không chỉ là một bức tranh đẹp.<br/>Là sự tự tin khi con kể về thế giới của mình.</div><div className="story-values"><span><Palette size={19}/> Tôn trọng nét riêng</span><span><BookOpen size={19}/> Đồng hành từng bước</span><span><ArrowRight size={19}/> Tiến bộ từ trải nghiệm</span></div><p className="story-description">Một không gian mỹ thuật để quan sát, thử nghiệm và thể hiện ý tưởng. Những điều học được cùng màu sắc sẽ theo con ra khỏi lớp học.</p></div></section>;
+  return <section className="section testimonials" id="about"><div className="shell"><span className="kicker">ĐIỀU LHL Art HƯỚNG ĐẾN</span><div className="quote">Không chỉ là một bức tranh đẹp.<br/>Là sự tự tin khi con kể về thế giới của mình.</div><div className="story-values"><span><Palette size={19}/> Tôn trọng nét riêng</span><span><BookOpen size={19}/> Đồng hành từng bước</span><span><ArrowRight size={19}/> Tiến bộ từ trải nghiệm</span></div><p className="story-description">Một không gian mỹ thuật để quan sát, thử nghiệm và thể hiện ý tưởng. Những điều học được cùng màu sắc sẽ theo con ra khỏi lớp học.</p></div></section>;
 }
 
 export function Questions() {
-  return <section className="section public-faq" id="faq"><div className="shell faq-grid"><div><span className="kicker">TRƯỚC KHI BẮT ĐẦU</span><h2>Có thể bạn<br/>đang muốn biết.</h2><p>Khám phá Artora trước, chọn hành trình khi bạn sẵn sàng.</p><a className="text-link" href="#contact">Thông tin liên hệ <ArrowRight size={17}/></a></div><div>{[
+  return <section className="section public-faq" id="faq"><div className="shell faq-grid"><div><span className="kicker">TRƯỚC KHI BẮT ĐẦU</span><h2>Có thể bạn<br/>đang muốn biết.</h2><p>Khám phá LHL Art trước, chọn hành trình khi bạn sẵn sàng.</p><a className="text-link" href="#contact">Thông tin liên hệ <ArrowRight size={17}/></a></div><div>{[
     ['Chưa đăng nhập có xem được thông tin không?', 'Bạn có thể xem giới thiệu, chương trình, phương pháp, góc sáng tạo, học phí của khóa công bố và lịch lớp mà không cần đăng nhập. Tài khoản được dùng khi quản lý hồ sơ, đăng ký lớp và theo dõi học tập.'],
     ['Chưa từng học vẽ có thể bắt đầu không?', 'Trung tâm tư vấn và đánh giá đầu vào để tìm hướng học phù hợp. Các điều kiện cụ thể được công bố cùng khóa học; không cần tự chọn trình độ thay cho đánh giá của giáo viên.'],
     ['Làm sao biết học phí và lớp còn chỗ?', 'Xem mục khóa được công bố và lịch khai giảng. Mỗi lớp có học phí áp dụng và số chỗ còn lại. Trung tâm kiểm tra chỗ trống một lần nữa khi lập phiếu đăng ký.'],
@@ -54,5 +54,5 @@ export function Questions() {
 }
 
 export function Contact() {
-  return <section className="section contact-section" id="contact"><div className="shell"><div className="section-head"><div><span className="kicker">GẶP ARTORA</span><h2>Bắt đầu bằng<br/>một cuộc trò chuyện.</h2></div><p>Cùng tìm lộ trình phù hợp trước khi chọn lớp và chuẩn bị cho buổi học đầu tiên.</p></div><div className="contact-grid"><article><span>GHÉ THĂM STUDIO</span><h3>36 Tân Thắng</h3><p>Tây Thạnh, TP.HCM</p></article><article><span>GỌI ĐỂ TƯ VẤN</span><a href="tel:0901676782">0901 676 782</a><p>Trao đổi về chương trình và lịch học.</p></article><article><span>GỬI LỜI NHẮN</span><a href="mailto:hello@artora.edu.vn">hello@artora.edu.vn</a><p>Thông tin liên hệ theo nội dung giới thiệu của studio.</p></article></div></div></section>;
+  return <section className="section contact-section" id="contact"><div className="shell"><div className="section-head"><div><span className="kicker">GẶP LHL Art</span><h2>Bắt đầu bằng<br/>một cuộc trò chuyện.</h2></div><p>Cùng tìm lộ trình phù hợp trước khi chọn lớp và chuẩn bị cho buổi học đầu tiên.</p></div><div className="contact-grid"><article><span>GHÉ THĂM STUDIO</span><h3>36 Tân Thắng</h3><p>Tây Thạnh, TP.HCM</p></article><article><span>GỌI ĐỂ TƯ VẤN</span><a href="tel:0901676782">0901 676 782</a><p>Trao đổi về chương trình và lịch học.</p></article><article><span>GỬI LỜI NHẮN</span><a href="mailto:hello@artora.edu.vn">hello@artora.edu.vn</a><p>Thông tin liên hệ theo nội dung giới thiệu của studio.</p></article></div></div></section>;
 }

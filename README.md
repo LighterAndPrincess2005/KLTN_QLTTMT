@@ -1,4 +1,4 @@
-﻿# ARTORA — giao diện website trung tâm mỹ thuật
+# LHL Art — giao diện website trung tâm mỹ thuật
 
 Frontend React + TypeScript được dựng trước theo nghiệp vụ đồ án. Website hiện đã gọi API thật. Đọc [hướng dẫn nối API và chạy web](NOI_API.md). Các file dữ liệu mẫu được giữ để tham khảo nhưng không được dùng trong ứng dụng đang chạy.
 

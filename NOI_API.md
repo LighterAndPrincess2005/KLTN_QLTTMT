@@ -1,4 +1,4 @@
-# Web ARTORA đã nối API
+# Web LHL Art đã nối API
 
 Web chính nằm ở `D:\long2026\KLTN_QLTTMT`; API đang sử dụng ở `D:\long2026\MyThuat`. Trong repo, bản mã nguồn backend được đặt riêng tại `backend/MyThuat`; phần web vẫn giữ vị trí hiện tại để tiếp tục mở package.json như trước.
 
