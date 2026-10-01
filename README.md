@@ -26,3 +26,13 @@ Nếu máy chưa cài Node.js/npm, có thể mở `preview.html` qua một web s
 ## Tích hợp API sau này
 
 Giữ nguyên chữ ký các hàm `getCourses`, `getClasses` và `submitRegistration` trong service. Thay dữ liệu mẫu bằng các lệnh `fetch`/Axios và cấu hình URL qua biến môi trường, ví dụ `VITE_API_BASE_URL`.
+
+## Backend API
+
+Mã nguồn ASP.NET Core + SQL Server nằm trong [`backend/MyThuat`](backend/MyThuat). Đọc [hướng dẫn API](backend/MyThuat/README.md) và [kết quả kiểm tra](backend/MyThuat/KIEM_TRA.md).
+
+- Mở `backend/MyThuat/MyThuat.sln` để sửa trong Visual Studio.
+- Trên Windows có .NET SDK/runtime phù hợp và SQL Server LocalDB, chạy `backend/MyThuat/Tao_Nut_Desktop.cmd` để tạo nút khởi động ở Desktop.
+- API mặc định: `http://localhost:5080`; Swagger: `http://localhost:5080/swagger`.
+- Bản bàn giao có đăng nhập/phân quyền và các nghiệp vụ quản lý, đăng ký, lịch, thu/hoàn tiền, học tập, kho và báo cáo. Không chứa database cá nhân, khóa bảo mật, cấu hình riêng hoặc thư viện build.
+- Frontend hiện vẫn dùng mock trong `src/services/artCenterService.ts`. Khi tích hợp, chuyển service sang gọi API và cấu hình `WebOrigins` theo địa chỉ Vite thực tế.

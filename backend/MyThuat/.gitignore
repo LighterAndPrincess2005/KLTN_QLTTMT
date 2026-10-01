@@ -1,0 +1,8 @@
+bin/
+obj/
+.vs/
+.local/
+.nuget/
+*.user
+appsettings.Local.json
+Checks.result.txt
