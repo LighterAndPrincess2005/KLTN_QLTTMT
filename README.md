@@ -1,6 +1,6 @@
-# ARTORA — giao diện website trung tâm mỹ thuật
+﻿# ARTORA — giao diện website trung tâm mỹ thuật
 
-Frontend React + TypeScript được dựng trước theo nghiệp vụ đồ án. Hiện dự án dùng dữ liệu mẫu; khi có API chỉ cần thay phần cài đặt trong `src/services/artCenterService.ts`, không cần sửa lại các màn hình.
+Frontend React + TypeScript được dựng trước theo nghiệp vụ đồ án. Website hiện đã gọi API thật. Đọc [hướng dẫn nối API và chạy web](NOI_API.md). Các file dữ liệu mẫu được giữ để tham khảo nhưng không được dùng trong ứng dụng đang chạy.
 
 ## Chạy dự án
 
@@ -26,3 +26,8 @@ Nếu máy chưa cài Node.js/npm, có thể mở `preview.html` qua một web s
 ## Tích hợp API sau này
 
 Giữ nguyên chữ ký các hàm `getCourses`, `getClasses` và `submitRegistration` trong service. Thay dữ liệu mẫu bằng các lệnh `fetch`/Axios và cấu hình URL qua biến môi trường, ví dụ `VITE_API_BASE_URL`.
+
+
+## Bản nối API
+
+Đọc [NOI_API.md](NOI_API.md) để biết cách bật API, chạy web, xác minh hồ sơ và cấu hình triển khai. Mã nguồn API tách riêng ở `backend/MyThuat`.

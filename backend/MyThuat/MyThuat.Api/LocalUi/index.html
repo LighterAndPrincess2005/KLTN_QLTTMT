@@ -1,0 +1,26 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>API Trung tâm Mỹ thuật</title><style>
+body{font:16px system-ui;background:#f3f5fa;color:#17243b;margin:0}main{max-width:800px;margin:40px auto;padding:24px}
+section{background:white;border-radius:16px;padding:24px;margin:16px 0;box-shadow:0 4px 20px #17243b0b}h1{font-size:28px}
+input,button,a.button{font:inherit;border-radius:8px;padding:12px;border:1px solid #ccd4e0;box-sizing:border-box}
+input{display:block;width:100%;margin:12px 0}button,a.button{background:#225ad7;color:white;border:0;cursor:pointer;text-decoration:none;display:inline-block}
+pre{white-space:pre-wrap;overflow-wrap:anywhere}small{color:#59677e}.hidden{display:none}
+</style><main><h1>API Trung tâm Mỹ thuật</h1><p>API đang chạy trên máy này. WinForms và web sẽ kết nối vào cùng API.</p>
+<section id="setup" class="hidden"><h2>Tạo quản trị lần đầu</h2><p>Tài khoản này quản lý nhân viên, quyền và dữ liệu của trung tâm.</p>
+<form id="setupform"><input name="HoTen" placeholder="Họ tên" required maxlength="150"><input name="TenDangNhap" placeholder="Tên đăng nhập" required minlength="3" maxlength="100">
+<input name="MatKhau" type="password" placeholder="Mật khẩu từ 12 ký tự, có chữ và số" required minlength="12" maxlength="128">
+<button>Tạo tài khoản quản trị</button></form></section>
+<section><h2>Đăng nhập</h2><form id="loginform"><input name="TenDangNhap" placeholder="Tên đăng nhập" autocomplete="username" required maxlength="100">
+<input name="MatKhau" type="password" placeholder="Mật khẩu" autocomplete="current-password" required maxlength="128"><button>Đăng nhập</button></form>
+<p id="message" role="status"></p><button id="copy" class="hidden">Sao chép token để thử API</button><p><a class="button" href="/swagger">Mở Swagger</a></p>
+<small>Trong Swagger, bấm Authorize và dán token. Token hiệu lực 30 phút; đăng xuất hoặc đổi mật khẩu thu hồi token cũ.</small></section>
+<section><h2>Cách dùng</h2><p>Mở nút “Bật API Mỹ Thuật” trên Desktop mỗi lần cần sử dụng. Bạn không cần mở Visual Studio hoặc cửa sổ SQL Server.</p>
+<p>Đây là trang bật và thử API. Giao diện WinForms quản lý và website đăng ký là các ứng dụng riêng.</p></section></main>
+<script>
+let token='';const message=document.getElementById('message');
+async function submit(url,form){const data=Object.fromEntries(new FormData(form));const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const body=await r.json().catch(()=>({}));if(!r.ok)throw Error(body.title||body.thongBao||'Thông tin không hợp lệ.');return body;}
+fetch('/api/tai-khoan/thiet-lap').then(r=>r.json()).then(x=>{if(x.canTaoQuanTri)document.getElementById('setup').classList.remove('hidden')}).catch(()=>message.textContent='Database chưa sẵn sàng. Xem file nhật ký khởi động.');
+document.getElementById('setupform').onsubmit=async e=>{e.preventDefault();try{await submit('/api/tai-khoan/thiet-lap',e.target);e.target.reset();document.getElementById('setup').classList.add('hidden');message.textContent='Đã tạo quản trị. Đăng nhập bằng tài khoản vừa tạo.'}catch(err){message.textContent=err.message}};
+document.getElementById('loginform').onsubmit=async e=>{e.preventDefault();try{const result=await submit('/api/tai-khoan/dang-nhap',e.target);token=result.accessToken;e.target.reset();document.getElementById('copy').classList.remove('hidden');message.textContent='Đăng nhập thành công: '+result.vaiTroChinh;}catch(err){message.textContent=err.message}};
+document.getElementById('copy').onclick=async()=>{try{await navigator.clipboard.writeText(token);message.textContent='Đã sao chép token. Mở Swagger → Authorize → dán vào.'}catch{message.textContent='Trình duyệt không cho sao chép tự động.'}};
+</script></html>
