@@ -1,4 +1,5 @@
 #programs{background:#f5f0e5;scroll-margin-top:90px}
+.logo .brand-logo{display:block;width:64px;height:64px;object-fit:contain;border-radius:10px;flex-shrink:0;background:#f7f6ed}.logo{gap:10px}.logo b{letter-spacing:.06em}.modal-head .brand-logo{width:54px;height:54px}footer .brand-logo{width:76px;height:76px}@media(max-width:700px){.logo .brand-logo{width:49px;height:49px}.logo b{font-size:17px}.logo small{font-size:9px}footer .brand-logo{width:65px;height:65px}}
 .program-spotlight{position:relative;display:grid;grid-template-columns:1.5fr 1fr;overflow:hidden;border-radius:28px;background:#163f35;color:#fff;margin-bottom:46px;box-shadow:0 18px 45px #163f351c}
 .spotlight-copy{position:relative;z-index:1;padding:48px 48px 35px}
 .spotlight-label{display:inline-flex;align-items:center;gap:9px;color:#f4c977;font-size:11px;font-weight:700;letter-spacing:.13em}
