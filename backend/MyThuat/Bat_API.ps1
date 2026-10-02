@@ -4,7 +4,7 @@ $taskApi = Join-Path $taskRoot 'MyThuat.Api'
 $taskLocal = Join-Path $taskApi '.local'
 $taskPublished = Join-Path $taskLocal 'publish'
 $taskLog = Join-Path $taskLocal 'khoi-dong.log'
-$taskUrl = 'http://localhost:5080'
+$taskUrl = 'http://127.0.0.1:5080'
 New-Item -ItemType Directory -Force -Path $taskLocal | Out-Null
 $taskMutex = New-Object System.Threading.Mutex($false, 'Local\MyThuatApiLauncherLong2026')
 if (-not $taskMutex.WaitOne(0)) { exit }
