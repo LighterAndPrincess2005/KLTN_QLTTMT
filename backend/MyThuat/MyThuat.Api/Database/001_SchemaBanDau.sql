@@ -1,4 +1,4 @@
-﻿-- LUU TRU: Schema ban dau, khong dung voi API hien tai. Dung 002_SchemaHoanThien.sql.
+-- LUU TRU: Schema ban dau, khong dung voi API hien tai. Dung 002_SchemaHoanThien.sql.
 CREATE TABLE [GiaoVien] (
     [Id] bigint NOT NULL IDENTITY,
     [MaGiaoVien] varchar(20) NOT NULL,
@@ -1040,5 +1040,3 @@ GO
 
 ALTER TABLE [TaiKhoan] ADD CONSTRAINT [FK_TaiKhoan_ThanhVien_ThanhVienId] FOREIGN KEY ([ThanhVienId]) REFERENCES [ThanhVien] ([Id]);
 GO
-
-

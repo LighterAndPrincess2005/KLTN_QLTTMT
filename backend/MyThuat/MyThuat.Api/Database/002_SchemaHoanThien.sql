@@ -1154,5 +1154,3 @@ GO
 
 ALTER TABLE [TaiKhoan] ADD CONSTRAINT [FK_TaiKhoan_ThanhVien_ThanhVienId] FOREIGN KEY ([ThanhVienId]) REFERENCES [ThanhVien] ([Id]);
 GO
-
-

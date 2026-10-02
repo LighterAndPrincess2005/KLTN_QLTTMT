@@ -71,6 +71,11 @@ builder.Services.AddHostedService<ExpiryWorker>();
 
 
 var app=builder.Build();
+if(args.Contains("--seed-demo"))
+{
+    using var scope=app.Services.CreateScope();
+    await DemoData.Seed(scope.ServiceProvider.GetRequiredService<MyThuatDbContext>(),app.Environment.ContentRootPath);return;
+}
 if(args.Contains("--export-schema"))
 {
     using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();

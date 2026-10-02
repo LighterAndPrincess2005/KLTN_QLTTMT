@@ -75,3 +75,8 @@ Database không nằm trong file ZIP mã nguồn. Sao lưu database riêng; gi�
 Web chạy ở origin khác phải khai báo danh sách `WebOrigins` trong cấu hình. WinForms gọi HTTP trực tiếp. Bản Desktop chỉ nghe loopback của máy; đưa lên Internet cần HTTPS, server SQL và cấu hình triển khai riêng.
 
 Nhật ký: `MyThuat.Api/.local/khoi-dong.log`, `api.log`, `api-error.log`. Nếu báo lỗi, xem các file này để biết bước thất bại.
+
+
+## Nạp dữ liệu mẫu từ Word
+
+Bộ mẫu LHL Art có 6 khóa, 6 lớp, 88 buổi cùng phòng/giáo viên/học viên mẫu. Tạo quản trị trước, rồi chạy `Nap_DuLieuMau.cmd`. Xem [DU_LIEU_MAU.md](DU_LIEU_MAU.md) để biết học phí, lịch và cách nạp trên máy khác. Mật khẩu sinh riêng trên máy nạp, không đưa lên Git.

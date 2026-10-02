@@ -137,4 +137,3 @@ public sealed class ChangeService(MyThuatDbContext db,AccessService access,Enrol
         await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return ManagementService.Scalars(r);
     }
 }
-

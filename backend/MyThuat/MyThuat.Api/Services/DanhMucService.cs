@@ -48,9 +48,11 @@ public sealed class DanhMucService(MyThuatDbContext db)
             .Skip((trang - 1) * kichThuoc).Take(kichThuoc)).ToListAsync(ct);
         return new(trang, kichThuoc, count, rows);
     }
-    private static IQueryable<LopHocDto> ChieuLop(IQueryable<LopHoc> query) => query.Select(x =>
+    private IQueryable<LopHocDto> ChieuLop(IQueryable<LopHoc> query) { var now=BusinessClock.Now; return query.Select(x =>
         new LopHocDto(x.Id, x.KhoaHocId, x.MaLop, x.TenLop, x.NgayKhaiGiangDuKien,
             x.NgayKetThucDuKien, x.SoBuoiKeHoach, x.LichHocDuKien, x.SiSoToiDa,
-            x.HocPhiApDung, x.MoDangKyLuc, x.DongDangKyLuc));
+            x.HocPhiApDung, x.MoDangKyLuc, x.DongDangKyLuc,
+            db.DangKy.Count(d=>d.LopHocId==x.Id && (d.TrangThai=="DA_XAC_NHAN"
+                || (d.TrangThai=="CHO_THANH_TOAN" || d.TrangThai=="CHO_CHUYEN") && d.HanGiuCho>now)))); }
     public Task<LopHocDto?> LayLop(long id, CancellationToken ct) => ChieuLop(LopCongBo.Where(x => x.Id == id)).SingleOrDefaultAsync(ct);
 }

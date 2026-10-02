@@ -17,7 +17,7 @@ public sealed class HocVienController(MyThuatDbContext db,AuditService audit):Co
         var member=User.MemberId();ApiError.Require(member.HasValue,"Tài khoản không liên kết thành viên.",403);
         var now=BusinessClock.Now;
         return await db.DaiDienHocVien.AsNoTracking().Where(x=>x.ThanhVienId==member&&x.HieuLucTu<=now&&(x.HieuLucDen==null||x.HieuLucDen>now))
-            .Select(x=>new {x.Id,x.HocVienId,x.HocVien!.HoTen,x.HocVien.NgaySinh,x.HocVien.TrangThai,x.QuanHe,x.QuyenDaiDien,x.XacNhanLuc}).ToListAsync(ct);
+            .Select(x=>new {x.Id,x.HocVienId,x.HocVien!.HoTen,x.HocVien.NgaySinh,x.HocVien.TrangThai,x.QuanHe,x.QuyenDaiDien,x.XacNhanLuc,x.HocVien.CapDoDeXuat}).ToListAsync(ct);
     }
     [HttpPost("toi")]
     public async Task<object> Add(StudentRequest r,CancellationToken ct)

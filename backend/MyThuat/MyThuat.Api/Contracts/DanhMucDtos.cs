@@ -7,6 +7,6 @@ public sealed record KhoaHocDto(long Id, long LoaiKhoaHocId, string MaKhoa, stri
 public sealed record LopHocDto(long Id, long KhoaHocId, string MaLop, string TenLop,
     DateOnly NgayKhaiGiangDuKien, DateOnly? NgayKetThucDuKien, short SoBuoiKeHoach,
     string LichHocDuKien, short SiSoToiDa, decimal HocPhiApDung,
-    DateTime MoDangKyLuc, DateTime DongDangKyLuc);
+    DateTime MoDangKyLuc, DateTime DongDangKyLuc, int SoChoDaGiu = 0);
 public sealed record NoiDungBuoiDto(long Id, short ThuTu, string ChuDe, string NoiDung,
     short SoTiet, string? YeuCauSanPham);

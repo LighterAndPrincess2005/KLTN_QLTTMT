@@ -37,7 +37,7 @@ builder.Services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtecti
 builder.Services.AddSingleton<AccessTokens>();builder.Services.AddScoped<IPasswordHasher<TaiKhoan>,PasswordHasher<TaiKhoan>>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuditService>();builder.Services.AddScoped<AccessService>();builder.Services.AddScoped<PolicyService>();
-builder.Services.AddScoped<ManagementValidation>();builder.Services.AddScoped<ManagementService>();builder.Services.AddScoped<ScheduleService>();
+builder.Services.AddScoped<DanhMucService>();builder.Services.AddScoped<ManagementValidation>();builder.Services.AddScoped<ManagementService>();builder.Services.AddScoped<ScheduleService>();
 builder.Services.AddScoped<EnrollmentService>();builder.Services.AddScoped<FinanceService>();builder.Services.AddScoped<LearningService>();
 builder.Services.AddScoped<ChangeService>();builder.Services.AddScoped<InventoryService>();builder.Services.AddScoped<ClassLifecycleService>();
 builder.Services.AddAuthentication("Bearer").AddScheme<AuthenticationSchemeOptions,BearerAuthenticationHandler>("Bearer",_=>{});
@@ -201,8 +201,23 @@ try
     var stock=await Call("GET","/api/kho/ton",token:adminToken);
     var toolStock=stock.AsArray().Single(x=>x!["id"]!.GetValue<long>()==toolId)!;
     if(toolStock["taiKho"]!.GetValue<decimal>()!=3||toolStock["dangMuon"]!.GetValue<decimal>()!=1)throw new Exception("Borrow/return/loss stock wrong");
+    await Call("GET","/api/khoa-hoc?trang=1&kichThuoc=100");
+    var publicClasses=await Call("GET","/api/lop-hoc?trang=1&kichThuoc=100");
+    var occupied=publicClasses["duLieu"]!.AsArray().Single(x=>Id(x!)==classB)!;
+    if(occupied["soChoDaGiu"]!.GetValue<int>()!=1)throw new Exception("Public occupied seats do not match confirmed registration");
+    var ownEnrollments=await Call("GET","/api/dang-ky/toi",token:memberToken);
+    if(ownEnrollments.AsArray().Count!=3)throw new Exception("Missing member enrollment history");
+    await Call("GET","/api/dang-ky/toi",expected:403,token:teacherToken);
+    await Call("POST","/api/tai-khoan/dang-ky",new SignupRequest("outsider","MyThuatTest2026!","Thành viên mới","0900000006",null));
+    var outsider=await Login("outsider");
+    var outsiders=await Call("GET","/api/dang-ky/toi",token:outsider);
+    if(outsiders.AsArray().Count!=0)throw new Exception("Other member enrollments leaked");
+    await Call("POST","/api/hoc-vien/toi",new StudentRequest("Hồ sơ mới",BusinessClock.Today.AddYears(-10),"Giám hộ","0900000006","GIAM_HO",null),token:outsider);
+    var pendingStudents=await Call("GET","/api/hoc-vien/toi",token:outsider);
+    if(pendingStudents[0]!["xacNhanLuc"] is not null)throw new Exception("New student automatically verified");
     await Call("GET","/api/bao-cao/tong-quan",token:adminToken);
     await Call("GET","/api/bao-cao/nhat-ky",expected:403,token:memberToken);
+    if(args.Contains("--web-e2e")) { Console.WriteLine("WEB_E2E_READY: temporary SQL test host at 5199"); await Task.Delay(TimeSpan.FromSeconds(90)); }
     await Call("POST","/api/tai-khoan/dang-xuat",expected:204,token:memberToken);
     await Call("GET","/api/tai-khoan/toi",expected:401,token:memberToken);
     var fresh=await Login("member");
