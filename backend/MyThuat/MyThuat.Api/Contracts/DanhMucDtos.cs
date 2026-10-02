@@ -1,4 +1,4 @@
-﻿namespace MyThuat.Api.Contracts;
+namespace MyThuat.Api.Contracts;
 public sealed record TrangKetQua<T>(int Trang, int KichThuoc, int TongSo, IReadOnlyList<T> DuLieu);
 public sealed record LoaiKhoaHocDto(long Id, string MaLoai, string TenLoai, string? MoTa);
 public sealed record KhoaHocDto(long Id, long LoaiKhoaHocId, string MaKhoa, string TenKhoa,

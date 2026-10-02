@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MyThuat.Api.Data;
 using MyThuat.Api.Security;
 using Microsoft.AspNetCore.Authorization;
