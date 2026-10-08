@@ -14,5 +14,7 @@ public sealed record AttendRequest([Required]string TrangThai,[Range(0,1440)]sho
     [Required]string RowVersion);
 public sealed record AbsenceRequest([StringLength(2000)]string? LyDo);
 public sealed record MakeupRequest([Range(1,long.MaxValue)]long DiemDanhVangId,[Range(1,long.MaxValue)]long BuoiHocId);
+public sealed record StudentLearningRequest([Range(1,long.MaxValue)]long DiemDanhId,[Required]string LoaiYeuCau,
+    [Required,StringLength(1000)]string LyDo,[StringLength(300)]string? KhungGioMongMuon);
 public sealed record ResultRequest([Range(1,long.MaxValue)]long HoSoTheoHocId,[Range(0,10)]decimal DiemCuoiKhoa,
     [Required,StringLength(2000)]string NhanXet,[StringLength(500)]string? BaiCuoiKhoaUrl);

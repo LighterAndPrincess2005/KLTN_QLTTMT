@@ -16,8 +16,10 @@ public sealed class HocVienController(MyThuatDbContext db,AuditService audit):Co
     {
         var member=User.MemberId();ApiError.Require(member.HasValue,"Tài khoản không liên kết thành viên.",403);
         var now=BusinessClock.Now;
+        var removable=RemovableLinks(member!.Value,now);
         return await db.DaiDienHocVien.AsNoTracking().Where(x=>x.ThanhVienId==member&&x.HieuLucTu<=now&&(x.HieuLucDen==null||x.HieuLucDen>now))
-            .Select(x=>new {x.Id,x.HocVienId,x.HocVien!.HoTen,x.HocVien.NgaySinh,x.HocVien.TrangThai,x.QuanHe,x.QuyenDaiDien,x.XacNhanLuc,x.HocVien.CapDoDeXuat}).ToListAsync(ct);
+            .Select(x=>new {x.Id,x.HocVienId,x.HocVien!.HoTen,x.HocVien.NgaySinh,x.HocVien.TrangThai,x.QuanHe,x.QuyenDaiDien,x.XacNhanLuc,x.HocVien.CapDoDeXuat,
+                CanXoa=removable.Any(d=>d.Id==x.Id)}).ToListAsync(ct);
     }
     [HttpPost("toi")]
     public async Task<object> Add(StudentRequest r,CancellationToken ct)
@@ -30,6 +32,30 @@ public sealed class HocVienController(MyThuatDbContext db,AuditService audit):Co
         db.HocVien.Add(student);await db.SaveChangesAsync(ct);
         db.DaiDienHocVien.Add(new(){ThanhVienId=member!.Value,HocVienId=student.Id,QuanHe=r.QuanHe,QuyenDaiDien="DAY_DU",LaLienHeChinh=true,HieuLucTu=BusinessClock.Now});
         audit.Add("HocVien",student.Id,"GUI_HO_SO");await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return new {student.Id,student.HoTen,student.TrangThai};
+    }
+    // Only a sole, unverified primary representative can withdraw an unused draft.
+    // Preserve the student and relationship records for traceability.
+    private IQueryable<DaiDienHocVien> RemovableLinks(long member,DateTime now)=>db.DaiDienHocVien.Where(x=>
+        x.ThanhVienId==member&&x.HieuLucTu<=now&&(x.HieuLucDen==null||x.HieuLucDen>now)
+        &&x.LaLienHeChinh&&x.QuyenDaiDien=="DAY_DU"&&x.XacNhanLuc==null&&x.NguoiXacNhan==null
+        &&x.HocVien!.TrangThai=="CHO_XAC_NHAN"&&x.HocVien.GiaoVienDanhGia==null&&x.HocVien.NgayDanhGiaDauVao==null
+        &&x.HocVien.CapDoDeXuat==null&&x.HocVien.NhanXetDauVao==null
+        &&!db.HoSoTheoHoc.Any(h=>h.HocVienId==x.HocVienId)
+        &&!db.DaiDienHocVien.Any(d=>d.HocVienId==x.HocVienId&&d.Id!=x.Id));
+
+    [HttpDelete("toi/{id:long:min(1)}")]
+    public async Task<IActionResult> RemoveDraft(long id,CancellationToken ct)
+    {
+        var member=User.MemberId();ApiError.Require(member.HasValue,"Tài khoản không liên kết thành viên.",403);
+        await using var tx=await db.Database.BeginTransactionAsync(IsolationLevel.Serializable,ct);
+        var now=BusinessClock.Now;
+        var link=await db.DaiDienHocVien.Include(x=>x.HocVien).SingleOrDefaultAsync(x=>x.ThanhVienId==member&&x.HocVienId==id
+            &&x.HieuLucTu<=now&&(x.HieuLucDen==null||x.HieuLucDen>now),ct)??throw new ApiError(404,"Không có hồ sơ của bạn.");
+        ApiError.Require(await RemovableLinks(member!.Value,now).AnyAsync(x=>x.Id==link.Id,ct),
+            "Chỉ xóa hồ sơ chưa được xác minh, chưa đánh giá hoặc đăng ký học và chưa có người đại diện khác. Liên hệ trung tâm để điều chỉnh hồ sơ đã sử dụng.",409);
+        link.HocVien!.TrangThai="NGUNG";link.HieuLucDen=now;
+        audit.Add("HocVien",id,"RUT_HO_SO",new {TrangThai="NGUNG"});
+        await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return NoContent();
     }
     [HttpPost("{id:long:min(1)}/danh-gia")]
     public async Task<IActionResult> Assess(long id,AssessRequest r,CancellationToken ct)

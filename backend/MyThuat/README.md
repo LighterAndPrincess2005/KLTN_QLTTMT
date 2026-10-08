@@ -36,6 +36,8 @@ Quản trị cấp thêm quyền nghiệp vụ cho nhân viên khi cần. Quyề
 - Kho: nhập, tiêu hao, bán riêng, cấp/trả dụng cụ, hỏng mất, dự trù, kiểm kê, điều chỉnh có chứng từ.
 - Phản hồi, báo cáo và nhật ký thay đổi.
 
+Khu học tập thành viên trên website có lịch/điểm danh, nhận xét từng buổi, học bù, đổi lịch/lớp và phản hồi. Xem [HOC_TAP_THANH_VIEN.md](HOC_TAP_THANH_VIEN.md) để biết luồng thành viên và thao tác trung tâm.
+
 Đây là backend và trang thử API. Giao diện WinForms quản lý và website đăng ký đầy đủ cần xây tiếp dựa vào các endpoint này. Chưa tích hợp cổng thanh toán, SMTP/xác thực email hoặc triển khai Internet. Các quy định nháp khởi tạo là phương án đề xuất từ tài liệu: quản trị cần xem và kích hoạt trước khi nhận đăng ký thật.
 
 ## Quy ước gọi API

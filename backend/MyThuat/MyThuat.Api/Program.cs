@@ -71,6 +71,16 @@ builder.Services.AddHostedService<ExpiryWorker>();
 
 
 var app=builder.Build();
+if(args.Contains("--seed-demo-learning"))
+{
+    using var scope=app.Services.CreateScope();
+    await DemoLearningAccounts.Seed(scope.ServiceProvider.GetRequiredService<MyThuatDbContext>(),app.Environment.ContentRootPath);return;
+}
+if(args.Contains("--seed-test-promos"))
+{
+    using var scope=app.Services.CreateScope();
+    await DemoPromotions.Seed(scope.ServiceProvider.GetRequiredService<MyThuatDbContext>());return;
+}
 if(args.Contains("--seed-demo"))
 {
     using var scope=app.Services.CreateScope();

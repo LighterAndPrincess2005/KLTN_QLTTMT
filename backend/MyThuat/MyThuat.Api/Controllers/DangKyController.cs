@@ -14,11 +14,14 @@ public sealed class DangKyController(EnrollmentService service,FinanceService fi
     {
         var member=User.MemberId();ApiError.Require(member.HasValue,"Tài khoản không liên kết thành viên.",403);
         var now=BusinessClock.Now;
+        var staff=User.Has(Permission.HoSo);
         return await db.DangKy.AsNoTracking().Where(x=>db.DaiDienHocVien.Any(d=>d.ThanhVienId==member
             &&d.HocVienId==x.HoSoTheoHoc!.HocVienId&&d.XacNhanLuc!=null&&d.HieuLucTu<=now&&(d.HieuLucDen==null||d.HieuLucDen>now)))
             .OrderByDescending(x=>x.LapLuc).Select(x=>new {x.Id,x.MaDangKy,x.HoSoTheoHocId,x.LopHocId,x.TrangThai,x.HanGiuCho,
-                HocVien=x.HoSoTheoHoc!.HocVien!.HoTen,TenKhoa=x.HoSoTheoHoc.KhoaHoc!.TenKhoa,
-                SoBuoi=x.HoSoTheoHoc.KhoaHoc.SoBuoi,TenLop=x.LopHoc!.TenLop,LichHoc=x.LopHoc.LichHocDuKien}).Take(500).ToListAsync(ct);
+                HocVienId=x.HoSoTheoHoc!.HocVienId,HocVien=x.HoSoTheoHoc.HocVien!.HoTen,TenKhoa=x.HoSoTheoHoc.KhoaHoc!.TenKhoa,
+                KhoaHocId=x.HoSoTheoHoc.KhoaHocId,SoBuoi=x.HoSoTheoHoc.KhoaHoc.SoBuoi,TenLop=x.LopHoc!.TenLop,LichHoc=x.LopHoc.LichHocDuKien,
+                CoTheQuanLy=staff||db.DaiDienHocVien.Any(d=>d.ThanhVienId==member&&d.HocVienId==x.HoSoTheoHoc.HocVienId&&d.XacNhanLuc!=null
+                    &&d.HieuLucTu<=now&&(d.HieuLucDen==null||d.HieuLucDen>now)&&(d.QuyenDaiDien=="DAY_DU"||d.QuyenDaiDien=="DANG_KY"))}).Take(500).ToListAsync(ct);
     }
     [HttpPost]public Task<object> Create(EnrollRequest r,CancellationToken ct)=>service.Create(r,ct);
     [HttpGet("{id:long:min(1)}")]public Task<object> Detail(long id,CancellationToken ct)=>service.Detail(id,ct);

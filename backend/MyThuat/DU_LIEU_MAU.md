@@ -25,3 +25,12 @@ Có 6 lớp, 88 nội dung/buổi học, 4 giáo viên, 2 phòng, 1 thành viên
 Mật khẩu tài khoản thử được sinh riêng khi nạp và lưu trong `MyThuat.Api/.local/Tai_khoan_mau.txt` trên máy đó, không có mật khẩu chung trong Git. Chưa có phiếu thu hay giao dịch tiền giả. Đăng ký vẫn cần quy định đang hiệu lực; bộ mẫu không tự kích hoạt hay thay đổi quy định quản trị.
 
 Thông tin khóa và đề cương là mẫu để trình diễn, không phải cam kết thương mại của trung tâm. Hồ sơ giáo viên, thành viên và học viên không phải người dùng thật.
+
+## Mã ưu đãi kiểm thử
+
+Sau khi có bộ mẫu và quản trị, chạy riêng `dotnet run --project MyThuat.Api -c Release -- --seed-test-promos` từ thư mục MyThuat. Lệnh không chạy lúc khởi động API thông thường, không kích hoạt quy định và không ghi đè mã đã có.
+
+- `LHLTEST10`: giảm 10% học phí, tối đa 500.000 đ, các khóa.
+- `LHLTEST200K`: giảm 200.000 đ học phí, chỉ Foundation 1 mẫu (`DEMO_KH02`).
+
+Mỗi mã có 1.000 lượt, thời hạn 90 ngày từ ngày nạp lần đầu. Hai mã dùng cho kiểm thử; mã đã hết hạn cần được xử lý bằng mã mới theo nghiệp vụ quản trị. Không tự cộng dồn hoặc tặng ưu đãi lần hai/giới thiệu. Giá giảm được chốt khi tạo phiếu, và vẫn cần quy định hiệu lực cùng các điều kiện đăng ký khác.

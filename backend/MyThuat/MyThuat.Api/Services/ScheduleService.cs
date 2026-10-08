@@ -130,6 +130,12 @@ public sealed class ScheduleService(MyThuatDbContext db,AuditService audit,Acces
             db.DiemDanh.Add(replacement);await db.SaveChangesAsync(ct);
             var makeup=await db.HocBu.SingleOrDefaultAsync(m=>m.DiemDanhBuId==x.Id,ct);
             if(makeup is not null)makeup.DiemDanhBuId=replacement.Id;
+            var marker=$"[DOI_LICH:{x.Id}]";
+            foreach(var request in await db.PhanHoi.Where(f=>f.DangKyId==x.DangKyId&&f.NoiDung.StartsWith(marker)&&f.TrangThai=="CHO_XU_LY").ToListAsync(ct))
+            {
+                request.TrangThai="DA_TRA_LOI";request.NguoiXuLy=access.User.AccountId();request.TraLoiLuc=BusinessClock.Now;
+                request.TraLoi=$"Trung tâm đã đổi lịch sang {next.BatDau:HH:mm dd/MM/yyyy}. Lý do: {r.LyDo}";
+            }
         }
         var cls=await db.LopHoc.SingleAsync(x=>x.Id==b.LopHocId,ct);
         cls.NgayKetThucDuKien=DateOnly.FromDateTime(await db.BuoiHoc.Where(x=>x.LopHocId==b.LopHocId&&x.TrangThai!="DA_HUY").MaxAsync(x=>x.KetThuc,ct));

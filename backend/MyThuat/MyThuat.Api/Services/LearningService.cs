@@ -12,7 +12,7 @@ public sealed class LearningService(MyThuatDbContext db,AccessService access,Pol
         await access.TeacherSession(session,ct);
         return await db.DiemDanh.AsNoTracking().Where(x=>x.BuoiHocId==session&&x.TrangThai!="HUY_BO"&&x.DangKy!.TrangThai=="DA_XAC_NHAN")
             .OrderBy(x=>x.DangKy!.HoSoTheoHoc!.HocVien!.HoTen)
-            .Select(x=>new {x.Id,x.DangKyId,HocVienId=x.DangKy!.HoSoTheoHoc!.HocVienId,HoTen=x.DangKy.HoSoTheoHoc.HocVien!.HoTen,
+            .Select(x=>new {x.Id,x.DangKyId,HocVienId=x.DangKy!.HoSoTheoHoc!.HocVienId,HoTen=x.DangKy.HoSoTheoHoc.HocVien!.HoTen,NgaySinh=x.DangKy.HoSoTheoHoc.HocVien.NgaySinh,
                 LuuY=x.DangKy.HoSoTheoHoc.HocVien.LuuYHoTroHocTap,x.LoaiThamGia,x.TrangThai,x.BaoNghiLuc,x.PhutThamDu,x.NhanXet,x.DiemSanPham,x.SanPhamUrl,x.RowVersion}).ToListAsync(ct);
     }
     public async Task<object> Attend(long id,AttendRequest r,CancellationToken ct)
@@ -70,7 +70,47 @@ public sealed class LearningService(MyThuatDbContext db,AccessService access,Pol
         db.DiemDanh.Add(attendance);await db.SaveChangesAsync(ct);
         var m=existing??new HocBu {DiemDanhVangId=absent.Id};
         m.DiemDanhBuId=attendance.Id;m.HanHoanTat=deadline;m.NguoiDuyet=access.User.AccountId();m.TrangThai="DA_DAT";
-        if(existing is null)db.HocBu.Add(m);await db.SaveChangesAsync(ct);audit.Add("HocBu",m.Id,"DAT_HOC_BU");await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return ManagementService.Scalars(m);
+        if(existing is null)db.HocBu.Add(m);
+        var marker=$"[HOC_BU:{absent.Id}]";
+        foreach(var request in await db.PhanHoi.Where(x=>x.DangKy!.HoSoTheoHocId==profile.Id&&x.NoiDung.StartsWith(marker)&&x.TrangThai=="CHO_XU_LY").ToListAsync(ct))
+        {
+            request.TrangThai="DA_TRA_LOI";request.NguoiXuLy=access.User.AccountId();request.TraLoiLuc=BusinessClock.Now;
+            request.TraLoi=$"Trung tâm đã xếp học bù lúc {target.BatDau:HH:mm dd/MM/yyyy}, lớp {target.LopHoc!.TenLop}.";
+        }
+        await db.SaveChangesAsync(ct);audit.Add("HocBu",m.Id,"DAT_HOC_BU");await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return ManagementService.Scalars(m);
+    }
+    public async Task<object> Suggest(StudentLearningRequest r,CancellationToken ct)
+    {
+        var member=access.User.MemberId();ApiError.Require(member.HasValue,"Tài khoản cần liên kết thành viên.",403);
+        ApiError.Require(r.LoaiYeuCau is "HOC_BU" or "DOI_LICH","Loại đề nghị không hợp lệ.");
+        await using var tx=await db.Database.BeginTransactionAsync(IsolationLevel.Serializable,ct);
+        var attendance=await db.DiemDanh.Include(x=>x.DangKy).ThenInclude(x=>x!.HoSoTheoHoc).Include(x=>x.BuoiHoc)
+            .SingleOrDefaultAsync(x=>x.Id==r.DiemDanhId,ct)??throw new ApiError(404,"Không có buổi học của học viên.");
+        var profile=attendance.DangKy!.HoSoTheoHoc!;await access.Student(profile.HocVienId,true,ct);
+        var active=await db.DangKy.SingleOrDefaultAsync(x=>x.HoSoTheoHocId==profile.Id&&x.TrangThai=="DA_XAC_NHAN",ct)
+            ??throw new ApiError(409,"Cần đăng ký đã xác nhận còn hiệu lực để gửi đề nghị học tập.");
+        var settings=await policies.ForProfile(profile.Id,ct);
+        if(r.LoaiYeuCau=="HOC_BU")
+        {
+            ApiError.Require(attendance.TrangThai=="VANG"&&attendance.LoaiThamGia=="HOC_CHINH"
+                &&attendance.BaoNghiLuc<=attendance.BuoiHoc!.BatDau.AddHours(-settings.BaoNghiTruocGio),"Cần vắng buổi chính và báo nghỉ đủ thời hạn để đề nghị học bù.");
+            ApiError.Require(!await db.HocBu.AnyAsync(x=>x.DiemDanhVangId==attendance.Id&&x.TrangThai!="DA_HUY",ct),"Buổi này đã có lịch/quyền học bù.",409);
+            ApiError.Require(await db.HocBu.CountAsync(x=>x.DiemDanhVang!.DangKy!.HoSoTheoHocId==profile.Id&&x.TrangThai!="DA_HUY",ct)<settings.SoLuotHocBu,"Đã hết lượt học bù của khóa.",409);
+            var originalClass=await db.LopHoc.SingleAsync(x=>x.Id==attendance.BuoiHoc!.LopHocId,ct);
+            var deadline=(originalClass.NgayKetThucDuKien??DateOnly.FromDateTime(attendance.BuoiHoc!.KetThuc)).AddDays(settings.HanHocBuNgay).ToDateTime(TimeOnly.MaxValue);
+            ApiError.Require(BusinessClock.Now<=deadline,"Đã quá hạn đề nghị học bù.",409);
+        }
+        else ApiError.Require(attendance.DangKyId==active.Id&&attendance.TrangThai=="CHO_THAM_GIA"
+            &&attendance.BuoiHoc!.TrangThai=="DA_XEP_LICH"&&attendance.BuoiHoc.BatDau>BusinessClock.Now,"Chỉ đề nghị đổi lịch cho buổi sắp tới của lớp đang học.");
+        var marker=$"[{r.LoaiYeuCau}:{attendance.Id}]";
+        ApiError.Require(!await db.PhanHoi.AnyAsync(x=>x.DangKyId==active.Id&&x.NoiDung.StartsWith(marker)&&x.TrangThai=="CHO_XU_LY",ct),"Buổi này đã có đề nghị cùng loại đang chờ xử lý.",409);
+        var label=r.LoaiYeuCau=="HOC_BU"?"Đề nghị học bù":"Đề nghị đổi lịch";
+        var feedback=new PhanHoi {DangKyId=active.Id,NguoiGuiId=member!.Value,GuiLuc=BusinessClock.Now,
+            HanPhanHoi=BusinessClock.AddWorkingDays(BusinessClock.Now,2,settings.NgayNghi),TrangThai="CHO_XU_LY",
+            NoiDung=$"{marker}\n{label} buổi {attendance.BuoiHoc!.ThuTuTrongLop} ({attendance.BuoiHoc.BatDau:dd/MM/yyyy HH:mm}).\nLý do: {r.LyDo.Trim()}\nKhung giờ mong muốn: {r.KhungGioMongMuon?.Trim()??"Trung tâm tư vấn"}"};
+        db.PhanHoi.Add(feedback);await db.SaveChangesAsync(ct);audit.Add("PhanHoi",feedback.Id,"GUI_DE_NGHI_HOC_TAP",new {r.LoaiYeuCau,DiemDanhId=attendance.Id});
+        await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);
+        return new {feedback.Id,feedback.TrangThai,ThongBao="Đã gửi đề nghị. Trung tâm sẽ xem xét và phản hồi; lịch học chỉ đổi sau khi được xác nhận."};
     }
     public async Task CloseSession(long id,CancellationToken ct)
     {

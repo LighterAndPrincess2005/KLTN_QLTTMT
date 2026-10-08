@@ -13,6 +13,8 @@ public sealed class PhanHoiController(MyThuatDbContext db,AccessService access,A
     [HttpPost]
     public async Task<object> Send(FeedbackRequest r,CancellationToken ct)
     {
+        ApiError.Require(!r.NoiDung.TrimStart().StartsWith("[HOC_BU:",StringComparison.Ordinal)&&!r.NoiDung.TrimStart().StartsWith("[DOI_LICH:",StringComparison.Ordinal),
+            "Vui lòng dùng mục Học bù hoặc Đổi lịch để gửi đề nghị này.");
         var member=User.MemberId();ApiError.Require(member.HasValue,"Tài khoản cần liên kết thành viên.",403);
         var e=await db.DangKy.Include(x=>x.HoSoTheoHoc).SingleOrDefaultAsync(x=>x.Id==r.DangKyId,ct)??throw new ApiError(404,"Không có đăng ký.");
         await access.Student(e.HoSoTheoHoc!.HocVienId,false,ct);
