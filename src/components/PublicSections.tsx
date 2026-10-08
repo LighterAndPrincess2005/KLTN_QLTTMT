@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, BookOpen, ChevronDown, Palette } from 'lucide-react';
+import { ArrowRight, BookOpen, ChevronDown, GraduationCap, Paintbrush } from 'lucide-react';
 import type { ArtClass, Course } from '../types';
 import { CourseDetails } from './CourseDetails';
 
@@ -8,12 +8,12 @@ export function IntroPrograms({courses,classes}:{courses:Course[];classes:ArtCla
   const [selected, setSelected] = useState<string | null>(null);
   const program = courses.find(c => c.id === selected);
   return <section className="section programs" id="programs"><div className="shell">
-    <div className="program-spotlight"><div className="spotlight-copy"><span className="spotlight-label"><Palette size={16}/> KHÁM PHÁ CHƯƠNG TRÌNH</span><h2>Từ nét vẽ đầu tiên.<br/><span>Đến thế giới của riêng con.</span></h2><p>Mỗi chất liệu mở ra một cách sáng tạo. Tìm chương trình vừa với độ tuổi và hành trình của con.</p><a href="#program-selection" className="spotlight-button">Tìm khóa học cho con <ArrowRight size={18}/></a></div><div className="spotlight-art" aria-hidden="true"><span className="art-orbit orbit-one"/><span className="art-orbit orbit-two"/><Palette size={100} strokeWidth={1.2}/><span className="art-note">Một nét vẽ nhỏ.<br/>Vô vàn ý tưởng lớn.</span></div><div className="spotlight-path"><span><b>01</b> Khám phá chất liệu</span><span><b>02</b> Chọn hướng học</span><span><b>03</b> Tìm lớp phù hợp</span></div></div>
+    <div className="program-spotlight"><div className="spotlight-copy"><span className="spotlight-label"><img className="inline-brand" src="/logo-lhl-art.jpg" alt=""/> KHÁM PHÁ CHƯƠNG TRÌNH</span><h2>Từ nét vẽ đầu tiên.<br/><span>Đến thế giới của riêng con.</span></h2><p>Mỗi chất liệu mở ra một cách sáng tạo. Tìm chương trình vừa với độ tuổi và hành trình của con.</p><a href="#program-selection" className="spotlight-button">Tìm khóa học cho con <ArrowRight size={18}/></a></div><div className="spotlight-art" aria-hidden="true"><img className="spotlight-brand" src="/logo-lhl-art.jpg" alt=""/><span className="art-note">Một nét vẽ nhỏ.<br/>Vô vàn ý tưởng lớn.</span></div><div className="spotlight-path"><span><b>01</b> Khám phá chất liệu</span><span><b>02</b> Chọn hướng học</span><span><b>03</b> Tìm lớp phù hợp</span></div></div>
     <div className="program-selection-head" id="program-selection"><div><span className="kicker">CHƯƠNG TRÌNH HỌC</span><h3>Con sẽ bắt đầu từ đâu?</h3></div><p>Chọn một chương trình để khám phá lộ trình.</p></div>
     <div className="filter-row" aria-label="Nhóm chương trình">{['Tất cả', ...new Set(courses.map(c=>c.category))].map(x => <button type="button" aria-pressed={category === x} className={category === x ? 'active' : ''} key={x} onClick={() => setCategory(x)}>{x}</button>)}</div>
     <div className="course-grid">{courses.filter(c => category === 'Tất cả' || c.category === category).map(c => <article className="course-card intro-course" key={c.id}>
       <div className="course-image"><img src={c.image} alt={`Khám phá chất liệu trong chương trình ${c.title}`} loading="lazy"/><span className="age-pill">{c.category}</span></div>
-      <div className="course-content"><span className="category" style={{color:c.color}}>{c.level}</span><h3>{c.title}</h3><div className="program-facts"><span>Từ {c.ageMin} tuổi</span><span>{c.sessions} buổi học</span></div><p>{c.skills.join(' · ')}</p><button className="course-link" onClick={() => setSelected(c.id)} aria-expanded={selected === c.id}>Khám phá chương trình <ArrowRight size={16}/></button></div>
+      <div className="course-content"><span className="category">{c.level}</span><h3>{c.title}</h3><div className="program-facts"><span>Từ {c.ageMin} tuổi</span><span>{c.sessions} buổi học</span></div><p>{c.skills.join(' · ')}</p><button className="course-link" onClick={() => setSelected(c.id)} aria-expanded={selected === c.id}>Khám phá chương trình <ArrowRight size={16}/></button></div>
     </article>)}</div>
     {program && <CourseDetails course={program} classes={classes} onClose={()=>setSelected(null)}/>}
   </div></section>;
@@ -33,14 +33,24 @@ export function Method() {
 }
 
 export function Gallery() {
-  const photos = ['photo-1577083288073-40892c0860a4', 'photo-1547891654-e66ed7ebb968', 'photo-1550859492-d5da9d8e45f3', 'photo-1541961017774-22349e4a1262'];
-  return <section className="section gallery" id="gallery"><div className="shell"><div className="gallery-head"><div><span className="kicker">GÓC SÁNG TẠO</span><h2>Mỗi gam màu,<br/>một cách kể chuyện.</h2></div><a href="#programs">Khám phá chương trình <ArrowRight size={17}/></a></div>
-    <div className="gallery-grid">{photos.map((photo, i) => <figure key={photo} className={`g${i + 1}`}><img src={`https://images.unsplash.com/${photo}?auto=format&fit=crop&w=900&q=85`} loading="lazy" alt={['Cảm hứng khu vườn nhiều màu sắc', 'Bố cục màu sắc và hình khối', 'Thử nghiệm chất liệu hội họa', 'Tác phẩm minh họa nét vẽ tự do'][i]}/><figcaption>{['Màu của khu vườn', 'Thành phố trong mơ', 'Chuyện của biển', 'Những người bạn nhỏ'][i]}<small>Cảm hứng sáng tạo · Ảnh minh họa</small></figcaption></figure>)}</div>
+  const artworks = [
+    {"image":"ppa-watercolor-study","title":"Sắc màu trên giấy","medium":"Màu nước","alt":"Ảnh minh họa các bài vẽ màu nước được bày trên mặt bàn"},
+    {"image":"ppa-still-life","title":"Tĩnh vật và hòa sắc","medium":"Sơn dầu / Acrylic","alt":"Ảnh minh họa tranh tĩnh vật bình hoa và trái cây"},
+    {"image":"ppa-seascape","title":"Biển và sắc xanh","medium":"Sơn dầu / Acrylic","alt":"Ảnh minh họa tranh sóng biển xanh được đặt trên giá vẽ"},
+    {"image":"ppa-flower-study","title":"Một góc hoa nở","medium":"Sơn dầu / Acrylic","alt":"Ảnh minh họa tranh hoa màu hồng trên nền xanh trong khung gỗ"},
+  ];
+  return <section className="section gallery student-gallery" id="gallery"><div className="shell"><div className="gallery-head"><div><span className="kicker">THÀNH PHẨM HỌC VIÊN</span><h2>Ý tưởng nhỏ.<br/><em>Thành phẩm đầy sắc màu.</em></h2><p className="gallery-intro">Từ quan sát đến phối màu, từ một nét phác đến bức tranh hoàn chỉnh — mỗi bài thực hành là một dịp để thể hiện ý tưởng theo cách riêng.</p></div><a href="#programs">Tìm hành trình sáng tạo <ArrowRight size={17}/></a></div>
+    <div className="student-art-grid">{artworks.map((artwork, i) => <figure key={artwork.image} className={`student-art student-art-${i + 1}`}><div className="artwork-mat"><img src={`/gallery/${artwork.image}.webp`} loading="lazy" alt={artwork.alt}/><span className="artwork-number" aria-hidden="true">0{i+1}</span></div><figcaption><span>{artwork.medium}</span><h3>{artwork.title}</h3></figcaption></figure>)}</div>
+    <div className="gallery-footnote"><span>Hình ảnh minh họa cho các bài thực hành.</span><a href="#classes">Bắt đầu tác phẩm của con <ArrowRight size={17}/></a></div>
   </div></section>;
 }
 
 export function StudioStory() {
-  return <section className="section testimonials" id="about"><div className="shell"><span className="kicker">ĐIỀU LHL Art HƯỚNG ĐẾN</span><div className="quote">Không chỉ là một bức tranh đẹp.<br/>Là sự tự tin khi con kể về thế giới của mình.</div><div className="story-values"><span><Palette size={19}/> Tôn trọng nét riêng</span><span><BookOpen size={19}/> Đồng hành từng bước</span><span><ArrowRight size={19}/> Tiến bộ từ trải nghiệm</span></div><p className="story-description">Một không gian mỹ thuật để quan sát, thử nghiệm và thể hiện ý tưởng. Những điều học được cùng màu sắc sẽ theo con ra khỏi lớp học.</p></div></section>;
+  return <section className="section studio-introduction" id="about"><div className="shell introduction-grid"><div className="introduction-copy"><span className="kicker">GIỚI THIỆU TRUNG TÂM · LHL ART</span><h2>Một nơi để học vẽ.<br/><em>Và lớn lên cùng sáng tạo.</em></h2><p>LHL Art là không gian học mỹ thuật dành cho những bạn nhỏ thích khám phá. Từ nét vẽ đầu tiên đến những bài thực hành nhiều chất liệu, con được hướng dẫn kỹ thuật nền tảng và khuyến khích thể hiện ý tưởng của mình.</p><p>Chúng mình tin rằng điều đáng nhớ sau mỗi buổi học không chỉ là một bức tranh, mà còn là niềm vui thử một điều mới và sự tự tin khi kể câu chuyện của riêng con.</p><a className="text-link" href="#method">Khám phá cách LHL Art đồng hành <ArrowRight size={18}/></a></div><div className="introduction-values"><span className="introduction-note">ĐIỀU LHL ART HƯỚNG ĐẾN</span>{[
+    {Icon:Paintbrush,title:'Tôn trọng nét riêng',text:'Quan sát, lựa chọn màu sắc và tự kể câu chuyện qua tác phẩm.'},
+    {Icon:BookOpen,title:'Đồng hành từng bước',text:'Lộ trình học từ nền tảng, hướng dẫn kỹ thuật theo chương trình.'},
+    {Icon:GraduationCap,title:'Nhìn thấy sự tiến bộ',text:'Theo dõi bài thực hành, điểm danh và nhận xét từ giáo viên.'},
+  ].map(({Icon,title,text})=><article key={title}><span><Icon size={24}/></span><div><h3>{title}</h3><p>{text}</p></div></article>)}</div></div></section>;
 }
 
 export function Questions() {

@@ -1,0 +1,174 @@
+:root { --accent: #ae431c; --accent-light: #ffc18e; --muted: #52645b; }
+html { scroll-padding-top: 124px; }
+.site-header { height: 112px; }
+.logo .brand-logo { width: 96px; height: 96px; border-radius: 12px; }
+.logo b { font-size: 23px; }
+.logo small { font-size: 12px; letter-spacing: .04em; }
+.logo { gap: 14px; flex-shrink: 0; }
+.nav { gap: 15px; font-size: 14px; }
+.nav > a:hover { color: var(--accent); }
+.nav .account-link { color: var(--accent); font-size: 14px; }
+.nav .btn { padding: 14px 18px; }
+.modal-head .brand-logo { width: 72px; height: 72px; }
+footer .logo .brand-logo { width: 110px; height: 110px; }
+.inline-brand { width: 26px; height: 26px; border-radius: 5px; object-fit: contain; flex-shrink: 0; }
+.empty-brand { width: 68px; height: 68px; }
+.studio-note > span { background: transparent; }
+.note-brand { width: 46px; height: 46px; object-fit: contain; border-radius: 6px; }
+.spotlight-brand { position: relative; width: 200px; height: 200px; object-fit: contain; border-radius: 24px; transform: rotate(-6deg); box-shadow: 0 20px 40px #082c2a40; }
+
+/* Warm accents and legible supporting text throughout the public pages. */
+.kicker, .eyebrow, .category { color: var(--accent); font-size: 14px; letter-spacing: .08em; }
+.kicker.light, .spotlight-label { color: var(--accent-light); font-size: 14px; }
+.cta .kicker.light { color: #fff5e5; }
+.text-link, .gallery-head > a { color: var(--accent); font-size: 16px; }
+.hero-assurances { color: #815031; font-size: 14px; gap: 20px; }
+.art-caption { color: var(--accent); font-size: 13px; letter-spacing: .08em; }
+.art-frame img { object-fit: contain; background: #f7f1e4; }
+.studio-note b { font-size: 15px; }
+.studio-note small { font-size: 13px; color: #596459; }
+.course-content > p, #programs .course-content > p { font-size: 15px; line-height: 1.8; }
+.spec-grid span { font-size: 14px; color: #5e4431; }
+.program-facts span { font-size: 13px; background: #fff0e2; color: #84380f; }
+.program-selection-head p { font-size: 15px; }
+.class-main small, .class-detail small, .seat small { color: var(--accent); font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+.class-main span, .class-detail b, .class-detail span, .seats { font-size: 14px; }
+.seats { color: #79502e; }
+.status { font-size: 13px; }
+.policy-grid article { border-top-color: #dc7a46; }
+.policy-grid svg { color: var(--accent); }
+.policy-grid p, .faq-grid details p, .contact-grid p { font-size: 15px; }
+.faq-grid summary { font-size: 16px; line-height: 1.6; }
+.contact-grid article > span { color: var(--accent); font-size: 13px; }
+.method-list > div > span { color: var(--accent); background: #fff0e2; border-color: #e6bfa1; }
+.method-list p { font-size: 15px; }
+.exploration-facts small, .lesson-outline summary small { color: var(--accent); font-size: 13px; font-weight: 600; }
+.exploration-facts b { color: #943710; }
+.course-exploration p, .lesson-outline summary b, .exploration-class small { font-size: 15px; }
+#programs, #program-selection, #about, #gallery, #method { scroll-margin-top: 124px; }
+
+/* An early introduction gives the center a presence before the course list. */
+.studio-introduction { background: #fff; border-top: 1px solid #eee6d8; }
+.introduction-grid { display: grid; grid-template-columns: 1.12fr .88fr; align-items: center; gap: 64px; }
+.introduction-copy h2 { font-size: clamp(32px, 3.3vw, 46px); line-height: 1.28; }
+.introduction-copy h2 em, .student-gallery h2 em { color: var(--accent); font-style: normal; }
+.introduction-copy > p { color: var(--muted); font-size: 16px; line-height: 1.9; max-width: 610px; }
+.introduction-copy .text-link { display: inline-flex; margin-top: 15px; line-height: 1.6; }
+.introduction-values { padding: 32px; background: #fcf1e6; border-radius: 24px; border: 1px solid #f0d8bf; }
+.introduction-note { display: block; font-size: 13px; font-weight: 800; letter-spacing: .08em; color: #8e431f; margin-bottom: 20px; }
+.introduction-values article { display: grid; grid-template-columns: 48px 1fr; gap: 17px; padding: 20px 0; border-bottom: 1px solid #ead6c1; }
+.introduction-values article:last-child { border-bottom: 0; padding-bottom: 0; }
+.introduction-values article > span { height: 48px; background: #fff; border-radius: 14px; color: var(--accent); display: grid; place-items: center; }
+.introduction-values h3 { font-size: 18px; margin: 0 0 8px; }
+.introduction-values p { font-size: 15px; line-height: 1.8; margin: 0; color: #645442; }
+
+/* The paintings have separate mats and captions, like a small exhibition. */
+.student-gallery { background: #f7ead7; }
+.student-gallery .gallery-head { align-items: flex-end; }
+.gallery-intro { font-size: 16px; color: #655845; line-height: 1.8; max-width: 660px; margin: 20px 0 0; }
+.gallery-head > a { white-space: nowrap; padding-bottom: 8px; }
+.student-art-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; align-items: start; }
+.student-art { margin: 0; padding: 12px 12px 20px; background: #fffdf7; border: 1px solid #ead9be; box-shadow: 0 12px 26px #76512c12; border-radius: 5px; transition: transform .2s, box-shadow .2s; }
+.student-art:nth-child(even) { margin-top: 36px; }
+.student-art:hover { transform: translateY(-5px); box-shadow: 0 20px 30px #76512c20; }
+.artwork-mat { position: relative; padding: 11px; background: #efe9dd; }
+.artwork-mat img { width: 100%; aspect-ratio: .86; object-fit: contain; display: block; background: #fff; }
+.artwork-number { position: absolute; top: 0; right: 0; background: #ae431c; color: #fff; border-radius: 0 0 0 8px; padding: 8px 9px; font-size: 13px; font-weight: 700; }
+.student-art figcaption { padding: 18px 8px 0; }
+.student-art figcaption > span { color: var(--accent); font-size: 13px; font-weight: 700; }
+.student-art h3 { font-size: 17px; font-weight: 700; line-height: 1.6; margin: 8px 0 0; }
+.gallery-footnote { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 36px; padding-top: 22px; border-top: 1px solid #d9c5a8; }
+.gallery-footnote > span { font-size: 14px; color: #66533e; }
+.gallery-footnote > a { display: inline-flex; align-items: center; gap: 10px; color: var(--accent); font-weight: 700; font-size: 16px; }
+
+.student-reviews { background: #fcfaf5; scroll-margin-top: 124px; }
+.reviews-paper { padding: 56px 38px 30px; border: 1px solid #e9decd; border-radius: 26px; background: repeating-linear-gradient(0deg, transparent 0 30px, #ae907b13 30px 31px), #fffcf7; }
+.reviews-heading { text-align: center; }
+.reviews-heading h2 { line-height: 1.3; margin: 16px 0 20px; }
+.reviews-heading h2 em { color: var(--accent); font-style: normal; }
+.reviews-sample { display: inline-block; padding: 7px 14px; border-radius: 99px; border: 1px solid #e7c1a7; color: #874727; background: #fff0e3; font-size: 13px; }
+.reviews-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px; margin-top: 44px; }
+.student-review { display: flex; flex-direction: column; text-align: center; margin: 0; padding: 0 6px; }
+.review-portrait { position: relative; width: 152px; height: 152px; margin: 0 auto 28px; }
+.review-portrait img { display: block; width: 152px; height: 152px; border-radius: 50%; object-fit: cover; border: 5px solid #fffaf1; box-shadow: 5px 5px 0 #cb6036, 0 8px 25px #8c563025; }
+.review-quote { position: absolute; bottom: -13px; left: -12px; color: var(--accent); background: #fff2e6; padding: 9px; box-sizing: content-box; border-radius: 14px; }
+.student-review blockquote { margin: 0; flex: 1; }
+.student-review blockquote p { font-size: 16px; font-style: italic; line-height: 1.9; margin: 0; color: #54594c; }
+.student-review figcaption { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #ead7c1; padding-top: 20px; margin-top: 23px; }
+.review-name { color: var(--accent); font-size: 19px; font-weight: 700; }
+.review-role { color: #6d6255; font-size: 13px; line-height: 1.7; }
+.reviews-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid #dfccb6; margin-top: 38px; padding-top: 22px; }
+.reviews-footer p { color: #6d6255; font-size: 15px; line-height: 1.8; margin: 0; }
+
+.student-choices .student-choice { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+.student-choices .student-choice.selected { border-color: var(--green); background: #eaf2ee; }
+.student-choices .student-select { padding: 0; border: 0; border-radius: 0; background: transparent; grid-template-columns: 28px minmax(0, 1fr) 24px; gap: 12px; width: 100%; }
+.student-choices .student-summary { gap: 7px; min-width: 0; }
+.student-summary b { overflow-wrap: anywhere; }
+.student-choices .student-summary small { font-size: 13px; }
+.student-age { display: inline-block; align-self: flex-start; color: #8c421b; background: #fff0e0; border-radius: 6px; padding: 5px 9px; font-size: 13px; line-height: 1.5; }
+.student-choices .student-choice.selected .student-selected-icon { opacity: 1; color: var(--green); }
+.student-choices .student-delete { display: inline-flex; gap: 6px; color: #a54122; background: #fff4eb; border-color: #e9c5af; padding: 10px 12px; font-size: 13px; }
+.student-choices .student-delete > svg { opacity: 1; }
+.student-choices .student-delete:disabled { background: #f3f3ef; color: #667069; border-color: #dde1d9; }
+.student-delete-confirm { grid-column: 1 / -1; padding-top: 16px; border-top: 1px solid #d6dfd3; }
+.student-delete-confirm p { font-size: 14px; line-height: 1.7; margin: 0 0 14px; }
+.student-delete-confirm > div { display: flex; gap: 12px; justify-content: flex-end; }
+.student-choices .student-delete-confirm button { display: inline-flex; padding: 10px 15px; font-size: 14px; }
+.student-choices .confirm-delete { background: #a54122; border-color: #a54122; color: #fff; }
+.student-profile-form { margin-top: 16px; }
+.student-profile-form > .btn { margin-top: 24px; }
+
+@media (max-width: 1120px) {
+  .menu-button { display: block; padding: 12px; color: var(--ink); }
+  .nav { display: none; position: absolute; top: 112px; left: 0; right: 0; background: var(--cream); padding: 22px; box-shadow: 0 15px 30px #21332f18; flex-direction: column; align-items: stretch; font-size: 16px; gap: 16px; }
+  .nav.open { display: flex; }
+  .nav > a { display: block; }
+  .nav .account-link { text-align: left; font-size: 16px; padding: 4px 0; }
+  .introduction-grid { grid-template-columns: 1fr; gap: 32px; }
+  .introduction-copy > p { max-width: 760px; }
+  .student-art-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+  .student-art:nth-child(even) { margin-top: 0; }
+  .reviews-grid { gap: 24px; }
+  .reviews-paper { padding: 40px 24px 28px; }
+}
+@media (max-width: 680px) {
+  html { scroll-padding-top: 98px; }
+  .site-header { height: 88px; }
+  .logo .brand-logo { width: 76px; height: 76px; }
+  .logo b { font-size: 22px; }
+  .logo small { font-size: 11px; }
+  .nav { top: 88px; }
+  .modal-head .brand-logo { width: 60px; height: 60px; }
+  .modal-head .logo b { font-size: 19px; }
+  .kicker, .eyebrow, .category { font-size: 13px; letter-spacing: .05em; }
+  .eyebrow { line-height: 1.6; padding: 8px 10px; }
+  .hero-assurances { font-size: 13px; gap: 12px; }
+  .studio-note small { font-size: 12px; line-height: 1.6; }
+  .spotlight-brand { width: 160px; height: 160px; }
+  .introduction-values { padding: 24px 20px; }
+  .introduction-copy h2, .student-gallery h2 { font-size: 32px; }
+  .introduction-copy > p, .gallery-intro { font-size: 15px; }
+  .gallery-head > a { white-space: normal; }
+  .student-art-grid { grid-template-columns: 1fr; gap: 24px; }
+  .artwork-mat img { aspect-ratio: 1; }
+  .student-art h3 { font-size: 19px; }
+  .gallery-footnote { flex-direction: column; align-items: flex-start; }
+  .spec-grid { grid-template-columns: 1fr; }
+  .faq-grid summary { font-size: 15px; }
+  #programs, #program-selection, #about, #gallery, #method { scroll-margin-top: 98px; }
+  .student-reviews { scroll-margin-top: 98px; }
+  .reviews-grid { grid-template-columns: 1fr; gap: 42px; }
+  .reviews-paper { padding: 36px 22px 26px; border-radius: 20px; }
+  .reviews-heading h2 { font-size: 32px; }
+  .student-review blockquote p { font-size: 15px; }
+  .reviews-footer { flex-direction: column; align-items: flex-start; }
+  .student-choices .student-choice { padding: 15px 12px; gap: 14px; }
+  .student-choices .student-select { gap: 9px; grid-template-columns: 22px minmax(0, 1fr) 20px; }
+  .student-choices .student-delete { padding: 10px 8px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .student-art { transition: none; }
+  .student-art:hover { transform: none; }
+}

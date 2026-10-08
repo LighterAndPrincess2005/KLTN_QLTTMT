@@ -1,0 +1,31 @@
+{
+  "sourcePage": "https://ppa.vn/",
+  "section": "Nói về chúng tôi",
+  "downloadedOn": "2026-10-08",
+  "images": [
+    {
+      "file": "Tran_Yen_Lan.jpg",
+      "name": "Trần Yến Lan",
+      "url": "https://ppa.vn/multidata/tran-yen-lan-1.jpg",
+      "width": 300,
+      "height": 300,
+      "bytes": 35591
+    },
+    {
+      "file": "Huong_Giang.jpg",
+      "name": "Hương Giang",
+      "url": "https://ppa.vn/multidata/huong-giang-1.jpg",
+      "width": 300,
+      "height": 300,
+      "bytes": 36965
+    },
+    {
+      "file": "Bao_Chau.jpg",
+      "name": "Bảo Châu",
+      "url": "https://ppa.vn/multidata/bao-chau-1.jpg",
+      "width": 300,
+      "height": 300,
+      "bytes": 29796
+    }
+  ]
+}

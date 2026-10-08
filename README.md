@@ -15,6 +15,9 @@ Nếu máy chưa cài Node.js/npm, có thể mở `preview.html` qua một web s
 ## Cấu trúc chính
 
 - `src/App.tsx`: trang chủ, bộ lọc lớp và luồng đăng ký 3 bước.
+- `src/components/MemberArea.tsx`: khu học tập với lịch/điểm danh, nhận xét, học bù, đổi lịch/lớp và phản hồi. Xem [hướng dẫn](docs/member-learning.md).
+- `src/components/LearningStudentPicker.tsx`: chọn học viên có lớp đã xác nhận từ nút Học tập.
+- `src/components/TeacherCorner.tsx`: trang giáo viên với lịch phân công, điểm danh và nhận xét từng buổi.
 - `src/data/mockData.ts`: khóa học, lớp học, đánh giá và ảnh mẫu.
 - `src/services/artCenterService.ts`: lớp truy cập dữ liệu, điểm thay thế bằng API sau này.
 - `src/types.ts`: kiểu dữ liệu nghiệp vụ dùng chung.
