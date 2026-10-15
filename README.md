@@ -1,5 +1,7 @@
 # LHL Art — giao diện website trung tâm mỹ thuật
 
+> **Nhánh `winf`:** ứng dụng Windows mới ở [`LhlArt`](LhlArt). Xem [hướng dẫn WinForms](WINFORMS.md) để chạy và kiểm tra. Mã website chính nằm trên nhánh `main`.
+
 Frontend React + TypeScript được dựng trước theo nghiệp vụ đồ án. Website hiện đã gọi API thật. Đọc [hướng dẫn nối API và chạy web](NOI_API.md). Các file dữ liệu mẫu được giữ để tham khảo nhưng không được dùng trong ứng dụng đang chạy.
 
 ## Chạy dự án
