@@ -1,0 +1,32 @@
+.teacher-hero { background: linear-gradient(120deg,#244f40,#2b6854); padding: 65px 0; color: #fff; }
+.teacher-hero h1 { font-size: clamp(36px,5vw,58px); line-height: 1.3; margin: 20px 0; letter-spacing: -.04em; }
+.teacher-hero p { max-width: 660px; line-height: 1.85; color: #edf1de; font-size: 16px; }
+.teacher-hero .btn { margin-top: 15px; }
+.teacher-filters { display: grid; grid-template-columns: 240px 1fr; gap: 20px; max-width: 800px; margin-bottom: 28px; }
+.teacher-filters .field { margin: 0; }
+.teacher-session-list { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+.teacher-session-button { background: #fffdf7; border: 1px solid #d9dccd; color: #2f4536; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px; text-align: left; cursor: pointer; }
+.teacher-session-button.selected { border: 2px solid #cb7142; padding: 19px; background: #fff5e8; }
+.teacher-session-button b { font-size: 18px; line-height: 1.6; }
+.teacher-session-button > span:not(.category) { font-size: 14px; line-height: 1.7; display: flex; gap: 8px; align-items: center; }
+.teacher-session-button svg { flex-shrink: 0; }
+.teacher-session-button small { font-size: 13px; line-height: 1.7; color: #6a725e; }
+.teacher-session-button:focus-visible { outline: 3px solid #276951; outline-offset: 3px; }
+.teacher-workspace { margin-top: 30px; background: white; border: 1px solid #d6dece; border-radius: 20px; padding: 28px; }
+.teacher-workspace h3 { font-size: 25px; line-height: 1.6; margin: 10px 0; }
+.teacher-workspace .info-note { font-size: 14px; margin-top: 20px; }
+.teacher-roster { display: grid; gap: 20px; margin-top: 25px; }
+.teacher-student { border: 1px solid #dde3d3; border-radius: 16px; padding: 24px; background: #fffdf7; }
+.teacher-student h4 { font-size: 20px; margin: 0; line-height: 1.6; }
+.teacher-student .learning-row-head p { font-size: 13px; margin: 8px 0 0; color: #64725a; line-height: 1.8; }
+.teacher-form-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+.teacher-student .field { min-width: 0; }
+.teacher-student .field span, .teacher-filters .field span { font-size: 14px; }
+.teacher-student textarea { width: 100%; padding: 12px; background: white; border: 1px solid #ccd7c1; border-radius: 10px; font: inherit; line-height: 1.8; color: #2d4633; resize: vertical; }
+.teacher-student textarea:focus { outline: 3px solid #9ebb92; outline-offset: 1px; }
+.teacher-student form > button { margin-top: 22px; }
+.teacher-absence-note { padding: 12px; background: #f9eedc; color: #8e491e; border-radius: 8px; font-size: 14px; line-height: 1.8; }
+.teacher-readonly { margin-top: 20px; font-size: 15px; line-height: 1.85; white-space: pre-wrap; }
+.teacher-close { border-top: 1px solid #dbe1d0; margin-top: 25px; padding-top: 15px; font-size: 14px; line-height: 1.8; color: #5d6f55; }
+@media(max-width:1000px) { .teacher-session-list { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:680px) { .teacher-hero { padding: 45px 0; } .teacher-session-list, .teacher-filters, .teacher-form-grid { grid-template-columns: 1fr; } .teacher-form-grid { gap: 0; } .teacher-workspace { padding: 20px 15px; } .teacher-student { padding: 18px; } .teacher-workspace h3 { font-size: 21px; } }

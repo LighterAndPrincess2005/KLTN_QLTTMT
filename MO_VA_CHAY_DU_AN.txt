@@ -1,0 +1,45 @@
+QUẢN LÝ TRUNG TÂM MỸ THUẬT — API, WEB VÀ WINFORMS
+
+1. Giải nén toàn bộ ZIP, mở thư mục QuanLyTrungTamMyThuat bằng VS Code.
+   Giữ nguyên cấu trúc thư mục để các đường dẫn dự án hoạt động đúng.
+
+2. Ba thành phần:
+   - API: backend/MyThuat/MyThuat.Api
+   - Website: src, public và package.json ở thư mục gốc
+   - WinForms: LhlArt
+
+3. Cài .NET 8 SDK, SQL Server Express LocalDB và Node.js 22.12 trở lên.
+   Mở terminal PowerShell trong thư mục gốc rồi chạy:
+
+   npm ci
+   powershell -ExecutionPolicy Bypass -File scripts/Start-Center.ps1 -Service Seed
+
+   Seed tạo database MyThuatCenter và nạp dữ liệu hư cấu nếu database trống.
+   Chạy lại không tạo trùng dữ liệu. Không thay thế database đang có của nhóm.
+
+4. Mở ba terminal riêng, mỗi terminal chạy một lệnh và giữ chạy:
+
+   powershell -ExecutionPolicy Bypass -File scripts/Start-Center.ps1 -Service Api
+   powershell -ExecutionPolicy Bypass -File scripts/Start-Center.ps1 -Service Web
+   powershell -ExecutionPolicy Bypass -File scripts/Start-Center.ps1 -Service WinForms
+
+   Website: http://127.0.0.1:5173
+   WinForms mở cửa sổ ứng dụng Windows.
+
+5. Thao tác qua lại:
+   - Web đăng ký học -> WinForms thấy đăng ký và công nợ.
+   - WinForms thu đủ học phí -> Web thấy xác nhận và lịch học.
+   - Web gửi phản hồi -> WinForms trả lời -> Web đọc câu trả lời.
+   - Các màn hình hỗ trợ làm mới hoặc cập nhật định kỳ 30 giây.
+   Cả hai ứng dụng cùng dùng API và SQL Server; không cần chép dữ liệu qua lại.
+
+6. Tài khoản thử luồng:
+   - Web: phuhuynh01
+   - WinForms: thungan hoặc quantri
+   - Mật khẩu các tài khoản trên: LhlArt2026!HocTap
+   Xem README.md để biết đủ 71 tài khoản, quyền và các bước kiểm tra đồng bộ.
+
+7. Kết quả và phần còn cần kiểm tra: docs/INTEGRATION_CHECKS.md.
+   Chưa chạy giao diện trên Windows hoặc kiểm chứng bằng SQL Server tại môi
+   trường bàn giao. Một số nghiệp vụ nâng cao vẫn cần dùng API qua Swagger,
+   được liệt kê trong README.md.

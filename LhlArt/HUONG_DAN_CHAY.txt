@@ -1,0 +1,25 @@
+LHL ART – QUẢN LÝ TRUNG TÂM MỸ THUẬT SÁNG TẠO
+
+1. Giải nén và mở thư mục LhlArt trong VS Code.
+2. Máy cần Windows 10/11, .NET 8 SDK.
+3. Mở Terminal và chạy:
+   dotnet run --project LhlArt.csproj
+
+Cách khác: bấm đúp CHAY_UNG_DUNG.bat hoặc nhấn Ctrl+Shift+B.
+Để gỡ lỗi: cài extension C# của Microsoft, nhấn F5.
+
+ĐĂNG NHẬP
+- Đã có dữ liệu bản trước: dùng tài khoản hiện tại.
+- Cài mới: tự tạo tài khoản quản trị khi ứng dụng yêu cầu.
+- Không có tài khoản hay hồ sơ được tạo sẵn.
+
+Menu trái có icon và nhóm mở/thu gọn. Bản này dùng giờ Việt Nam hiện tại.
+Dữ liệu cũ được giữ lại. Sao lưu bằng Quản trị > Sao lưu dữ liệu.
+Xem README.md để biết cấu trúc MVC, phạm vi chức năng và hướng dẫn chi tiết.
+
+TÀI KHOẢN NHÂN VIÊN
+Đăng nhập bằng quản lý, vào Quản trị > Tài khoản nhân viên > Thêm tài khoản.
+Chọn vai trò: Quản lý, Học vụ, Kế toán, Giáo viên hoặc Họa cụ.
+Tài khoản Giáo viên phải chọn hồ sơ giáo viên liên kết.
+Xem Báo cáo > Biểu đồ doanh thu để xem thống kê theo tháng.
+Bảng rà soát đầy đủ nằm trong DOI_CHIEU_YEU_CAU.md.
