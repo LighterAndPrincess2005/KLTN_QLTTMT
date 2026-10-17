@@ -72,6 +72,10 @@ public sealed class ScheduleService(MyThuatDbContext db,AuditService audit,Acces
         }
         cls.NgayKhaiGiangDuKien=DateOnly.FromDateTime(sessions[0].BatDau);
         cls.NgayKetThucDuKien=DateOnly.FromDateTime(sessions[^1].KetThuc);
+        // The published class timetable must describe the actual recurring slot.
+        var first=sessions[0];
+        var weekdays=new[]{"Chủ nhật","Thứ Hai","Thứ Ba","Thứ Tư","Thứ Năm","Thứ Sáu","Thứ Bảy"};
+        cls.LichHocDuKien=$"{weekdays[(int)first.BatDau.DayOfWeek]} · {first.BatDau:HH:mm}–{first.KetThuc:HH:mm} · "+(request.CachTuan==1?"Hàng tuần":$"Mỗi {request.CachTuan} tuần");
         audit.Add("LopHoc",classId,"SINH_LICH",new {SoBuoi=sessions.Count});await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);
         return sessions.Select(ManagementService.Scalars);
     }

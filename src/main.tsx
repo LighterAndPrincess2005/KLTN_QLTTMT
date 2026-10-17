@@ -9,6 +9,12 @@ import './programHighlights.css';
 import './studioRefresh.css';
 import './memberLearning.css';
 import './teacherCorner.css';
+import './reportWeb.css';
+import './publicPages.css';
+import './studyDashboard.css';
+import './weeklySchedule.css';
+import './methodDiscovery.css';
+import './typography.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,

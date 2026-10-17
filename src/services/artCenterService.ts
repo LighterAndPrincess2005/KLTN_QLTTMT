@@ -1,5 +1,6 @@
 import type { ArtClass, Course, StudentProfile } from '../types';
 import { courseImage } from '../data/courseImages';
+import {demoMode,demoRequest,demoCourses,demoClasses} from './demo';
 const base=(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 type Session={token:string;expires:number};
 let session:Session|null=null;
@@ -8,6 +9,7 @@ export class ApiError extends Error { constructor(message:string,public status:n
 export const clearSession=()=>{session=null;sessionStorage.removeItem('artora.session')};
 export const signedIn=()=>!!session&&session.expires>Date.now();
 export async function request<T>(path:string,body?:unknown,method=body===undefined?'GET':'POST'):Promise<T>{
+ if(demoMode)return demoRequest(path,body,method) as T;
  const headers:Record<string,string>={'Accept':'application/json'};
  if(body!==undefined)headers['Content-Type']='application/json';
  if(signedIn())headers.Authorization=`Bearer ${session!.token}`;
@@ -22,10 +24,10 @@ export async function request<T>(path:string,body?:unknown,method=body===undefin
 type Page<T>={duLieu:T[];tongSo:number};
 async function all<T>(path:string){const out:T[]=[];for(let trang=1;trang<=10000;trang++){const p=await request<Page<T>>(`${path}?trang=${trang}&kichThuoc=100`);out.push(...p.duLieu);if(out.length>=p.tongSo||!p.duLieu.length)break}return out}
 type CourseDto={id:number;loaiKhoaHocId:number;tenKhoa:string;capDo:string;tuoiToiThieu:number|null;yeuCauDauVao:string|null;mucTieu:string;soBuoi:number;soTietMoiBuoi:number;phutMoiTiet:number;hocPhi:number};
-type ClassDto={id:number;khoaHocId:number;maLop:string;tenLop:string;ngayKhaiGiangDuKien:string;lichHocDuKien:string;siSoToiDa:number;hocPhiApDung:number;moDangKyLuc:string;dongDangKyLuc:string;soChoDaGiu:number};
-export type Member={id:number;tenDangNhap:string;vaiTro:string;thanhVienId:number|null};
-export type Enrollment={id:number;maDangKy:string;hoSoTheoHocId:number;hocVienId:number;lopHocId:number;khoaHocId?:number;coTheQuanLy?:boolean;trangThai:string;hanGiuCho:string;hocVien:string;tenKhoa:string;tenLop:string;lichHoc:string;soBuoi:number};
-export type Attendance={id:number;buoiHocId:number;ngayHoc:string;ketThuc?:string;thuTu?:number;chuDe?:string;tenPhong?:string;trangThaiBuoi?:string;trangThai:string;loaiThamGia?:string;nhanXet:string|null;diemSanPham?:number|null;sanPhamUrl:string|null;noiDungDuocTinhId:number;baoNghiLuc?:string|null;ghiLuc?:string|null;nguoiNhanXet?:string|null};
+type ClassDto={id:number;khoaHocId:number;maLop:string;tenLop:string;ngayKhaiGiangDuKien:string;ngayKetThucDuKien?:string|null;lichHocDuKien:string;siSoToiDa:number;hocPhiApDung:number;moDangKyLuc:string;dongDangKyLuc:string;soChoDaGiu:number};
+export type Member={id:number;tenDangNhap:string;vaiTro:string;thanhVienId:number|null;hoTen?:string;dienThoai?:string;email?:string;ngaySinh?:string};
+export type Enrollment={id:number;maDangKy:string;hoSoTheoHocId:number;hocVienId:number;lopHocId:number;khoaHocId?:number;coTheQuanLy?:boolean;trangThai:string;hanGiuCho:string;ngayBatDau?:string;ngayKetThuc?:string|null;hocVien:string;tenKhoa:string;tenLop:string;lichHoc:string;soBuoi:number};
+export type Attendance={id:number;dangKyId?:number;lopHocId?:number;tenLop?:string;giaoVien?:string|null;buoiHocId:number;ngayHoc:string;ketThuc?:string;thuTu?:number;chuDe?:string;tenPhong?:string;trangThaiBuoi?:string;trangThai:string;loaiThamGia?:string;nhanXet:string|null;diemSanPham?:number|null;sanPhamUrl:string|null;noiDungDuocTinhId:number;baoNghiLuc?:string|null;ghiLuc?:string|null;nguoiNhanXet?:string|null};
 export type Makeup={id:number;diemDanhVangId:number;diemDanhBuId:number|null;trangThai:string;hanHoanTat:string;ngayBu:string|null;tenLopBu:string|null};
 export type CourseResult={ketLuan:string;nhanXetTongKet:string|null;diemCuoiKhoaChot:number|null;soXacNhan:string|null};
 export type Progress={soNoiDungDaThamGia:number;diemDanh:Attendance[];hocBu?:Makeup[];ketQua:CourseResult|null};
@@ -37,8 +39,8 @@ const field=(o:Record<string,unknown>,name:string)=>o[name]??o[name[0].toLowerCa
 export const vnTime=(v:string)=>new Date(/(?:Z|[+-]\d\d:\d\d)$/.test(v)?v:v+'+07:00');
 export const dateTime=(v:string)=>vnTime(v).toLocaleString('vi-VN');
 export const artCenterService={
- async getCourses():Promise<Course[]>{const [rows,types]=await Promise.all([all<CourseDto>('/api/khoa-hoc'),request<{id:number;tenLoai:string}[]>('/api/loai-khoa-hoc')]);return rows.map((c,i)=>({id:String(c.id),title:c.tenKhoa,ageMin:c.tuoiToiThieu||0,level:c.capDo,sessions:c.soBuoi,minutesPerSession:c.soTietMoiBuoi*c.phutMoiTiet,maxStudents:0,tuitionFee:c.hocPhi,materialFee:0,category:types.find(x=>x.id===c.loaiKhoaHocId)?.tenLoai||'Mỹ thuật',color:['#ce6249','#327562','#bd8b34'][i%3],image:courseImage(c.capDo),skills:[c.mucTieu],prerequisites:c.yeuCauDauVao?[c.yeuCauDauVao]:[]}))},
- async getClasses():Promise<ArtClass[]>{return (await all<ClassDto>('/api/lop-hoc')).map(c=>{const now=Date.now();return{id:String(c.id),code:c.maLop,title:c.tenLop,courseId:String(c.khoaHocId),schedule:c.lichHocDuKien,startDateISO:c.ngayKhaiGiangDuKien,startDate:new Date(c.ngayKhaiGiangDuKien+'T00:00:00+07:00').toLocaleDateString('vi-VN'),registrationDeadline:dateTime(c.dongDangKyLuc),deadline:c.dongDangKyLuc,teacher:'',room:'',capacity:c.siSoToiDa,enrolled:c.soChoDaGiu,tuitionFee:c.hocPhiApDung,mode:'Trực tiếp',status:now<vnTime(c.moDangKyLuc).getTime()?'Chưa mở đăng ký':now>=vnTime(c.dongDangKyLuc).getTime()?'Đã khóa đăng ký':c.soChoDaGiu>=c.siSoToiDa?'Đủ chỗ':'Đang nhận đăng ký'}})},
+ async getCourses():Promise<Course[]>{if(demoMode)return demoCourses;const [rows,types]=await Promise.all([all<CourseDto>('/api/khoa-hoc'),request<{id:number;tenLoai:string}[]>('/api/loai-khoa-hoc')]);return rows.map((c,i)=>({id:String(c.id),title:c.tenKhoa,ageMin:c.tuoiToiThieu||0,level:c.capDo,sessions:c.soBuoi,minutesPerSession:c.soTietMoiBuoi*c.phutMoiTiet,minutesPerPeriod:c.phutMoiTiet,maxStudents:0,tuitionFee:c.hocPhi,materialFee:0,category:types.find(x=>x.id===c.loaiKhoaHocId)?.tenLoai?.replace(/^Core$/i,'Chính khóa')||'Mỹ thuật',color:['#ce6249','#327562','#bd8b34'][i%3],image:courseImage(c.capDo),skills:[c.mucTieu],prerequisites:c.yeuCauDauVao?[c.yeuCauDauVao]:[]}))},
+ async getClasses():Promise<ArtClass[]>{if(demoMode)return demoClasses;const rows=await all<ClassDto>('/api/lop-hoc');const promotions=await request<{maKhuyenMai:string;tenKhuyenMai:string;khoaApDungId:number|null;loaiGiam:string;giaTriGiam:number;tranGiam:number|null;soNgayTuXacNhanTV:number|null}[]>('/api/khuyen-mai').catch(()=>[]);return rows.map(c=>{const now=Date.now();const promo=promotions.find(p=>(p.khoaApDungId==null||p.khoaApDungId===c.khoaHocId)&&['PHAN_TRAM','SO_TIEN'].includes(p.loaiGiam)&&p.giaTriGiam>0&&c.hocPhiApDung>0);return{promotion:promo?{code:promo.maKhuyenMai,label:promo.tenKhuyenMai+' (theo điều kiện)',percent:Math.min(promo.loaiGiam==='PHAN_TRAM'?promo.giaTriGiam:promo.giaTriGiam/c.hocPhiApDung*100,promo.tranGiam!=null?promo.tranGiam/c.hocPhiApDung*100:100)}:undefined,id:String(c.id),code:c.maLop,title:c.tenLop,courseId:String(c.khoaHocId),schedule:c.lichHocDuKien,startDateISO:c.ngayKhaiGiangDuKien,endDateISO:c.ngayKetThucDuKien,startDate:new Date(c.ngayKhaiGiangDuKien+'T00:00:00+07:00').toLocaleDateString('vi-VN'),registrationDeadline:dateTime(c.dongDangKyLuc),deadline:c.dongDangKyLuc,teacher:'',room:'',capacity:c.siSoToiDa,enrolled:c.soChoDaGiu,tuitionFee:c.hocPhiApDung,mode:'Trực tiếp',status:now<vnTime(c.moDangKyLuc).getTime()?'Chưa mở đăng ký':now>=vnTime(c.dongDangKyLuc).getTime()?'Đã khóa đăng ký':c.soChoDaGiu>=c.siSoToiDa?'Đủ chỗ':'Đang nhận đăng ký'}})},
  async login(name:string,password:string){const x=await request<{accessToken:string;expiresIn:number}>('/api/tai-khoan/dang-nhap',{TenDangNhap:name,MatKhau:password});session={token:x.accessToken,expires:Date.now()+x.expiresIn*1000};sessionStorage.setItem('artora.session',JSON.stringify(session));return this.me()},
  signup:(body:unknown)=>request('/api/tai-khoan/dang-ky',body),
  me:()=>request<Member>('/api/tai-khoan/toi'),

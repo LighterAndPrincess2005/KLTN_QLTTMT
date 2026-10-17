@@ -76,8 +76,14 @@ public sealed class AuthController(MyThuatDbContext db, IPasswordHasher<TaiKhoan
     }
 
     [Authorize, HttpGet("toi")]
-    public object Me()=>new {Id=User.AccountId(),TenDangNhap=User.Identity!.Name,VaiTro=User.FindFirstValue(ClaimTypes.Role),
-        ThanhVienId=User.MemberId(),GiaoVienId=User.TeacherId(),Quyen=User.FindFirstValue("permissions")};
+    public async Task<object> Me(CancellationToken ct)
+    {
+        var memberId=User.MemberId();
+        var member=memberId.HasValue?await db.ThanhVien.AsNoTracking().SingleOrDefaultAsync(x=>x.Id==memberId.Value,ct):null;
+        return new {Id=User.AccountId(),TenDangNhap=User.Identity!.Name,VaiTro=User.FindFirstValue(ClaimTypes.Role),
+            ThanhVienId=memberId,GiaoVienId=User.TeacherId(),Quyen=User.FindFirstValue("permissions"),
+            HoTen=member?.HoTen,DienThoai=member?.DienThoai,Email=member?.Email};
+    }
 
     [Authorize, HttpPost("dang-xuat")]
     public async Task<IActionResult> Logout(CancellationToken ct)

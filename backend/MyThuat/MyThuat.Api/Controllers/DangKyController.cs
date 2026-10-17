@@ -17,8 +17,10 @@ public sealed class DangKyController(EnrollmentService service,FinanceService fi
         return await db.DangKy.AsNoTracking().Where(x=>db.DaiDienHocVien.Any(d=>d.ThanhVienId==member
             &&d.HocVienId==x.HoSoTheoHoc!.HocVienId&&d.XacNhanLuc!=null&&d.HieuLucTu<=now&&(d.HieuLucDen==null||d.HieuLucDen>now)))
             .OrderByDescending(x=>x.LapLuc).Select(x=>new {x.Id,x.MaDangKy,x.HoSoTheoHocId,x.LopHocId,x.TrangThai,x.HanGiuCho,
-                HocVien=x.HoSoTheoHoc!.HocVien!.HoTen,TenKhoa=x.HoSoTheoHoc.KhoaHoc!.TenKhoa,
-                SoBuoi=x.HoSoTheoHoc.KhoaHoc.SoBuoi,TenLop=x.LopHoc!.TenLop,LichHoc=x.LopHoc.LichHocDuKien}).Take(500).ToListAsync(ct);
+                HocVienId=x.HoSoTheoHoc!.HocVienId,HocVien=x.HoSoTheoHoc.HocVien!.HoTen,KhoaHocId=x.HoSoTheoHoc.KhoaHocId,TenKhoa=x.HoSoTheoHoc.KhoaHoc!.TenKhoa,
+                SoBuoi=x.HoSoTheoHoc.KhoaHoc.SoBuoi,TenLop=x.LopHoc!.TenLop,LichHoc=x.LopHoc.LichHocDuKien,
+                NgayBatDau=x.LopHoc.NgayKhaiGiangDuKien,NgayKetThuc=x.LopHoc.NgayKetThucDuKien,
+                CoTheQuanLy=db.DaiDienHocVien.Any(d=>d.ThanhVienId==member&&d.HocVienId==x.HoSoTheoHoc.HocVienId&&d.XacNhanLuc!=null&&d.HieuLucTu<=now&&(d.HieuLucDen==null||d.HieuLucDen>now)&&(d.QuyenDaiDien=="DAY_DU"||d.QuyenDaiDien=="DANG_KY"))}).Take(500).ToListAsync(ct);
     }
     [HttpPost]public Task<object> Create(EnrollRequest r,CancellationToken ct)=>service.Create(r,ct);
     [HttpGet("{id:long:min(1)}")]public Task<object> Detail(long id,CancellationToken ct)=>service.Detail(id,ct);

@@ -1,3 +1,4 @@
+import {pageHref} from '../navigation';
 import { ArrowRight, Quote } from 'lucide-react';
 
 // Portraits and excerpts supplied as a reference by the user.
@@ -38,7 +39,7 @@ export function StudentReviews() {
           <figcaption><span className="review-name">{review.name}</span><span className="review-role">Chia sẻ về trải nghiệm học mỹ thuật</span></figcaption>
         </figure>)}
       </div>
-      <div className="reviews-footer"><p>Mỗi trải nghiệm đều là một dịp để lắng nghe.</p><a className="text-link" href="#member">Gửi phản hồi về lớp học <ArrowRight size={18}/></a></div>
+      <div className="reviews-footer"><p>Mỗi trải nghiệm đều là một dịp để lắng nghe.</p><a className="text-link" href={pageHref('/hoc-tap')}>Gửi phản hồi về lớp học <ArrowRight size={18}/></a></div>
     </div>
   </section>;
 }

@@ -1,7 +1,7 @@
 :root { --accent: #ae431c; --accent-light: #ffc18e; --muted: #52645b; }
 html { scroll-padding-top: 124px; }
 .site-header { height: 112px; }
-.logo .brand-logo { width: 96px; height: 96px; border-radius: 12px; }
+.logo .brand-logo { width: 90px; height: 90px; border-radius: 50%; }
 .logo b { font-size: 23px; }
 .logo small { font-size: 12px; letter-spacing: .04em; }
 .logo { gap: 14px; flex-shrink: 0; }
@@ -10,12 +10,12 @@ html { scroll-padding-top: 124px; }
 .nav .account-link { color: var(--accent); font-size: 14px; }
 .nav .btn { padding: 14px 18px; }
 .modal-head .brand-logo { width: 72px; height: 72px; }
-footer .logo .brand-logo { width: 110px; height: 110px; }
+footer .logo .brand-logo { width: 80px; height: 80px; }
 .inline-brand { width: 26px; height: 26px; border-radius: 5px; object-fit: contain; flex-shrink: 0; }
 .empty-brand { width: 68px; height: 68px; }
 .studio-note > span { background: transparent; }
 .note-brand { width: 46px; height: 46px; object-fit: contain; border-radius: 6px; }
-.spotlight-brand { position: relative; width: 200px; height: 200px; object-fit: contain; border-radius: 24px; transform: rotate(-6deg); box-shadow: 0 20px 40px #082c2a40; }
+.spotlight-brand { position: relative; width: 100px; height: 100px; object-fit: contain; border-radius: 50%; transform: rotate(-6deg); box-shadow: 0 20px 40px #082c2a40; }
 
 /* Warm accents and legible supporting text throughout the public pages. */
 .kicker, .eyebrow, .category { color: var(--accent); font-size: 14px; letter-spacing: .08em; }
@@ -67,16 +67,17 @@ footer .logo .brand-logo { width: 110px; height: 110px; }
 .student-gallery .gallery-head { align-items: flex-end; }
 .gallery-intro { font-size: 16px; color: #655845; line-height: 1.8; max-width: 660px; margin: 20px 0 0; }
 .gallery-head > a { white-space: nowrap; padding-bottom: 8px; }
-.student-art-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; align-items: start; }
+.student-art-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; align-items: stretch; }
 .student-art { margin: 0; padding: 12px 12px 20px; background: #fffdf7; border: 1px solid #ead9be; box-shadow: 0 12px 26px #76512c12; border-radius: 5px; transition: transform .2s, box-shadow .2s; }
-.student-art:nth-child(even) { margin-top: 36px; }
+.student-art:nth-child(even) { margin-top: 0; }
 .student-art:hover { transform: translateY(-5px); box-shadow: 0 20px 30px #76512c20; }
 .artwork-mat { position: relative; padding: 11px; background: #efe9dd; }
-.artwork-mat img { width: 100%; aspect-ratio: .86; object-fit: contain; display: block; background: #fff; }
+.artwork-mat img { width: 100%; aspect-ratio: 1.35; object-fit: cover; display: block; background: #efe9dd; }
 .artwork-number { position: absolute; top: 0; right: 0; background: #ae431c; color: #fff; border-radius: 0 0 0 8px; padding: 8px 9px; font-size: 13px; font-weight: 700; }
 .student-art figcaption { padding: 18px 8px 0; }
 .student-art figcaption > span { color: var(--accent); font-size: 13px; font-weight: 700; }
 .student-art h3 { font-size: 17px; font-weight: 700; line-height: 1.6; margin: 8px 0 0; }
+.artwork-source{display:inline-block;margin-top:12px;font-size:12px;color:#226b56;text-underline-offset:4px}
 .gallery-footnote { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 36px; padding-top: 22px; border-top: 1px solid #d9c5a8; }
 .gallery-footnote > span { font-size: 14px; color: #66533e; }
 .gallery-footnote > a { display: inline-flex; align-items: center; gap: 10px; color: var(--accent); font-weight: 700; font-size: 16px; }
@@ -145,7 +146,7 @@ footer .logo .brand-logo { width: 110px; height: 110px; }
   .eyebrow { line-height: 1.6; padding: 8px 10px; }
   .hero-assurances { font-size: 13px; gap: 12px; }
   .studio-note small { font-size: 12px; line-height: 1.6; }
-  .spotlight-brand { width: 160px; height: 160px; }
+  .spotlight-brand { width: 100px; height: 100px; }
   .introduction-values { padding: 24px 20px; }
   .introduction-copy h2, .student-gallery h2 { font-size: 32px; }
   .introduction-copy > p, .gallery-intro { font-size: 15px; }

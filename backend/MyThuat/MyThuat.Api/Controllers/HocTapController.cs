@@ -21,7 +21,13 @@ public sealed class HocTapController(LearningService service,MyThuatDbContext db
         var profile=await db.HoSoTheoHoc.AsNoTracking().SingleOrDefaultAsync(x=>x.Id==id,ct)??throw new ApiError(404,"Không có hồ sơ.");
         await access.Student(profile.HocVienId,false,ct);
         var rows=await db.DiemDanh.AsNoTracking().Where(x=>x.DangKy!.HoSoTheoHocId==id).OrderBy(x=>x.BuoiHoc!.BatDau)
-            .Select(x=>new {x.Id,x.BuoiHocId,x.NoiDungDuocTinhId,x.LoaiThamGia,x.TrangThai,x.NhanXet,x.DiemSanPham,x.SanPhamUrl,NgayHoc=x.BuoiHoc!.BatDau}).ToListAsync(ct);
+            .Select(x=>new {x.Id,x.DangKyId,x.BuoiHocId,x.NoiDungDuocTinhId,x.LoaiThamGia,x.TrangThai,x.NhanXet,x.DiemSanPham,x.SanPhamUrl,x.BaoNghiLuc,x.GhiLuc,
+                NgayHoc=x.BuoiHoc!.BatDau,x.BuoiHoc.KetThuc,ThuTu=x.BuoiHoc.ThuTuTrongLop,ChuDe=x.BuoiHoc.NoiDungBuoi!.ChuDe,
+                TrangThaiBuoi=x.BuoiHoc.TrangThai,TenPhong=x.BuoiHoc.PhongHoc!.TenPhong,x.BuoiHoc.LopHocId,TenLop=x.BuoiHoc.LopHoc!.TenLop,
+                NguoiNhanXet=x.NguoiGhiTaiKhoan==null?null:x.NguoiGhiTaiKhoan.TenDangNhap,
+                GiaoVien=db.PhanCong.Where(p=>p.LopHocId==x.BuoiHoc.LopHocId&&p.VaiTroTrongLop=="CHINH"
+                    &&p.TuNgay<=DateOnly.FromDateTime(x.BuoiHoc.BatDau)&&(p.DenNgay==null||p.DenNgay>=DateOnly.FromDateTime(x.BuoiHoc.BatDau)))
+                    .OrderByDescending(p=>p.TuNgay).Select(p=>p.GiaoVien!.HoTen).FirstOrDefault()}).ToListAsync(ct);
         var result=await db.KetQuaKhoaHoc.AsNoTracking().SingleOrDefaultAsync(x=>x.HoSoTheoHocId==id,ct);
         return new {HoSoTheoHocId=id,SoNoiDungDaThamGia=rows.Where(x=>x.TrangThai=="CO_MAT").Select(x=>x.NoiDungDuocTinhId).Distinct().Count(),DiemDanh=rows,
             KetQua=result is null?null:ManagementService.Scalars(result)};

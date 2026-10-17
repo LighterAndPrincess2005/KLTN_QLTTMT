@@ -1,7 +1,9 @@
+import {pageHref} from '../navigation';
 import {useEffect,useState} from 'react';
 import {ArrowRight,CalendarDays,Check,RefreshCw,Users} from 'lucide-react';
 import {artCenterService as api,dateTime,vnTime} from '../services/artCenterService';
 import type {Member,RosterRow,TeacherSession} from '../services/artCenterService';
+import {demoMode} from '../services/demo';
 
 const errorText=(error:unknown)=>error instanceof Error?error.message:'Chưa xử lý được. Vui lòng thử lại.';
 const day=(value:Date)=>value.toLocaleDateString('en-CA',{timeZone:'Asia/Ho_Chi_Minh'});
@@ -44,6 +46,7 @@ function TeachingSession({session,onChanged}:{session:TeacherSession;onChanged:(
  const canEdit=vnTime(session.batDau).getTime()<=Date.now()&&day(vnTime(session.batDau))===today();
  return <section className="teacher-workspace" aria-labelledby="teacher-session-title">
   <div className="learning-heading"><div><span className="kicker">BUỔI ĐANG XEM</span><h3 id="teacher-session-title">{session.tenLop} · Buổi {session.thuTu} · {session.chuDe}</h3><p>{dateTime(session.batDau)} · {session.tenPhong}</p></div><button className="learning-refresh" disabled={loading||closing} onClick={()=>{setReload(n=>n+1);onChanged()}}><RefreshCw size={16}/> Cập nhật</button></div>
+  <div className="teacher-attendance-summary" aria-label="Tổng hợp điểm danh"><div><b>{rows.length}</b><span>Học viên</span></div><div><b>{rows.filter(r=>r.trangThai==='CO_MAT').length}</b><span>Có mặt</span></div><div><b>{rows.filter(r=>r.trangThai==='VANG').length}</b><span>Vắng</span></div><div><b>{rows.filter(r=>r.trangThai==='CHO_THAM_GIA').length}</b><span>Chưa điểm danh</span></div></div>
   {!canEdit&&<p className="info-note">Bạn có thể xem danh sách và kết quả đã ghi. Điểm danh/nhận xét được cập nhật sau khi buổi bắt đầu, trong ngày học; chỉnh muộn cần học vụ hỗ trợ.</p>}
   {notice&&<p className="info-note" role="status">{notice}</p>}{error&&<div className="error-note" role="alert"><p>{error}</p><button className="btn btn-soft" onClick={()=>setReload(n=>n+1)}>Tải lại danh sách</button></div>}
   {loading&&!rows.length?<p className="learning-empty" role="status">Đang tải danh sách học viên…</p>:!error&&<><div className="teacher-roster">{rows.map(row=><RosterEditor key={row.id} row={row} session={session} onSaved={()=>{setReload(n=>n+1);onChanged()}}/>)}</div>{!rows.length&&<p className="learning-empty">Buổi này chưa có học viên đã xác nhận vào lớp.</p>}
@@ -53,22 +56,25 @@ function TeachingSession({session,onChanged}:{session:TeacherSession;onChanged:(
 }
 
 function TeacherDashboard(){
- const [rows,setRows]=useState<TeacherSession[]>([]),[selectedId,setSelectedId]=useState<number|null>(null),[scope,setScope]=useState('all'),[query,setQuery]=useState('');
+ const [rows,setRows]=useState<TeacherSession[]>([]),[selectedId,setSelectedId]=useState<number|null>(null),[scope,setScope]=useState('all'),[query,setQuery]=useState(''),[classId,setClassId]=useState('');
  const [loading,setLoading]=useState(true),[error,setError]=useState(''),[reload,setReload]=useState(0);
  useEffect(()=>{let alive=true;setLoading(true);setError('');api.teacherSchedule().then(data=>{if(alive){setRows(data);setSelectedId(old=>data.some(row=>row.id===old)?old:(data.find(row=>day(vnTime(row.batDau))===today())||data.find(row=>vnTime(row.batDau).getTime()>Date.now())||data.at(-1))?.id??null)}}).catch(error=>{if(alive)setError(errorText(error))}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[reload]);
  const visible=rows.filter(row=>scope==='all'||scope==='today'&&day(vnTime(row.batDau))===today()||scope==='future'&&vnTime(row.batDau).getTime()>Date.now()||scope==='past'&&vnTime(row.ketThuc).getTime()<=Date.now()).filter(row=>(row.tenLop+' '+row.tenKhoa+' '+row.chuDe).toLocaleLowerCase('vi-VN').includes(query.toLocaleLowerCase('vi-VN')));
- const selected=visible.find(row=>row.id===selectedId)||visible[0];
- return <><section className="teacher-hero"><div className="shell"><span className="kicker light">LHL ART · GÓC GIÁO VIÊN</span><h1>Mỗi buổi học,<br/>một bước tiến mới.</h1><p>Lịch giảng dạy, điểm danh và nhận xét học viên trong các buổi bạn được phân công.</p><a className="btn btn-white" href="#top">Xem trang giới thiệu <ArrowRight size={17}/></a></div></section>
+ const classSessions=visible.filter(row=>!classId||String(row.lopHocId)===classId);
+ const selected=classSessions.find(row=>row.id===selectedId)||classSessions[0];
+ return <><section className="teacher-hero"><div className="shell"><span className="kicker light">MỸ THUẬT BỤI · GÓC GIÁO VIÊN</span><h1>Mỗi buổi học,<br/>một bước tiến mới.</h1><p>Lịch giảng dạy, điểm danh và nhận xét học viên trong các buổi bạn được phân công.</p><a className="btn btn-white" href={pageHref('/')}>Xem trang giới thiệu <ArrowRight size={17}/></a></div></section>
   <section className="section teacher-area"><div className="shell"><div className="section-head"><div><span className="kicker">LỊCH GIẢNG DẠY CỦA BẠN</span><h2>Chọn buổi để vào lớp.</h2></div><p>Chỉ các buổi được phân công xuất hiện trong danh sách này.</p></div>
+   {demoMode&&<p className="info-note">Bản xem thử giáo viên · Điểm danh và nhận xét chỉ lưu trong phiên trình duyệt, không ghi vào database trung tâm.</p>}
+   <div className="teacher-class-filter"><label className="field"><span>Lớp phụ trách</span><select value={classId} onChange={e=>setClassId(e.target.value)}><option value="">Tất cả lớp được phân công</option>{[...new Map(rows.map(row=>[row.lopHocId,row])).values()].map(row=><option key={row.lopHocId} value={row.lopHocId}>{row.maLop} · {row.tenLop}</option>)}</select></label></div>
    <div className="teacher-filters"><label className="field"><span>Khoảng thời gian</span><select name="teacherScope" value={scope} onChange={event=>setScope(event.target.value)}><option value="all">Tất cả buổi</option><option value="today">Hôm nay</option><option value="future">Sắp tới</option><option value="past">Đã diễn ra</option></select></label><label className="field"><span>Tìm lớp / nội dung</span><input name="teacherSearch" value={query} onChange={event=>setQuery(event.target.value)} placeholder="Nhập tên lớp, khóa hoặc bài học"/></label></div>
    {error&&<div className="error-note" role="alert"><p>{error}</p><button className="btn btn-soft" onClick={()=>setReload(n=>n+1)}>Thử lại</button></div>}
-   {loading&&!rows.length?<p className="learning-empty" role="status">Đang tải lịch giảng dạy…</p>:!error&&<><div className="teacher-session-list">{visible.map(row=><button type="button" key={row.id} className={'teacher-session-button'+(selected?.id===row.id?' selected':'')} aria-pressed={selected?.id===row.id} onClick={()=>setSelectedId(row.id)}><span className="category">{row.maLop} · {row.tenKhoa}</span><b>{row.tenLop} · Buổi {row.thuTu}</b><span>{row.chuDe}</span><span><CalendarDays size={15}/>{dateTime(row.batDau)}</span><span><Users size={15}/>{row.soHocVien} học viên · {row.tenPhong}</span><small>{row.vaiTro==='CHINH'?'Giáo viên chính':'Trợ giảng'} · {status(row.trangThai)}</small></button>)}</div>{!visible.length&&<p className="learning-empty">{rows.length?'Chưa có buổi phù hợp với bộ lọc.':'Bạn chưa được phân công buổi học nào.'}</p>}
+   {loading&&!rows.length?<p className="learning-empty" role="status">Đang tải lịch giảng dạy…</p>:!error&&<><div className="teacher-session-list">{classSessions.map(row=><button type="button" key={row.id} className={'teacher-session-button'+(selected?.id===row.id?' selected':'')} aria-pressed={selected?.id===row.id} onClick={()=>setSelectedId(row.id)}><span className="category">{row.maLop} · {row.tenKhoa}</span><b>{row.tenLop} · Buổi {row.thuTu}</b><span>{row.chuDe}</span><span><CalendarDays size={15}/>{dateTime(row.batDau)}</span><span><Users size={15}/>{row.soHocVien} học viên · {row.tenPhong}</span><small>{row.vaiTro==='CHINH'?'Giáo viên chính':'Trợ giảng'} · {status(row.trangThai)}</small></button>)}</div>{!classSessions.length&&<p className="learning-empty">{rows.length?'Chưa có buổi phù hợp với bộ lọc.':'Bạn chưa được phân công buổi học nào.'}</p>}
     {selected&&<TeachingSession key={selected.id} session={selected} onChanged={()=>setReload(n=>n+1)}/>}</>}
   </div></section></>;
 }
 
 export function TeacherCorner({member,onLogin}:{member:Member|null;onLogin:()=>void}){
- if(!member)return <section className="section"><div className="shell member-welcome"><h2>Góc giáo viên</h2><p>Đăng nhập bằng tài khoản giáo viên để xem buổi được phân công.</p><button className="btn btn-primary" onClick={onLogin}>Đăng nhập</button></div></section>;
- if(member.vaiTro!=='GIAO_VIEN')return <section className="section"><div className="shell learning-welcome"><h2>Góc giáo viên dành cho tài khoản giáo viên.</h2><p>Dùng Học tập để xem thông tin học viên của bạn.</p><a className="text-link" href="#member">Về góc học tập <ArrowRight size={16}/></a></div></section>;
+ if(!member)return <section className="section"><div className="shell member-welcome"><h2>Góc giáo viên</h2><p>Đăng nhập bằng tài khoản giáo viên để xem buổi được phân công.</p>{demoMode&&<p className="info-note">Xem thử: tên đăng nhập <b>gv_demo</b>, mật khẩu <b>Demo123456789</b>. Dữ liệu chỉ được mô phỏng trong phiên trình duyệt.</p>}<button className="btn btn-primary" onClick={onLogin}>Đăng nhập</button></div></section>;
+ if(member.vaiTro!=='GIAO_VIEN')return <section className="section"><div className="shell learning-welcome"><h2>Góc giáo viên dành cho tài khoản giáo viên.</h2><p>Dùng Học tập để xem thông tin học viên của bạn.</p><a className="text-link" href={pageHref('/hoc-tap')}>Về góc học tập <ArrowRight size={16}/></a></div></section>;
  return <TeacherDashboard key={member.id}/>;
 }
