@@ -80,6 +80,12 @@ public sealed class EnrollmentService(MyThuatDbContext db,AccessService access,P
             charges.Add(new(){DangKyId=enrollment.Id,LoaiKhoan="HOA_CU",HoaCuId=material.Id,MoTaChot=material.TenHoaCu,
                 SoLuong=purchase.SoLuong,DonGiaChot=material.GiaBanThamKhao,ThanhTienChot=decimal.Round(purchase.SoLuong*material.GiaBanThamKhao,0,MidpointRounding.AwayFromZero)});
         }
+        var publicOffer=await PublicDiscount.Best(db,course.Id,cls.HocPhiApDung,now,ct);
+        if(publicOffer is not null){
+            var amount=PublicDiscount.Amount(publicOffer,cls.HocPhiApDung);var tuition=charges[0];
+            tuition.TienGiamChot=amount;tuition.ThanhTienChot-=amount;
+            db.ApDungUuDai.Add(new(){DangKyId=enrollment.Id,KhuyenMaiId=publicOffer.Id,NhomKhoanThu="HOC_PHI",GiaTriGiamChot=amount,HanGiuLuot=enrollment.HanGiuCho,TrangThaiLuot="GIU_LUOT"});
+        }
         await Discount(enrollment,member,charges,"HOC_PHI",r.MaGiamHocPhi,ct);
         await Discount(enrollment,member,charges,"HOA_CU",r.MaGiamHoaCu,ct);
         if(charges.Sum(x=>x.ThanhTienChot)==0)
@@ -102,16 +108,18 @@ public sealed class EnrollmentService(MyThuatDbContext db,AccessService access,P
         var promo=await db.KhuyenMai.SingleOrDefaultAsync(x=>x.MaKhuyenMai==code&&x.TrangThai=="HOAT_DONG"&&x.BatDau<=now&&x.KetThuc>now,ct)
             ??throw new ApiError(400,"Mã ưu đãi không hiệu lực.");
         var profile=await db.HoSoTheoHoc.SingleAsync(x=>x.Id==enrollment.HoSoTheoHocId,ct);
+        ApiError.Require(!promo.TuDongApDung,"Ưu đãi công khai được tự áp dụng, không nhập như mã cá nhân.");
         ApiError.Require(promo.NhomKhoanThu==group&&(promo.KhoaApDungId==null||promo.KhoaApDungId==profile.KhoaHocId),"Mã không áp dụng cho khoản thu/khóa này.");
         ApiError.Require(promo.SoNgayTuXacNhanTV is null||member.XacNhanThanhVienLuc.HasValue
             &&now<=member.XacNhanThanhVienLuc.Value.AddDays(promo.SoNgayTuXacNhanTV.Value),"Thành viên ngoài thời hạn ưu đãi.");
         ApiError.Require(await db.ApDungUuDai.CountAsync(x=>x.KhuyenMaiId==promo.Id&&(x.TrangThaiLuot=="DA_DUNG"||x.TrangThaiLuot=="GIU_LUOT"&&x.HanGiuLuot>now),ct)<promo.TongLuot,"Ưu đãi đã hết lượt.",409);
         var lines=charges.Where(x=>x.LoaiKhoan==group).ToList();var subtotal=lines.Sum(x=>x.ThanhTienChot);
-        ApiError.Require(subtotal>0,"Không có khoản thu phù hợp để áp dụng ưu đãi.");
-        var discount=promo.LoaiGiam=="PHAN_TRAM"?decimal.Round(subtotal*promo.GiaTriGiam/100,0,MidpointRounding.AwayFromZero):promo.GiaTriGiam;
+        var original=lines.Sum(x=>x.SoLuong*x.DonGiaChot);
+        ApiError.Require(original>0,"Không có khoản thu phù hợp để áp dụng ưu đãi.");
+        var discount=promo.LoaiGiam=="PHAN_TRAM"?decimal.Round(original*promo.GiaTriGiam/100,0,MidpointRounding.AwayFromZero):promo.GiaTriGiam;
         discount=Math.Min(subtotal,Math.Min(discount,promo.TranGiam??decimal.MaxValue));
         var remaining=discount;
-        foreach(var line in lines){line.TienGiamChot=Math.Min(line.ThanhTienChot,remaining);line.ThanhTienChot-=line.TienGiamChot;remaining-=line.TienGiamChot;}
+        foreach(var line in lines){var applied=Math.Min(line.ThanhTienChot,remaining);line.TienGiamChot+=applied;line.ThanhTienChot-=applied;remaining-=applied;}
         db.ApDungUuDai.Add(new(){DangKyId=enrollment.Id,KhuyenMaiId=promo.Id,NhomKhoanThu=group,GiaTriGiamChot=discount,HanGiuLuot=enrollment.HanGiuCho,TrangThaiLuot="GIU_LUOT"});
     }
     public async Task CheckRead(DangKy enrollment,CancellationToken ct)

@@ -197,6 +197,7 @@ GO
 
 CREATE TABLE [KhuyenMai] (
     [Id] bigint NOT NULL IDENTITY,
+    [TuDongApDung] bit NOT NULL,
     [MaKhuyenMai] varchar(30) NOT NULL,
     [TenKhuyenMai] nvarchar(200) NOT NULL,
     [NhomKhoanThu] varchar(20) NOT NULL,
@@ -778,7 +779,7 @@ CREATE TABLE [TinNhanTuVan] (
 GO
 
 
-CREATE UNIQUE INDEX [IX_ApDungUuDai_DangKyId_NhomKhoanThu] ON [ApDungUuDai] ([DangKyId], [NhomKhoanThu]);
+CREATE UNIQUE INDEX [IX_ApDungUuDai_DangKyId_NhomKhoanThu_KhuyenMaiId] ON [ApDungUuDai] ([DangKyId], [NhomKhoanThu], [KhuyenMaiId]);
 GO
 
 
@@ -1284,3 +1285,5 @@ GO
 
 ALTER TABLE [TaiKhoan] ADD CONSTRAINT [FK_TaiKhoan_ThanhVien_ThanhVienId] FOREIGN KEY ([ThanhVienId]) REFERENCES [ThanhVien] ([Id]);
 GO
+
+

@@ -651,7 +651,7 @@ public class MyThuatDbContext(DbContextOptions<MyThuatDbContext> options) : DbCo
     modelBuilder.Entity<BuoiHoc>().HasIndex(x => new { x.LopHocId, x.NoiDungBuoiId, x.LanXepLich }).IsUnique();
     modelBuilder.Entity<GiangDayBuoi>().HasIndex(x => new { x.BuoiHocId, x.GiaoVienId, x.VaiTro }).IsUnique();
     modelBuilder.Entity<DaiDienHocVien>().HasIndex(x => new { x.ThanhVienId, x.HocVienId, x.HieuLucTu }).IsUnique();
-    modelBuilder.Entity<ApDungUuDai>().HasIndex(x => new { x.DangKyId, x.NhomKhoanThu }).IsUnique();
+    modelBuilder.Entity<ApDungUuDai>().HasIndex(x => new { x.DangKyId, x.NhomKhoanThu, x.KhuyenMaiId }).IsUnique();
     modelBuilder.Entity<DiemDanh>().HasIndex(x => new { x.DangKyId, x.BuoiHocId }).IsUnique();
     modelBuilder.Entity<DinhMucHoaCu>().HasIndex(x => new { x.NoiDungBuoiId, x.HoaCuId, x.CoSoTinh }).IsUnique();
     modelBuilder.Entity<QuyDinh>().HasIndex(x => new { x.MaBoQuyDinh, x.SoPhienBan }).IsUnique();

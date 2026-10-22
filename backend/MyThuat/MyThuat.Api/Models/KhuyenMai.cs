@@ -3,6 +3,7 @@ namespace MyThuat.Api.Models;
 // Chính sách ưu đãi có hạn mức giữ và sử dụng.
 public sealed class KhuyenMai : EntityBase
 {
+    public bool TuDongApDung { get; set; }
     public string MaKhuyenMai { get; set; } = string.Empty;
     public string TenKhuyenMai { get; set; } = string.Empty;
     public string NhomKhoanThu { get; set; } = string.Empty;

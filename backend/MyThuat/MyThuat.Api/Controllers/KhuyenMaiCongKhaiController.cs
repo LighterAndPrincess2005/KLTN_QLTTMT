@@ -12,10 +12,10 @@ public sealed class KhuyenMaiCongKhaiController(MyThuatDbContext db):ControllerB
     public async Task<object> List(CancellationToken ct)
     {
         var now=BusinessClock.Now;
-        return await db.KhuyenMai.AsNoTracking()
+        return await PublicDiscount.Available(db,now).AsNoTracking()
             .Where(p=>p.TrangThai=="HOAT_DONG"&&p.BatDau<=now&&p.KetThuc>now&&p.NhomKhoanThu=="HOC_PHI"
                 &&db.ApDungUuDai.Count(a=>a.KhuyenMaiId==p.Id&&(a.TrangThaiLuot=="DA_DUNG"||a.TrangThaiLuot=="GIU_LUOT"&&a.HanGiuLuot>now))<p.TongLuot)
-            .Select(p=>new {p.MaKhuyenMai,p.TenKhuyenMai,p.KhoaApDungId,p.LoaiGiam,p.GiaTriGiam,p.TranGiam,p.KetThuc,p.SoNgayTuXacNhanTV})
+            .Select(p=>new {p.TenKhuyenMai,p.KhoaApDungId,p.LoaiGiam,p.GiaTriGiam,p.TranGiam,p.KetThuc,p.SoNgayTuXacNhanTV})
             .Take(100).ToListAsync(ct);
     }
 }

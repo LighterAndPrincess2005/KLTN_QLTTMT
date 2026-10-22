@@ -278,6 +278,37 @@ try
     await Call("PUT","/api/noi-dung/quan-ly/bai-viet/"+articleSaved["id"],article with{Status="DA_DANG",RowVersion=articleSaved["rowVersion"]!.GetValue<string>()},token:adminToken);
     await Call("GET","/api/noi-dung/bai-viet/bai-thu");
     await Call("PUT","/api/noi-dung/quan-ly/bai-viet/0",article,403,outsider);
+    // Public course discount and private voucher both use the original tuition.
+    long promoClass;
+    await using(var db=new CheckDbContext(options)){
+        var template=await db.LopHoc.AsNoTracking().SingleAsync(x=>x.Id==classA);
+        var cls=new LopHoc();db.LopHoc.Add(cls);db.Entry(cls).CurrentValues.SetValues(template);
+        cls.Id=0;cls.RowVersion=[];cls.MaLop="PROMO_STACK";cls.TenLop="Cộng dồn ưu đãi";cls.HocPhiApDung=1000000;cls.TrangThai="DANG_TUYEN_SINH";
+        cls.MoDangKyLuc=BusinessClock.Now.AddDays(-1);cls.DongDangKyLuc=BusinessClock.Now.AddDays(300);cls.NgayKhaiGiangDuKien=BusinessClock.Today.AddDays(310);
+        await db.SaveChangesAsync();promoClass=cls.Id;
+        var slot=await db.BuoiHoc.AsNoTracking().FirstAsync(x=>x.LopHocId==classA);
+        var session=new BuoiHoc();db.BuoiHoc.Add(session);db.Entry(session).CurrentValues.SetValues(slot);
+        session.Id=0;session.RowVersion=[];session.LopHocId=cls.Id;session.BatDau=BusinessClock.Now.AddDays(310);session.KetThuc=session.BatDau.Add(slot.KetThuc-slot.BatDau);session.TrangThai="DA_XEP_LICH";
+        foreach(var spec in new[]{("AUTO10",true,10m),("PRIVATE10",false,10m),("PRIVATE100",false,100m)})
+            db.KhuyenMai.Add(new(){MaKhuyenMai=spec.Item1,TenKhuyenMai=spec.Item1,TuDongApDung=spec.Item2,KhoaApDungId=courseId,NhomKhoanThu="HOC_PHI",LoaiGiam="PHAN_TRAM",GiaTriGiam=spec.Item3,TongLuot=100,BatDau=BusinessClock.Now.AddDays(-1),KetThuc=BusinessClock.Now.AddDays(30),TrangThai="HOAT_DONG"});
+        await db.SaveChangesAsync();
+    }
+    var publicOffers=await Call("GET","/api/khuyen-mai");
+    if(publicOffers.ToJsonString().Contains("PRIVATE"))throw new Exception("Private vouchers leaked to public catalog");
+    var noCode=await Call("POST","/api/dang-ky/bao-gia",new QuoteRequest(studentId,promoClass,null),token:memberToken);
+    if(noCode["tongPhaiTra"]!.GetValue<decimal>()!=900000)throw new Exception("Public discount not automatic");
+    var stacked=await Call("POST","/api/dang-ky/bao-gia",new QuoteRequest(studentId,promoClass,"PRIVATE10"),token:memberToken);
+    if(stacked["tongPhaiTra"]!.GetValue<decimal>()!=800000||stacked["giamMaCaNhan"]!.GetValue<decimal>()!=100000)throw new Exception("10% + 10% must equal 20% of original");
+    var capped=await Call("POST","/api/dang-ky/bao-gia",new QuoteRequest(studentId,promoClass,"PRIVATE100"),token:memberToken);
+    if(capped["tongPhaiTra"]!.GetValue<decimal>()!=0)throw new Exception("Discount must not exceed original");
+    await Call("POST","/api/dang-ky/bao-gia",new QuoteRequest(studentId,promoClass,"AUTO10"),400,memberToken);
+    var stackRequest=new EnrollRequest(studentId,promoClass,memberId,"stack-public-private-01",MaGiamHocPhi:"PRIVATE10");
+    var stackEnroll=await Call("POST","/api/dang-ky",stackRequest,token:memberToken);
+    await Call("POST","/api/dang-ky",stackRequest,token:memberToken);
+    await using(var db=new CheckDbContext(options)){
+        var id=Id(stackEnroll);var line=await db.KhoanThuDangKy.SingleAsync(x=>x.DangKyId==id&&x.LoaiKhoan=="HOC_PHI");
+        if(line.ThanhTienChot!=800000||line.TienGiamChot!=200000||await db.ApDungUuDai.CountAsync(x=>x.DangKyId==id)!=2)throw new Exception("Final invoice and two discount snapshots differ from quote");
+    }
     if(args.Contains("--web-e2e")) { Console.WriteLine("WEB_E2E_READY: temporary SQL test host at 5199"); await Task.Delay(TimeSpan.FromSeconds(90)); }
     await Call("POST","/api/tai-khoan/dang-xuat",expected:204,token:memberToken);
     await Call("GET","/api/tai-khoan/toi",expected:401,token:memberToken);

@@ -73,6 +73,17 @@ builder.Services.AddHostedService<ExpiryWorker>();
 
 
 var app=builder.Build();
+if(args.Contains("--upgrade-promotions"))
+{
+    using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();
+    await MainDatabaseSetup.Backup(db,app.Environment.ContentRootPath);
+    await db.Database.ExecuteSqlRawAsync(await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","008_TachUuDaiCongKhai.sql")));
+    var junior=await db.KhoaHoc.FirstOrDefaultAsync(x=>x.CapDo=="JUNIOR"&&x.TrangThai=="HOAT_DONG");
+    if(junior!=null&&!await db.KhuyenMai.AnyAsync(x=>x.MaKhuyenMai=="PUBLIC_JUNIOR10")){
+        var now=BusinessClock.Now;db.KhuyenMai.Add(new(){MaKhuyenMai="PUBLIC_JUNIOR10",TenKhuyenMai="Ưu đãi khóa Junior 10%",TuDongApDung=true,KhoaApDungId=junior.Id,NhomKhoanThu="HOC_PHI",LoaiGiam="PHAN_TRAM",GiaTriGiam=10,TongLuot=int.MaxValue,BatDau=now.AddDays(-1),KetThuc=now.AddDays(120),TrangThai="HOAT_DONG"});await db.SaveChangesAsync();
+    }
+    Console.WriteLine("Đã tách ưu đãi công khai và mã cá nhân; không sửa phiếu đăng ký cũ.");return;
+}
 if(args.Contains("--reset-main-passwords"))
 {
     using var scope=app.Services.CreateScope();await MainPasswordReset.Run(scope.ServiceProvider.GetRequiredService<MyThuatDbContext>(),app.Environment.ContentRootPath);return;
@@ -94,6 +105,7 @@ if(args.Contains("--prepare-main"))
     await MainDatabaseSetup.Backup(db,app.Environment.ContentRootPath);
     var sql=await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","007_WebsiteMain.sql"));
     await db.Database.ExecuteSqlRawAsync(sql);
+    await db.Database.ExecuteSqlRawAsync(await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","008_TachUuDaiCongKhai.sql")));
     await MainData.Seed(db,app.Environment.ContentRootPath);await MainDataExtras.Seed(db);await MainDataReport.Save(db,app.Environment.ContentRootPath);return;
 }
 if(args.Contains("--check-main"))

@@ -80,6 +80,7 @@ public sealed class ManagementValidation(MyThuatDbContext db,AccessService acces
                 if(m.TrangThai=="HOAT_DONG"&&m.XacNhanThanhVienLuc is null)m.XacNhanThanhVienLuc=BusinessClock.Now;
                 break;
             case KhuyenMai p:
+                ApiError.Require(!p.TuDongApDung||(p.KhoaApDungId!=null&&p.NhomKhoanThu=="HOC_PHI"&&p.SoNgayTuXacNhanTV==null),"Ưu đãi công khai phải thuộc một khóa và áp dụng cho mọi người.");
                 ApiError.Require(access.User.IsInRole("QUAN_TRI"),"Quản trị duyệt ưu đãi.",403);
                 ApiError.Require(p.NhomKhoanThu is "HOC_PHI" or "HOA_CU"&&p.LoaiGiam is "PHAN_TRAM" or "SO_TIEN"
                     &&p.GiaTriGiam>=0&&(p.LoaiGiam!="PHAN_TRAM"||p.GiaTriGiam<=100)&&p.TongLuot>0&&p.BatDau<p.KetThuc,"Ưu đãi không hợp lệ.");
