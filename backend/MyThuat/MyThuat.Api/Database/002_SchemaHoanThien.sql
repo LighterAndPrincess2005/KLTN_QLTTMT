@@ -1,3 +1,26 @@
+CREATE TABLE [BaiViet] (
+    [Id] bigint NOT NULL IDENTITY,
+    [Slug] nvarchar(180) NOT NULL,
+    [TieuDe] nvarchar(250) NOT NULL,
+    [ChuDe] nvarchar(100) NOT NULL,
+    [AnhBia] nvarchar(1000) NOT NULL,
+    [TomTat] nvarchar(2000) NOT NULL,
+    [NoiDungJson] nvarchar(max) NOT NULL,
+    [BaiThucHanh] nvarchar(max) NOT NULL,
+    [Nguon] nvarchar(1000) NOT NULL,
+    [ThuVienJson] nvarchar(max) NOT NULL,
+    [TrangThai] nvarchar(20) NOT NULL,
+    [DangLuc] datetime2 NULL,
+    [NguoiSuaId] bigint NOT NULL,
+    [CreatedAt] datetime2 NOT NULL,
+    [UpdatedAt] datetime2 NOT NULL,
+    [RowVersion] rowversion NOT NULL,
+    CONSTRAINT [PK_BaiViet] PRIMARY KEY ([Id]),
+    CONSTRAINT [CK_BaiViet_Json] CHECK (ISJSON([NoiDungJson])=1 AND ISJSON([ThuVienJson])=1 AND [TrangThai] IN ('NHAP','DA_DANG','AN'))
+);
+GO
+
+
 CREATE TABLE [GiaoVien] (
     [Id] bigint NOT NULL IDENTITY,
     [MaGiaoVien] varchar(20) NOT NULL,
@@ -85,6 +108,23 @@ CREATE TABLE [PhongHoc] (
 GO
 
 
+CREATE TABLE [GioiThieuGiaoVien] (
+    [Id] bigint NOT NULL IDENTITY,
+    [GiaoVienId] bigint NOT NULL,
+    [AnhDaiDien] nvarchar(1000) NOT NULL,
+    [GioiThieu] nvarchar(3000) NOT NULL,
+    [KhuVuc] nvarchar(200) NOT NULL,
+    [TacPhamJson] nvarchar(max) NOT NULL,
+    [CongKhai] bit NOT NULL,
+    [CreatedAt] datetime2 NOT NULL,
+    [UpdatedAt] datetime2 NOT NULL,
+    [RowVersion] rowversion NOT NULL,
+    CONSTRAINT [PK_GioiThieuGiaoVien] PRIMARY KEY ([Id]),
+    CONSTRAINT [FK_GioiThieuGiaoVien_GiaoVien_GiaoVienId] FOREIGN KEY ([GiaoVienId]) REFERENCES [GiaoVien] ([Id])
+);
+GO
+
+
 CREATE TABLE [HocVien] (
     [Id] bigint NOT NULL IDENTITY,
     [MaHocVien] varchar(20) NOT NULL,
@@ -134,6 +174,23 @@ CREATE TABLE [KhoaHoc] (
     CONSTRAINT [CK_KhoaHoc_DuLieu] CHECK ([SoBuoi] > 0 AND [SoTietMoiBuoi] > 0 AND [PhutMoiTiet] > 0 AND [HocPhi] >= 0 AND [PhienBan] > 0 AND ([TuoiToiThieu] IS NULL OR [TuoiToiThieu] >= 0)),
     CONSTRAINT [FK_KhoaHoc_KhoaHoc_KhoaGocId] FOREIGN KEY ([KhoaGocId]) REFERENCES [KhoaHoc] ([Id]),
     CONSTRAINT [FK_KhoaHoc_LoaiKhoaHoc_LoaiKhoaHocId] FOREIGN KEY ([LoaiKhoaHocId]) REFERENCES [LoaiKhoaHoc] ([Id])
+);
+GO
+
+
+CREATE TABLE [GioiThieuKhoaHoc] (
+    [Id] bigint NOT NULL IDENTITY,
+    [KhoaHocId] bigint NOT NULL,
+    [AnhDaiDien] nvarchar(1000) NOT NULL,
+    [DauRaJson] nvarchar(max) NOT NULL,
+    [HoaCuBaoGom] nvarchar(max) NOT NULL,
+    [CanChuanBi] nvarchar(max) NOT NULL,
+    [ThanhPhamJson] nvarchar(max) NOT NULL,
+    [CreatedAt] datetime2 NOT NULL,
+    [UpdatedAt] datetime2 NOT NULL,
+    [RowVersion] rowversion NOT NULL,
+    CONSTRAINT [PK_GioiThieuKhoaHoc] PRIMARY KEY ([Id]),
+    CONSTRAINT [FK_GioiThieuKhoaHoc_KhoaHoc_KhoaHocId] FOREIGN KEY ([KhoaHocId]) REFERENCES [KhoaHoc] ([Id])
 );
 GO
 
@@ -623,6 +680,7 @@ CREATE TABLE [ThanhVien] (
     [Id] bigint NOT NULL IDENTITY,
     [MaThanhVien] varchar(20) NOT NULL,
     [HoTen] nvarchar(150) NOT NULL,
+    [NgaySinh] date NULL,
     [DienThoai] varchar(25) NOT NULL,
     [Email] nvarchar(254) NULL,
     [DiaChi] nvarchar(300) NULL,
@@ -640,6 +698,30 @@ CREATE TABLE [ThanhVien] (
     [RowVersion] rowversion NOT NULL,
     CONSTRAINT [PK_ThanhVien] PRIMARY KEY ([Id]),
     CONSTRAINT [FK_ThanhVien_TaiKhoan_NguoiTuVan] FOREIGN KEY ([NguoiTuVan]) REFERENCES [TaiKhoan] ([Id])
+);
+GO
+
+
+CREATE TABLE [TuVan] (
+    [Id] bigint NOT NULL IDENTITY,
+    [MaTraCuu] nvarchar(40) NOT NULL,
+    [KhoaTraCuuHash] nvarchar(64) NOT NULL,
+    [ThanhVienId] bigint NULL,
+    [KhoaHocId] bigint NULL,
+    [HoTen] nvarchar(150) NOT NULL,
+    [Email] nvarchar(254) NOT NULL,
+    [DienThoai] nvarchar(25) NULL,
+    [ChuDe] nvarchar(200) NOT NULL,
+    [TrangThai] nvarchar(20) NOT NULL,
+    [GuiLuc] datetime2 NOT NULL,
+    [DocLuc] datetime2 NULL,
+    [NguoiXuLyId] bigint NULL,
+    [CreatedAt] datetime2 NOT NULL,
+    [UpdatedAt] datetime2 NOT NULL,
+    [RowVersion] rowversion NOT NULL,
+    CONSTRAINT [PK_TuVan] PRIMARY KEY ([Id]),
+    CONSTRAINT [FK_TuVan_KhoaHoc_KhoaHocId] FOREIGN KEY ([KhoaHocId]) REFERENCES [KhoaHoc] ([Id]),
+    CONSTRAINT [FK_TuVan_ThanhVien_ThanhVienId] FOREIGN KEY ([ThanhVienId]) REFERENCES [ThanhVien] ([Id])
 );
 GO
 
@@ -680,11 +762,31 @@ CREATE TABLE [YeuCauThayDoi] (
 GO
 
 
+CREATE TABLE [TinNhanTuVan] (
+    [Id] bigint NOT NULL IDENTITY,
+    [TuVanId] bigint NOT NULL,
+    [NoiDung] nvarchar(4000) NOT NULL,
+    [TuNhanVien] bit NOT NULL,
+    [TaiKhoanId] bigint NULL,
+    [GuiLuc] datetime2 NOT NULL,
+    [CreatedAt] datetime2 NOT NULL,
+    [UpdatedAt] datetime2 NOT NULL,
+    [RowVersion] rowversion NOT NULL,
+    CONSTRAINT [PK_TinNhanTuVan] PRIMARY KEY ([Id]),
+    CONSTRAINT [FK_TinNhanTuVan_TuVan_TuVanId] FOREIGN KEY ([TuVanId]) REFERENCES [TuVan] ([Id])
+);
+GO
+
+
 CREATE UNIQUE INDEX [IX_ApDungUuDai_DangKyId_NhomKhoanThu] ON [ApDungUuDai] ([DangKyId], [NhomKhoanThu]);
 GO
 
 
 CREATE INDEX [IX_ApDungUuDai_KhuyenMaiId] ON [ApDungUuDai] ([KhuyenMaiId]);
+GO
+
+
+CREATE UNIQUE INDEX [IX_BaiViet_Slug] ON [BaiViet] ([Slug]);
 GO
 
 
@@ -833,6 +935,14 @@ GO
 
 
 CREATE UNIQUE INDEX [IX_GiaoVien_MaGiaoVien] ON [GiaoVien] ([MaGiaoVien]);
+GO
+
+
+CREATE UNIQUE INDEX [IX_GioiThieuGiaoVien_GiaoVienId] ON [GioiThieuGiaoVien] ([GiaoVienId]);
+GO
+
+
+CREATE UNIQUE INDEX [IX_GioiThieuKhoaHoc_KhoaHocId] ON [GioiThieuKhoaHoc] ([KhoaHocId]);
 GO
 
 
@@ -1025,6 +1135,26 @@ GO
 
 
 CREATE INDEX [IX_ThanhVien_NguoiTuVan] ON [ThanhVien] ([NguoiTuVan]);
+GO
+
+
+CREATE INDEX [IX_TinNhanTuVan_TuVanId_GuiLuc] ON [TinNhanTuVan] ([TuVanId], [GuiLuc]);
+GO
+
+
+CREATE INDEX [IX_TuVan_KhoaHocId] ON [TuVan] ([KhoaHocId]);
+GO
+
+
+CREATE UNIQUE INDEX [IX_TuVan_MaTraCuu] ON [TuVan] ([MaTraCuu]);
+GO
+
+
+CREATE INDEX [IX_TuVan_ThanhVienId] ON [TuVan] ([ThanhVienId]);
+GO
+
+
+CREATE INDEX [IX_TuVan_TrangThai_GuiLuc] ON [TuVan] ([TrangThai], [GuiLuc]);
 GO
 
 

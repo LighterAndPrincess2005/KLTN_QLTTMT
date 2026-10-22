@@ -46,7 +46,7 @@ builder.Services.AddAuthorization(o=>{
     foreach(var p in Enum.GetValues<Permission>().Where(x=>x!=Permission.None))o.AddPolicy(p.ToString(),b=>b.RequireAuthenticatedUser().RequireAssertion(c=>
         p is Permission.TaiKhoan or Permission.NhatKy?c.User.IsInRole("QUAN_TRI"):c.User.Has(p)));
 });
-builder.Services.AddRateLimiter(o=>o.AddFixedWindowLimiter("login",v=>{v.PermitLimit=1000;v.Window=TimeSpan.FromMinutes(1);}));
+builder.Services.AddRateLimiter(o=>{o.AddFixedWindowLimiter("login",v=>{v.PermitLimit=1000;v.Window=TimeSpan.FromMinutes(1);});o.AddFixedWindowLimiter("consultation",v=>{v.PermitLimit=1000;v.Window=TimeSpan.FromMinutes(1);});});
 var app=builder.Build();
 app.Use(async(ctx,next)=>{try{await next(ctx);}catch(Exception ex){ctx.Response.StatusCode=ex is ApiError e?e.Status:ex is DbUpdateException?409:500;await ctx.Response.WriteAsJsonAsync(new{error=ex.Message});}});
 app.UseRouting();app.UseRateLimiter();app.UseAuthentication();app.UseAuthorization();app.MapControllers();
@@ -131,6 +131,12 @@ try
     }
     await Call("GET",$"/api/hoc-tap/buoi/{Id(listB[0]!)}/danh-sach",expected:403,token:teacherToken);
     var request=new EnrollRequest(studentId,classA,memberId,"enroll-key-0001");
+    await using(var db=new CheckDbContext(options)){
+        var selfServiceStudent=await db.HocVien.SingleAsync(x=>x.Id==studentId);
+        selfServiceStudent.NgayDanhGiaDauVao=null;selfServiceStudent.GiaoVienDanhGia=null;selfServiceStudent.CapDoDeXuat=null;
+        await db.SaveChangesAsync();
+    }
+    // A valid profile must be able to enroll without waiting for an entry-assessment approval.
     var enrollment=await Call("POST","/api/dang-ky",request,token:memberToken);var enrollmentId=Id(enrollment);
     var replay=await Call("POST","/api/dang-ky",request,token:memberToken);if(Id(replay)!=enrollmentId)throw new Exception("Idempotency failed");
     await Call("POST","/api/dang-ky",request with{HocVienId=secondStudent},409,memberToken);
@@ -207,22 +213,80 @@ try
     if(occupied["soChoDaGiu"]!.GetValue<int>()!=1)throw new Exception("Public occupied seats do not match confirmed registration");
     var ownEnrollments=await Call("GET","/api/dang-ky/toi",token:memberToken);
     if(ownEnrollments.AsArray().Count!=3)throw new Exception("Missing member enrollment history");
+    await using(var db=new CheckDbContext(options)){
+        (await db.LopHoc.SingleAsync(x=>x.Id==classA)).DongDangKyLuc=BusinessClock.Now.AddMinutes(-1);
+        (await db.LopHoc.SingleAsync(x=>x.Id==classB)).MoDangKyLuc=BusinessClock.Now.AddDays(1);
+        await db.SaveChangesAsync();
+    }
+    var hiddenClasses=await Call("GET","/api/lop-hoc?trang=1&kichThuoc=100");
+    if(hiddenClasses["duLieu"]!.AsArray().Any(x=>Id(x!)==classA||Id(x!)==classB))throw new Exception("Closed or not-yet-open class leaked into public catalog");
+    var retainedHistory=await Call("GET","/api/dang-ky/toi",token:memberToken);
+    if(retainedHistory.AsArray().Count!=3)throw new Exception("Public filtering removed member enrollment history");
     await Call("GET","/api/dang-ky/toi",expected:403,token:teacherToken);
-    await Call("POST","/api/tai-khoan/dang-ky",new SignupRequest("outsider","MyThuatTest2026!","Thành viên mới","0900000006",null));
+    await Call("POST","/api/tai-khoan/dang-ky",new SignupRequest("invalidbirth","MyThuatTest2026!","Ngày sinh không hợp lệ","0900000006",null,BusinessClock.Today.AddDays(1)),400);
+    await Call("POST","/api/tai-khoan/dang-ky",new SignupRequest("outsider","MyThuatTest2026!","Thành viên mới","0900000006",null,new DateOnly(1990,5,12)));
     var outsider=await Login("outsider");
+    var outsiderProfile=await Call("GET","/api/tai-khoan/toi",token:outsider);
+    if(outsiderProfile["hoTen"]?.GetValue<string>()!="Thành viên mới"||outsiderProfile["dienThoai"]?.GetValue<string>()!="0900000006")throw new Exception("Missing account contact autofill fields");
+    if(outsiderProfile["ngaySinh"]?.GetValue<string>()!="1990-05-12")throw new Exception("Signup date of birth was not persisted on the member account");
     var outsiders=await Call("GET","/api/dang-ky/toi",token:outsider);
     if(outsiders.AsArray().Count!=0)throw new Exception("Other member enrollments leaked");
     await Call("POST","/api/hoc-vien/toi",new StudentRequest("Hồ sơ mới",BusinessClock.Today.AddYears(-10),"Giám hộ","0900000006","GIAM_HO",null),token:outsider);
     var pendingStudents=await Call("GET","/api/hoc-vien/toi",token:outsider);
-    if(pendingStudents[0]!["xacNhanLuc"] is not null)throw new Exception("New student automatically verified");
+    if(pendingStudents[0]!["xacNhanLuc"] is null||pendingStudents[0]!["trangThai"]?.GetValue<string>()!="HOAT_DONG"||pendingStudents[0]!["quyenDaiDien"]?.GetValue<string>()!="DAY_DU")throw new Exception("Self-service student should be active with own registration rights");
     await Call("GET","/api/bao-cao/tong-quan",token:adminToken);
     await Call("GET","/api/bao-cao/nhat-ky",expected:403,token:memberToken);
+    var accountEdit=new UpdateMemberRequest("Thành viên đã sửa","0900000006",null,new DateOnly(1990,5,12),outsiderProfile["rowVersion"]!.GetValue<string>());
+    await Call("PUT","/api/tai-khoan/toi",accountEdit,204,outsider);
+    await Call("PUT","/api/tai-khoan/toi",accountEdit,409,outsider);
+    var editId=pendingStudents[0]!["hocVienId"]!.GetValue<long>();
+    var studentEdit=new UpdateStudentRequest("Hồ sơ đã sửa",BusinessClock.Today.AddYears(-10),"Thành viên mới","0900000006",null,pendingStudents[0]!["rowVersion"]!.GetValue<string>());
+    await Call("PUT","/api/hoc-vien/toi/"+editId,studentEdit,204,outsider);
+    await Call("PUT","/api/hoc-vien/toi/"+editId,studentEdit,409,outsider);
+    await Call("PUT","/api/hoc-vien/toi/"+editId,studentEdit,403,adminToken);
+    var updatedStudents=await Call("GET","/api/hoc-vien/toi",token:outsider);
+    if(updatedStudents[0]!["hoTen"]!.GetValue<string>()!="Hồ sơ đã sửa"||updatedStudents[0]!["canSua"]!.GetValue<bool>()!=true)throw new Exception("Student edit did not persist");
+    var memberStudents=await Call("GET","/api/hoc-vien/toi",token:memberToken);
+    var enrolledStudent=memberStudents.AsArray().First(x=>x!["hocVienId"]!.GetValue<long>()==studentId)!;
+    await Call("PUT","/api/hoc-vien/toi/"+studentId,new UpdateStudentRequest("Không được lưu",BusinessClock.Today,"Liên hệ","0900000003",null,enrolledStudent["rowVersion"]!.GetValue<string>()),400,memberToken);
+    await using(var db=new CheckDbContext(options)){
+        var link=await db.DaiDienHocVien.SingleAsync(x=>x.HocVienId==editId);link.QuyenDaiDien="XEM";await db.SaveChangesAsync();
+    }
+    await Call("PUT","/api/hoc-vien/toi/"+editId,studentEdit,403,outsider);
+    await using(var db=new CheckDbContext(options)){
+        var link=await db.DaiDienHocVien.SingleAsync(x=>x.HocVienId==editId);link.QuyenDaiDien="DAY_DU";await db.SaveChangesAsync();
+    }
+    var adviceReceipt=await Call("POST","/api/tu-van",new ConsultationRequest("Khách kiểm thử","test@example.invalid",null,"Hỏi khóa học","Tôi muốn học cuối tuần.",null));
+    var lookupRequest=new ConsultationAccess(adviceReceipt["maTraCuu"]!.GetValue<string>(),adviceReceipt["khoaTraCuu"]!.GetValue<string>());
+    await Call("POST","/api/tu-van/tra-cuu",lookupRequest);
+    await Call("POST","/api/tu-van/tra-cuu",lookupRequest with{KhoaTraCuu="wrong"},404);
+    await Call("GET","/api/tu-van",expected:401);
+    await Call("GET","/api/tu-van",expected:403,token:outsider);
+    var adviceList=await Call("GET","/api/tu-van",token:adminToken);var adviceId=adviceList["duLieu"]![0]!["id"]!.GetValue<long>();
+    var adviceRead=await Call("GET","/api/tu-van/"+adviceId,token:adminToken);
+    if(adviceRead["trangThai"]!.GetValue<string>()!="DA_DOC")throw new Exception("Consultation read state not persisted");
+    var reply=new ConsultationMessage("Trung tâm đã tiếp nhận.",adviceRead["rowVersion"]!.GetValue<string>());
+    await Call("POST","/api/tu-van/"+adviceId+"/tra-loi",reply,204,adminToken);
+    await Call("POST","/api/tu-van/"+adviceId+"/tra-loi",reply,409,adminToken);
+    var adviceReply=await Call("POST","/api/tu-van/tra-cuu",lookupRequest);
+    if(adviceReply["tinNhan"]!.AsArray().Count!=2)throw new Exception("Consultation reply missing");
+    await Call("POST","/api/tu-van/bo-sung",new ConsultationFollowup(lookupRequest.MaTraCuu,lookupRequest.KhoaTraCuu,"Tôi cảm ơn."),204);
+    var publicArticles=await Call("GET","/api/noi-dung/bai-viet");if(publicArticles.AsArray().Count!=0)throw new Exception("Unexpected test article");
+    var article=new ArticleRequest("bai-thu","Bài viết thử","Chất liệu","/bui/watercolor.jpg","Mô tả thử",[new("Quan sát","Nội dung hướng dẫn.")],"Thực hành.","",[],"NHAP",null);
+    var articleSaved=await Call("PUT","/api/noi-dung/quan-ly/bai-viet/0",article,token:adminToken);
+    await Call("GET","/api/noi-dung/bai-viet/bai-thu",expected:404);
+    await Call("PUT","/api/noi-dung/quan-ly/bai-viet/"+articleSaved["id"],article with{Status="DA_DANG",RowVersion=articleSaved["rowVersion"]!.GetValue<string>()},token:adminToken);
+    await Call("GET","/api/noi-dung/bai-viet/bai-thu");
+    await Call("PUT","/api/noi-dung/quan-ly/bai-viet/0",article,403,outsider);
     if(args.Contains("--web-e2e")) { Console.WriteLine("WEB_E2E_READY: temporary SQL test host at 5199"); await Task.Delay(TimeSpan.FromSeconds(90)); }
     await Call("POST","/api/tai-khoan/dang-xuat",expected:204,token:memberToken);
     await Call("GET","/api/tai-khoan/toi",expected:401,token:memberToken);
     var fresh=await Login("member");
-    await Call("POST","/api/tai-khoan/doi-mat-khau",new PasswordRequest("MyThuatTest2026!","MyThuatChanged2026!"),204,fresh);
+    await Call("POST","/api/tai-khoan/doi-mat-khau",new PasswordRequest("wrong-current","Bui@2026"),400,fresh);
+    await Call("POST","/api/tai-khoan/doi-mat-khau",new PasswordRequest("MyThuatTest2026!","short"),400,fresh);
+    await Call("POST","/api/tai-khoan/doi-mat-khau",new PasswordRequest("MyThuatTest2026!","Bui@2026"),204,fresh);
     await Call("GET","/api/tai-khoan/toi",expected:401,token:fresh);
+    await Call("POST","/api/tai-khoan/dang-nhap",new LoginRequest("member","Bui@2026"));
     await using(var db=new CheckDbContext(options))
     {
         if(await db.TaiKhoan.AnyAsync(x=>x.PasswordHash=="MyThuatTest2026!"))throw new Exception("Plain text password stored");

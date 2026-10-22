@@ -1,0 +1,4 @@
+import {useEffect,useState} from 'react';
+import {websiteApi} from '../services/websiteService';
+import {demoMode} from '../services/demo';
+export function DebtSummary({id}:{id:number}){const [rows,setRows]=useState<{loaiKhoan:string;thanhTienChot:number;daThanhToan:number;conThieu:number}[]>([]),[error,setError]=useState('');useEffect(()=>{if(demoMode)return;let alive=true;websiteApi.debt(id).then(r=>{if(alive)setRows(r.khoanThu)}).catch(e=>{if(alive)setError(String(e))});return()=>{alive=false}},[id]);return demoMode?null:error?<p className="error-note">Chưa tải được công nợ.</p>:<div className="debt-row">{rows.map((r,i)=><div key={i}><p>{r.loaiKhoan==='HOC_PHI'?'Học phí':'Họa cụ'}: {r.thanhTienChot.toLocaleString('vi-VN')}đ</p><p>Đã thanh toán: {r.daThanhToan.toLocaleString('vi-VN')}đ</p><b>Còn phải trả: {r.conThieu.toLocaleString('vi-VN')}đ</b></div>)}<p>Liên hệ thu ngân để thực hiện thanh toán. Không tự xác nhận đã trả tiền trên trình duyệt.</p></div>}

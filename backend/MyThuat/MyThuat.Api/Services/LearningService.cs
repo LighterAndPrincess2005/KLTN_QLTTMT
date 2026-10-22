@@ -13,7 +13,7 @@ public sealed class LearningService(MyThuatDbContext db,AccessService access,Pol
         return await db.DiemDanh.AsNoTracking().Where(x=>x.BuoiHocId==session&&x.TrangThai!="HUY_BO"&&x.DangKy!.TrangThai=="DA_XAC_NHAN")
             .OrderBy(x=>x.DangKy!.HoSoTheoHoc!.HocVien!.HoTen)
             .Select(x=>new {x.Id,x.DangKyId,HocVienId=x.DangKy!.HoSoTheoHoc!.HocVienId,HoTen=x.DangKy.HoSoTheoHoc.HocVien!.HoTen,
-                LuuY=x.DangKy.HoSoTheoHoc.HocVien.LuuYHoTroHocTap,x.LoaiThamGia,x.TrangThai,x.BaoNghiLuc,x.PhutThamDu,x.NhanXet,x.DiemSanPham,x.SanPhamUrl,x.RowVersion}).ToListAsync(ct);
+                NgaySinh=x.DangKy.HoSoTheoHoc.HocVien.NgaySinh,LuuY=x.DangKy.HoSoTheoHoc.HocVien.LuuYHoTroHocTap,x.LoaiThamGia,x.TrangThai,x.BaoNghiLuc,x.PhutThamDu,x.NhanXet,x.DiemSanPham,x.SanPhamUrl,x.RowVersion}).ToListAsync(ct);
     }
     public async Task<object> Attend(long id,AttendRequest r,CancellationToken ct)
     {
@@ -28,7 +28,7 @@ public sealed class LearningService(MyThuatDbContext db,AccessService access,Pol
         ApiError.Require(r.PhutThamDu is null||r.PhutThamDu>=0&&r.PhutThamDu<=(b.KetThuc-b.BatDau).TotalMinutes,"Số phút tham dự không hợp lệ.");
         ApiError.Require(r.TrangThai!="CO_MAT"||r.PhutThamDu>0,"Có mặt phải ghi số phút tham dự.");
         ApiError.Require(record.TrangThai!="HUY_BO","Điểm danh này đã hủy.");
-        if(!string.IsNullOrWhiteSpace(r.SanPhamUrl))ApiError.Require(Uri.TryCreate(r.SanPhamUrl,UriKind.Absolute,out var uri)&&uri.Scheme is "http" or "https","Liên kết sản phẩm cần dùng HTTP/HTTPS.");
+        if(!string.IsNullOrWhiteSpace(r.SanPhamUrl))ApiError.Require((r.SanPhamUrl.StartsWith("/bui/")||r.SanPhamUrl.StartsWith("/api/tep/cong-khai/"))&&!r.SanPhamUrl.Contains("..")&&!r.SanPhamUrl.Contains('\\')||Uri.TryCreate(r.SanPhamUrl,UriKind.Absolute,out var uri)&&uri.Scheme is "http" or "https","Liên kết sản phẩm không hợp lệ.");
         record.TrangThai=r.TrangThai;record.PhutThamDu=r.PhutThamDu;record.NhanXet=r.NhanXet;
         record.DiemSanPham=r.DiemSanPham;record.SanPhamUrl=r.SanPhamUrl;record.NguoiGhi=access.User.AccountId();record.GhiLuc=now;
         var makeup=await db.HocBu.SingleOrDefaultAsync(x=>x.DiemDanhBuId==id,ct);

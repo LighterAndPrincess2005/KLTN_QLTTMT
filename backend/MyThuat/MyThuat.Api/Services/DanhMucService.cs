@@ -11,7 +11,9 @@ public sealed class DanhMucService(MyThuatDbContext db)
         .Where(x => x.TrangThai == "HOAT_DONG" && x.LoaiKhoaHoc!.TrangThai == "HOAT_DONG");
     private IQueryable<LopHoc> LopCongBo => db.LopHoc.AsNoTracking()
         .Where(x => x.TrangThai == "DANG_TUYEN_SINH" && x.KhoaHoc!.TrangThai == "HOAT_DONG"
-            && x.KhoaHoc.LoaiKhoaHoc!.TrangThai == "HOAT_DONG");
+            && x.KhoaHoc.LoaiKhoaHoc!.TrangThai == "HOAT_DONG"
+            && x.MoDangKyLuc<=BusinessClock.Now && x.DongDangKyLuc>BusinessClock.Now
+            && x.NgayKhaiGiangDuKien>=BusinessClock.Today);
 
     public async Task<List<LoaiKhoaHocDto>> LayLoai(CancellationToken ct) =>
         await db.LoaiKhoaHoc.AsNoTracking().Where(x => x.TrangThai == "HOAT_DONG")
@@ -53,6 +55,8 @@ public sealed class DanhMucService(MyThuatDbContext db)
             x.NgayKetThucDuKien, x.SoBuoiKeHoach, x.LichHocDuKien, x.SiSoToiDa,
             x.HocPhiApDung, x.MoDangKyLuc, x.DongDangKyLuc,
             db.DangKy.Count(d=>d.LopHocId==x.Id && (d.TrangThai=="DA_XAC_NHAN"
-                || (d.TrangThai=="CHO_THANH_TOAN" || d.TrangThai=="CHO_CHUYEN") && d.HanGiuCho>now)))); }
+                || (d.TrangThai=="CHO_THANH_TOAN" || d.TrangThai=="CHO_CHUYEN") && d.HanGiuCho>now)),
+            db.PhanCong.Where(p=>p.LopHocId==x.Id&&p.VaiTroTrongLop=="CHINH"&&p.TuNgay<=x.NgayKhaiGiangDuKien&&p.DenNgay>=x.NgayKhaiGiangDuKien).Select(p=>p.GiaoVien!.HoTen).FirstOrDefault(),
+            db.BuoiHoc.Where(b=>b.LopHocId==x.Id&&b.TrangThai!="DA_HUY").OrderBy(b=>b.BatDau).Select(b=>b.PhongHoc!.TenPhong).FirstOrDefault())); }
     public Task<LopHocDto?> LayLop(long id, CancellationToken ct) => ChieuLop(LopCongBo.Where(x => x.Id == id)).SingleOrDefaultAsync(ct);
 }

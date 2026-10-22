@@ -47,17 +47,16 @@ public sealed class EnrollmentService(MyThuatDbContext db,AccessService access,P
         ApiError.Require(cls.TrangThai=="DANG_TUYEN_SINH"&&cls.MoDangKyLuc<=now&&cls.DongDangKyLuc>now,"Lớp không trong thời gian tuyển sinh.",409);
         var course=await db.KhoaHoc.SingleAsync(x=>x.Id==cls.KhoaHocId,ct);
         ApiError.Require(course.TrangThai=="HOAT_DONG","Khóa không hoạt động.");
-        var student=await db.HocVien.SingleOrDefaultAsync(x=>x.Id==r.HocVienId&&x.TrangThai=="HOAT_DONG",ct)??throw new ApiError(400,"Học viên chưa được xác minh.");
-        var member=await db.ThanhVien.SingleOrDefaultAsync(x=>x.Id==r.NguoiDangKyId&&x.TrangThai=="HOAT_DONG",ct)??throw new ApiError(400,"Thành viên chưa được xác minh.");
+        var student=await db.HocVien.SingleOrDefaultAsync(x=>x.Id==r.HocVienId&&x.TrangThai=="HOAT_DONG",ct)??throw new ApiError(400,"Hồ sơ học viên không hoạt động.");
+        var member=await db.ThanhVien.SingleOrDefaultAsync(x=>x.Id==r.NguoiDangKyId&&x.TrangThai=="HOAT_DONG",ct)??throw new ApiError(400,"Tài khoản thành viên không hoạt động.");
         var link=await db.DaiDienHocVien.SingleOrDefaultAsync(x=>x.HocVienId==student.Id&&x.ThanhVienId==member.Id
             &&x.XacNhanLuc!=null&&x.HieuLucTu<=now&&(x.HieuLucDen==null||x.HieuLucDen>now),ct);
-        ApiError.Require(link is not null&&link.QuyenDaiDien is "DAY_DU" or "DANG_KY","Thiếu quyền đại diện đã xác minh.");
+        ApiError.Require(link is not null&&link.QuyenDaiDien is "DAY_DU" or "DANG_KY","Không có quyền đăng ký cho hồ sơ này.");
         var birthday=student.NgaySinh;var age=cls.NgayKhaiGiangDuKien.Year-birthday.Year;
         if(birthday.AddYears(age)>cls.NgayKhaiGiangDuKien)age--;
         ApiError.Require(course.TuoiToiThieu is null||age>=course.TuoiToiThieu,"Học viên chưa đủ tuổi tối thiểu. Không áp dụng tuổi tối đa.");
         ApiError.Require(age>=18||link!.QuanHe!="TU_BAN_THAN","Người dưới 18 tuổi cần người đại diện.");
-        ApiError.Require(student.NgayDanhGiaDauVao.HasValue&&student.GiaoVienDanhGia.HasValue
-            &&student.CapDoDeXuat==course.CapDo,"Cần đánh giá đầu vào và cấp độ đề xuất phù hợp trước khi đăng ký.");
+        // Entry assessment is advisory. Self-service enrollment does not wait for staff approval.
         await EnsureCapacity(cls,student.Id,ct);
         var rule=await policies.Current(ct);var settings=PolicySettings.Parse(rule.NoiDungJson);
         var first=await db.BuoiHoc.Where(x=>x.LopHocId==cls.Id&&x.TrangThai!="DA_HUY").MinAsync(x=>(DateTime?)x.BatDau,ct);
@@ -98,6 +97,7 @@ public sealed class EnrollmentService(MyThuatDbContext db,AccessService access,P
     private async Task Discount(DangKy enrollment,ThanhVien member,List<KhoanThuDangKy> charges,string group,string? code,CancellationToken ct)
     {
         if(string.IsNullOrWhiteSpace(code))return;
+        code=code.Trim().ToUpperInvariant();
         var now=BusinessClock.Now;
         var promo=await db.KhuyenMai.SingleOrDefaultAsync(x=>x.MaKhuyenMai==code&&x.TrangThai=="HOAT_DONG"&&x.BatDau<=now&&x.KetThuc>now,ct)
             ??throw new ApiError(400,"Mã ưu đãi không hiệu lực.");

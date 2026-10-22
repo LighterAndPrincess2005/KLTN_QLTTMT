@@ -5,6 +5,11 @@ namespace MyThuat.Api.Data;
 public class MyThuatDbContext(DbContextOptions<MyThuatDbContext> options) : DbContext(options)
 {
     public DbSet<LoaiKhoaHoc> LoaiKhoaHoc => Set<LoaiKhoaHoc>();
+    public DbSet<BaiViet> BaiViet=>Set<BaiViet>();
+    public DbSet<GioiThieuGiaoVien> GioiThieuGiaoVien=>Set<GioiThieuGiaoVien>();
+    public DbSet<GioiThieuKhoaHoc> GioiThieuKhoaHoc=>Set<GioiThieuKhoaHoc>();
+    public DbSet<TuVan> TuVan=>Set<TuVan>();
+    public DbSet<TinNhanTuVan> TinNhanTuVan=>Set<TinNhanTuVan>();
     public DbSet<KhoaHoc> KhoaHoc => Set<KhoaHoc>();
     public DbSet<NoiDungBuoi> NoiDungBuoi => Set<NoiDungBuoi>();
     public DbSet<LopHoc> LopHoc => Set<LopHoc>();
@@ -49,6 +54,7 @@ public class MyThuatDbContext(DbContextOptions<MyThuatDbContext> options) : DbCo
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+    WebsiteMapping.Configure(modelBuilder);
     {
         var e = modelBuilder.Entity<LoaiKhoaHoc>();
         e.ToTable("LoaiKhoaHoc");
@@ -208,6 +214,7 @@ public class MyThuatDbContext(DbContextOptions<MyThuatDbContext> options) : DbCo
     {
         var e = modelBuilder.Entity<ThanhVien>();
         e.ToTable("ThanhVien");
+        e.Property(x => x.NgaySinh).HasColumnType("date");
         e.HasKey(x => x.Id);
         e.Property(x => x.Id).HasColumnType("bigint").IsRequired();
         e.Property(x => x.MaThanhVien).HasColumnType("varchar(20)").IsRequired();

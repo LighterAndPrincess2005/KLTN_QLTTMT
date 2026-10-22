@@ -1,0 +1,77 @@
+/* Secondary actions remain links, with clear button affordances. */
+a.text-link,
+.md-reading-head>a,
+.md-observe figcaption>a,
+.student-art-footer>a,
+.course-page-actions>a:not(.btn),
+.study-guest>a,
+.program-detail>a,
+.gallery-head>a,
+.gallery-footnote>a,
+.course-link,
+.artwork-source,
+.md-source>a,
+.reading-practice>a{
+ display:inline-flex;align-items:center;justify-content:center;gap:10px;
+ width:fit-content;max-width:100%;min-height:46px;padding:12px 18px;
+ border:1px solid #a9cabc;border-radius:12px;background:#eaf3ec;
+ color:#185b47;font-size:14px;font-weight:700;line-height:1.6;
+ text-decoration:none;text-align:left;cursor:pointer;
+ box-shadow:0 3px 0 #184e3910;
+ transition:background .18s,border-color .18s,box-shadow .18s;
+}
+a.text-link:hover,.md-source>a:hover,.reading-practice>a:hover{
+ background:#dbece0;border-color:#4c8a70;box-shadow:0 5px 14px #184e391c;
+}
+.md-reading-head>a:hover,.md-observe figcaption>a:hover,.student-art-footer>a:hover,
+.course-page-actions>a:not(.btn):hover,.study-guest>a:hover,.program-detail>a:hover,
+.gallery-head>a:hover,.gallery-footnote>a:hover,.course-link:hover,.artwork-source:hover{background:#dbece0;border-color:#4c8a70;box-shadow:0 5px 14px #184e391c}
+.md-reading-head>a:focus-visible,.md-observe figcaption>a:focus-visible,.student-art-footer>a:focus-visible,
+.course-page-actions>a:focus-visible,.study-guest>a:focus-visible,.program-detail>a:focus-visible,
+.gallery-head>a:focus-visible,.gallery-footnote>a:focus-visible,.course-link:focus-visible,.artwork-source:focus-visible{outline:3px solid #b9552b;outline-offset:4px}
+/* The whole card is one link: its action label looks like a button, not a nested button. */
+.md-reading-card .md-read-link,.reading-index-card>div>span{
+ display:inline-flex;align-items:center;justify-content:center;gap:10px;align-self:flex-start;
+ width:fit-content;max-width:100%;min-height:44px;padding:10px 16px;
+ border:1px solid #a9cabc;border-radius:10px;background:#eaf3ec;color:#185b47;
+ font-size:13px;font-weight:700;line-height:1.6;
+}
+.md-reading-card:hover .md-read-link,.reading-index-card:hover>div>span,
+.md-reading-card:focus-visible .md-read-link,.reading-index-card:focus-visible>div>span{background:#216b55;border-color:#216b55;color:#fff}
+.md-reading-card:focus-visible,.reading-index-card:focus-visible{outline:3px solid #b9552b;outline-offset:4px}
+.md-reading-card{display:flex;flex-direction:column}.md-reading-card>div:last-child{display:flex;flex-direction:column;flex:1;align-items:flex-start}
+.md-reading-card .md-read-link{margin-top:auto}.md-reading-card>div:last-child>p{margin-bottom:22px}
+.md-reading-image{flex-shrink:0}.reading-index-card>div>span{margin-top:auto}
+/* Compact navigation stays compact, but no longer looks like ordinary copy. */
+.reading-toc>a{min-height:44px;padding:9px 12px;border:1px solid #cddbc7;border-radius:9px;background:#fffdf7;color:#285a45}
+.reading-toc>a:hover{background:#e0ecda;border-color:#75966c}
+.reading-toc>a:focus-visible,.reading-breadcrumb>a:focus-visible,.breadcrumbs>a:focus-visible,
+.study-home-link:focus-visible{outline:3px solid #b9552b;outline-offset:3px}
+.reading-breadcrumb>a,.breadcrumbs>a,.study-home-link{text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px}
+.lesson-outline summary,.public-faq summary,.learning-cancel summary,.study-pending summary{border:1px solid #cddbc7;border-radius:10px;padding:14px 16px;background:#f2f6ed;cursor:pointer;min-height:48px}
+.lesson-outline summary:hover,.public-faq summary:hover,.learning-cancel summary:hover,.study-pending summary:hover{background:#e4eedc;border-color:#7b9e72}
+.lesson-outline summary:focus-visible,.public-faq summary:focus-visible,.learning-cancel summary:focus-visible,.study-pending summary:focus-visible{outline:3px solid #b9552b;outline-offset:3px}
+.contact-grid a[href^="tel:"],.contact-grid a[href^="mailto:"]{display:inline-flex;align-items:center;min-height:44px;padding:8px 12px;border:1px solid #b5cbb6;border-radius:10px;background:#eaf3e8;color:#1f6047;overflow-wrap:anywhere;max-width:100%;font-size:clamp(14px,1.3vw,21px)}
+.contact-grid a:hover{background:#dcebd8}.contact-grid a:focus-visible{outline:3px solid #b9552b;outline-offset:3px}
+a.text-link:focus-visible,.md-source>a:focus-visible,.reading-practice>a:focus-visible,
+.reading-reference summary:focus-visible,.reading-reference>a:focus-visible{
+ outline:3px solid #b9552b;outline-offset:4px;
+}
+a.text-link svg,.reading-practice>a svg{flex-shrink:0}
+.md-source>a{margin:8px 6px;font-size:13px;vertical-align:middle}
+.md-source-action{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:24px;padding:18px 20px;background:#f7f8f0;border:1px solid #dce3d3;border-radius:14px}
+.md-source-action>span{font-size:14px;color:#435c4c}.md-source-action>small{flex-basis:100%;font-size:12px;color:#687760}
+.md-source-action>a{margin:0}.md-source-action svg{flex-shrink:0}
+.reading-practice>a{margin-top:23px;background:#216b55;color:#fff;border-color:#216b55;padding:13px 20px}
+.reading-practice>a:hover{background:#164e3d;color:#fff;border-color:#164e3d}
+.reading-reference{border:1px solid #d8ddcf;border-radius:14px;padding:0;background:#f3f4ec;overflow:hidden;font-size:14px;color:#344b3d}
+.reading-reference summary{display:flex;align-items:center;gap:10px;min-height:52px;padding:14px 18px;list-style:none;font-weight:700;color:#285a45;cursor:pointer}
+.reading-reference summary::-webkit-details-marker{display:none}
+.reading-reference summary::before{content:'+';display:grid;place-items:center;flex-shrink:0;width:24px;height:24px;border-radius:7px;background:#dfeadd;color:#20553f;font-size:20px;line-height:1}
+.reading-reference[open] summary::before{content:'−'}
+.reading-reference summary::after{content:'Mở';margin-left:auto;font-size:12px;font-weight:600;color:#52684e;white-space:nowrap}
+.reading-reference[open] summary::after{content:'Thu gọn'}
+.reading-reference summary:hover{background:#e5eddf}
+.reading-reference>a{display:block;margin:0 18px 18px;padding:12px 14px;border:1px solid #c6d7c4;border-radius:10px;background:#fffdf7;color:#236047;text-decoration:underline;text-underline-offset:3px;line-height:1.8}
+@media(max-width:600px){a.text-link,.reading-practice>a{padding:12px 15px}.md-source>a{margin-left:0;margin-right:0}.reading-reference summary{padding:13px 14px}.reading-reference>a{margin:0 14px 14px}}
+@media(prefers-reduced-motion:reduce){a.text-link,.md-source>a,.reading-practice>a{transition:none}}

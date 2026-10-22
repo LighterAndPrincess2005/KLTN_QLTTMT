@@ -15,6 +15,10 @@ import './studyDashboard.css';
 import './weeklySchedule.css';
 import './methodDiscovery.css';
 import './typography.css';
+import './artReading.css';
+
+import './actionLinks.css';
+import './websiteContent.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,

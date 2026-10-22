@@ -5,7 +5,7 @@ Project chính: `D:\long2026\MyThuat`. API C# ASP.NET Core, Entity Framework Cor
 ## Bật lần sau
 
 1. Bấm **Bat_API_MyThuat** trên Desktop. Nút tự khởi động LocalDB, kiểm tra database rồi bật API và mở `http://localhost:5080`.
-2. Lần đầu tạo tài khoản quản trị trên trang vừa mở. Tự chọn mật khẩu từ 12 ký tự, có chữ và số; không có mật khẩu mặc định.
+2. Lần đầu tạo tài khoản quản trị trên trang vừa mở. Tự chọn mật khẩu từ 8 ký tự, có chữ và số; nên dùng mật khẩu dài, riêng biệt khi vận hành thật. Bộ tài khoản MAIN được khởi tạo riêng theo lệnh, không phải mật khẩu mặc định của API.
 3. Đăng nhập, sao chép token, mở Swagger → Authorize → dán token để gọi API có phân quyền.
 4. Khi cần tắt API, bấm `Tat_API.cmd` trong thư mục project. Đóng tab trình duyệt chỉ đóng trang, API vẫn chạy.
 

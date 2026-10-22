@@ -4,6 +4,7 @@ import type { ArtClass, Course } from '../types';
 import {courseHref,pageHref,courseClassesHref} from '../navigation';
 import {Pagination} from './CatalogTools';
 import {PromotionHighlight} from './PromotionHighlight';
+import {isPublicClass} from '../publicClassVisibility';
 
 export function IntroPrograms({courses,classes}:{courses:Course[];classes:ArtClass[]}) {
   const [category, setCategory] = useState('Tất cả');
@@ -16,7 +17,7 @@ export function IntroPrograms({courses,classes}:{courses:Course[];classes:ArtCla
     <div className="program-selection-head" id="program-selection"><div><span className="kicker">CHƯƠNG TRÌNH HỌC</span><h3>Con sẽ bắt đầu từ đâu?</h3></div><p>Xem học phí, lộ trình và chất liệu; chọn khóa để khám phá chi tiết.</p></div>
     <div className="filter-row" aria-label="Nhóm chương trình">{['Tất cả', ...new Set(courses.map(c=>c.category))].map(x => <button type="button" aria-pressed={category === x} className={category === x ? 'active' : ''} key={x} onClick={() => {setCategory(x);setPage(1)}}>{x}</button>)}</div>
     <div className="course-grid">{filtered.slice((current-1)*6,current*6).map(c => <article className="course-card intro-course" key={c.id}>
-      <div className="course-image"><img src={c.image} alt={`Khám phá chất liệu trong chương trình ${c.title}`} loading="lazy"/><span className="age-pill">{c.category}</span>{classes.find(cl=>cl.courseId===c.id&&cl.promotion)?.promotion&&<div className="program-promo"><PromotionHighlight promotion={classes.find(cl=>cl.courseId===c.id&&cl.promotion)!.promotion!}/></div>}</div>
+      <div className="course-image"><img src={c.image} alt={`Khám phá chất liệu trong chương trình ${c.title}`} loading="lazy"/><span className="age-pill">{c.category}</span>{classes.find(cl=>cl.courseId===c.id&&isPublicClass(cl)&&cl.promotion)?.promotion&&<div className="program-promo"><PromotionHighlight promotion={classes.find(cl=>cl.courseId===c.id&&isPublicClass(cl)&&cl.promotion)!.promotion!}/></div>}</div>
       <div className="course-content"><span className="category">{c.level}</span><h3>{c.title}</h3><div className="program-facts"><span>Từ {c.ageMin} tuổi</span><span>{c.sessions} buổi học</span><span>{c.minutesPerSession} phút / buổi</span></div><div className="program-tuition"><span>Học phí khóa</span><strong>{c.tuitionFee.toLocaleString('vi-VN')}đ</strong></div><p>{c.skills.join(' · ')}</p><a className="course-link" href={courseHref(c.id)}>Khám phá chương trình <ArrowRight size={16}/></a><a className="btn btn-primary course-register-link" href={courseClassesHref(c.id)}>Đăng ký khóa học <ArrowRight size={16}/></a></div>
     </article>)}</div>
     <Pagination page={current} count={count} onChange={setPage}/>
@@ -38,14 +39,14 @@ export function Method() {
 
 export function Gallery() {
   const artworks = [
-    {image:'/bui/student-watercolor-4.jpg',title:'Chút xanh trên cành',medium:'Màu nước · bài tốt nghiệp',alt:'Tác phẩm học viên Bụi vẽ chim xanh trên cành cây',source:'https://mythuatbui.edu.vn/hcm-bai-tot-nghiep-khoa-mau-nuoc-08-thang-7/'},
-    {image:'/bui/student-watercolor-5.jpg',title:'Một giỏ hồng dịu dàng',medium:'Màu nước · bài tốt nghiệp',alt:'Tác phẩm học viên Bụi vẽ giỏ hoa hồng',source:'https://mythuatbui.edu.vn/hcm-bai-tot-nghiep-khoa-mau-nuoc-08-thang-7/'},
-    {image:'/bui/student-oil.jpg',title:'Sắc ngọt mùa hè',medium:'Sơn dầu · bài tốt nghiệp',alt:'Tác phẩm học viên Bụi vẽ kem trái cây trên nền xanh',source:'https://mythuatbui.edu.vn/hcm-bai-tot-nghiep-khoa-son-dau-can-ban-01-thang-7/'},
-    {image:'/bui/student-sketch.jpg',title:'Những người bạn nhỏ',medium:'Bài tốt nghiệp · bộ bài Ký Họa 33',alt:'Tác phẩm những chú mèo trong bộ bài tốt nghiệp được Bụi công bố',source:'https://mythuatbui.edu.vn/hcm-bai-tot-nghie%CC%A3p-khoa-ki-ho%CC%A3a-33-tran-phu-thang-3/'},
+    {image:'/bui/student-watercolor-4.jpg',title:'Chút xanh trên cành',medium:'Màu nước · bài tốt nghiệp',alt:'Tác phẩm học viên Bụi vẽ chim xanh trên cành cây',source:'/bai-viet/thanh-pham-mau-nuoc'},
+    {image:'/bui/student-watercolor-5.jpg',title:'Một giỏ hồng dịu dàng',medium:'Màu nước · bài tốt nghiệp',alt:'Tác phẩm học viên Bụi vẽ giỏ hoa hồng',source:'/bai-viet/thanh-pham-mau-nuoc'},
+    {image:'/bui/student-oil.jpg',title:'Sắc ngọt mùa hè',medium:'Sơn dầu · bài tốt nghiệp',alt:'Tác phẩm học viên Bụi vẽ kem trái cây trên nền xanh',source:'/bai-viet/thanh-pham-son-dau'},
+    {image:'/bui/student-sketch.jpg',title:'Những người bạn nhỏ',medium:'Bài tốt nghiệp · bộ bài Ký Họa 33',alt:'Tác phẩm những chú mèo trong bộ bài tốt nghiệp được Bụi công bố',source:'/bai-viet/thanh-pham-ky-hoa'},
   ];
   return <section className="section gallery student-gallery" id="gallery"><div className="shell"><div className="gallery-head"><div><span className="kicker">THÀNH PHẨM HỌC VIÊN</span><h2>Ý tưởng nhỏ.<br/><em>Thành phẩm đầy sắc màu.</em></h2><p className="gallery-intro">Từ quan sát đến phối màu, từ một nét phác đến bức tranh hoàn chỉnh — mỗi bài thực hành là một dịp để thể hiện ý tưởng theo cách riêng.</p></div><a href={pageHref('/khoa-hoc')}>Tìm hành trình sáng tạo <ArrowRight size={17}/></a></div>
-    <div className="student-art-grid">{artworks.map((artwork, i) => <figure key={artwork.image} className={`student-art student-art-${i + 1}`}><div className="artwork-mat"><img src={artwork.image} loading="lazy" alt={artwork.alt}/><span className="artwork-number" aria-hidden="true">0{i+1}</span></div><figcaption><span>{artwork.medium}</span><h3>{artwork.title}</h3><a className="artwork-source" href={artwork.source} target="_blank" rel="noreferrer">Xem bài gốc tại Bụi ↗</a></figcaption></figure>)}</div>
-    <div className="gallery-footnote"><span>Ảnh tác phẩm từ website Mỹ Thuật Bụi; tiêu đề mô tả hình ảnh, không phải tên gốc tác phẩm.</span><a href="https://www.instagram.com/hocvecungbui/" target="_blank" rel="noreferrer">Theo dõi @hocvecungbui <ArrowRight size={17}/></a></div>
+    <div className="student-art-grid">{artworks.map((artwork, i) => <figure key={artwork.image} className={`student-art student-art-${i + 1}`}><div className="artwork-mat"><img src={artwork.image} loading="lazy" alt={artwork.alt}/><span className="artwork-number" aria-hidden="true">0{i+1}</span></div><figcaption><span>{artwork.medium}</span><h3>{artwork.title}</h3><a className="artwork-source" href={pageHref(artwork.source)}>Khám phá tác phẩm →</a></figcaption></figure>)}</div>
+    <div className="gallery-footnote"><span>Từ nét phác đầu tiên đến một tác phẩm mang dấu ấn riêng.</span><a href={pageHref('/bai-viet')}>Khám phá thêm câu chuyện <ArrowRight size={17}/></a></div>
   </div></section>;
 }
 

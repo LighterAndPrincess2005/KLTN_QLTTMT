@@ -1,5 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 namespace MyThuat.Api.Contracts;
+public sealed record UpdateStudentRequest([Required,StringLength(150)]string HoTen,DateOnly NgaySinh,
+    [Required,StringLength(150)]string LienHeKhanCapTen,[Required,StringLength(25)]string LienHeKhanCapSDT,
+    [StringLength(1000)]string? MucTieuHoc,[Required]string RowVersion);
 public sealed record StudentRequest([Required,StringLength(150)]string HoTen,DateOnly NgaySinh,
     [Required,StringLength(150)]string LienHeKhanCapTen,[Required,StringLength(25)]string LienHeKhanCapSDT,
     [Required]string QuanHe,[StringLength(1000)]string? MucTieuHoc);

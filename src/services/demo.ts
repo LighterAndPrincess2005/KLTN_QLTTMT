@@ -14,12 +14,24 @@ export function demoRequest(path:string,body?:unknown,method='GET'):unknown{
  if(path.includes('/dang-nhap')){save('teacherRole',String(data.TenDangNhap).toLowerCase()==='gv_demo');return {accessToken:'demo-local',expiresIn:86400}};
  if(path.includes('/dang-xuat'))return {};
  if(path==='/api/tai-khoan/dang-ky'){save('account',{hoTen:data.HoTen,dienThoai:data.DienThoai,email:data.Email,ngaySinh:data.NgaySinh});return {}};
+ if(path==='/api/tai-khoan/toi'&&method==='PUT'){
+  if(read('teacherRole',false))throw new Error('Tài khoản không liên kết thành viên.');
+  const current=read('account',{});if(String(current.rowVersion||'1')!==data.RowVersion)throw new Error('Thông tin đã thay đổi. Vui lòng mở lại.');
+  save('account',{...current,hoTen:data.HoTen,dienThoai:data.DienThoai,email:data.Email,ngaySinh:data.NgaySinh,rowVersion:String(Number(current.rowVersion||1)+1)});return {};
+ }
+ if(path.startsWith('/api/hoc-vien/toi/')&&method==='PUT'){
+  const students=read('students',[]),student=students.find((s:{hocVienId:number})=>String(s.hocVienId)===path.split('/').pop());
+  if(!student||student.quyenDaiDien!=='DAY_DU')throw new Error('Không có quyền sửa hồ sơ.');
+  if(String(student.rowVersion||'1')!==data.RowVersion)throw new Error('Hồ sơ đã thay đổi. Vui lòng mở lại.');
+  const enrollments=read('enrollments',[]);for(const row of enrollments.filter((r:{hocVienId:number;trangThai:string})=>r.hocVienId===student.hocVienId&&r.trangThai==='DA_XAC_NHAN')){const cl=demoClasses.find(c=>Number(c.id)===row.lopHocId),course=demoCourses.find(c=>c.id===cl?.courseId);if(cl&&course){const birth=new Date(String(data.NgaySinh)+'T12:00:00Z'),at=new Date(cl.startDateISO+'T12:00:00Z');const age=at.getUTCFullYear()-birth.getUTCFullYear()-(at.getUTCMonth()<birth.getUTCMonth()||at.getUTCMonth()===birth.getUTCMonth()&&at.getUTCDate()<birth.getUTCDate()?1:0);if(age<course.ageMin||age<18&&student.quanHe==='TU_BAN_THAN')throw new Error('Ngày sinh mới không đáp ứng điều kiện tuổi của lớp đã đăng ký.');}}
+  Object.assign(student,{hoTen:data.HoTen,ngaySinh:data.NgaySinh,lienHeKhanCapTen:data.LienHeKhanCapTen,lienHeKhanCapSDT:data.LienHeKhanCapSDT,mucTieuHoc:data.MucTieuHoc,rowVersion:String(Number(student.rowVersion||1)+1)});save('students',students);return {};
+ }
  if(path==='/api/tai-khoan/toi'&&read('teacherRole',false))return {id:901,tenDangNhap:'gv_demo',vaiTro:'GIAO_VIEN',thanhVienId:null,hoTen:'Giáo viên trình diễn'};
  if(path.startsWith('/api/hoc-tap/')&&read('teacherRole',false)){const result=teacherDemoRequest(path,data,method);if(result!==undefined)return result}
- if(path==='/api/tai-khoan/toi')return {id:1,tenDangNhap:'trinh_dien',vaiTro:'THANH_VIEN',thanhVienId:1,hoTen:'Nguyễn Minh Anh',dienThoai:'0901234567',ngaySinh:'1992-05-12',...read('account',{})};
+ if(path==='/api/tai-khoan/toi')return {id:1,tenDangNhap:'trinh_dien',vaiTro:'THANH_VIEN',thanhVienId:1,hoTen:'Nguyễn Minh Anh',dienThoai:'0901234567',ngaySinh:'1992-05-12',rowVersion:'1',...read('account',{})};
  if(path==='/api/hoc-vien/toi'){
- const students=read('students',[{hocVienId:1,hoTen:'Nguyễn Bảo An',ngaySinh:'2018-06-18',capDoDeXuat:'Nền tảng',trangThai:'HOAT_DONG',xacNhanLuc:new Date().toISOString(),quyenDaiDien:'DAY_DU',canXoa:true}]);save('students',students);
- if(method==='POST'){const student={hocVienId:Date.now(),hoTen:data.HoTen,ngaySinh:data.NgaySinh,capDoDeXuat:'Tự chọn',trangThai:'HOAT_DONG',xacNhanLuc:new Date().toISOString(),quyenDaiDien:'DAY_DU',canXoa:true};students.push(student);save('students',students);return student}return students;
+ const students=read('students',[{hocVienId:1,hoTen:'Nguyễn Bảo An',ngaySinh:'2018-06-18',capDoDeXuat:'Nền tảng',trangThai:'HOAT_DONG',xacNhanLuc:new Date().toISOString(),quyenDaiDien:'DAY_DU',canXoa:true,canSua:true,rowVersion:'1',lienHeKhanCapTen:'Nguyễn Minh Anh',lienHeKhanCapSDT:'0901234567'}]);save('students',students);
+ if(method==='POST'){const student={quanHe:data.QuanHe,canSua:true,rowVersion:'1',lienHeKhanCapTen:data.LienHeKhanCapTen,lienHeKhanCapSDT:data.LienHeKhanCapSDT,hocVienId:Date.now(),hoTen:data.HoTen,ngaySinh:data.NgaySinh,capDoDeXuat:'Tự chọn',trangThai:'HOAT_DONG',xacNhanLuc:new Date().toISOString(),quyenDaiDien:'DAY_DU',canXoa:true};students.push(student);save('students',students);return {id:student.hocVienId,...student}}return students.map((s:Record<string,unknown>)=>({...s,canSua:s.quyenDaiDien==='DAY_DU',rowVersion:s.rowVersion||'1'}));
  }
  if(path.startsWith('/api/hoc-vien/toi/')&&method==='DELETE'){save('students',read('students',[]).filter((s:{hocVienId:number})=>String(s.hocVienId)!==path.split('/').pop()));return {}};
  if(path==='/api/dang-ky'&&method==='POST'){

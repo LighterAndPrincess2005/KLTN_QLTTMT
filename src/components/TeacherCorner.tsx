@@ -1,3 +1,4 @@
+import {safeMediaUrl} from '../mediaUrls';
 import {pageHref} from '../navigation';
 import {useEffect,useState} from 'react';
 import {ArrowRight,CalendarDays,Check,RefreshCw,Users} from 'lucide-react';
@@ -35,7 +36,7 @@ function RosterEditor({row,session,onSaved}:{row:RosterRow;session:TeacherSessio
    <label className="field"><span>Liên kết bài thực hành (không bắt buộc)</span><input name="product" type="url" maxLength={500} value={product} disabled={busy} onChange={event=>setProduct(event.target.value)} placeholder="https://…"/></label>
    {error&&<p className="error-note" role="alert">{error}</p>}{notice&&<p className="info-note" role="status">{notice}</p>}
    <button className="btn btn-primary" disabled={busy}>{busy?'Đang lưu…':'Lưu điểm danh & nhận xét'} <Check size={16}/></button>
-  </form>:<div className="teacher-readonly"><p>{row.trangThai==='CHO_THAM_GIA'?'Chưa có nhận xét đã ghi.':row.nhanXet||'Chưa có nhận xét.'}</p><p>{row.diemSanPham==null?'Chưa có điểm sản phẩm.':`Điểm sản phẩm: ${row.diemSanPham}/10`}</p>{row.sanPhamUrl&&/^https?:\/\//i.test(row.sanPhamUrl)&&<a className="text-link" href={row.sanPhamUrl} target="_blank" rel="noopener noreferrer">Xem bài thực hành <ArrowRight size={16}/></a>}</div>}
+  </form>:<div className="teacher-readonly"><p>{row.trangThai==='CHO_THAM_GIA'?'Chưa có nhận xét đã ghi.':row.nhanXet||'Chưa có nhận xét.'}</p><p>{row.diemSanPham==null?'Chưa có điểm sản phẩm.':`Điểm sản phẩm: ${row.diemSanPham}/10`}</p>{row.sanPhamUrl&&safeMediaUrl(row.sanPhamUrl)&&<a className="text-link" href={row.sanPhamUrl} target="_blank" rel="noopener noreferrer">Xem bài thực hành <ArrowRight size={16}/></a>}</div>}
  </article>;
 }
 

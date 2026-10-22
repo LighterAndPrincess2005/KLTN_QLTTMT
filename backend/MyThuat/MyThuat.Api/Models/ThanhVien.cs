@@ -5,6 +5,7 @@ public sealed class ThanhVien : EntityBase
 {
     public string MaThanhVien { get; set; } = string.Empty;
     public string HoTen { get; set; } = string.Empty;
+    public DateOnly? NgaySinh { get; set; }
     public string DienThoai { get; set; } = string.Empty;
     public string? Email { get; set; }
     public string? DiaChi { get; set; }

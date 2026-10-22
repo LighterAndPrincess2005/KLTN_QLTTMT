@@ -47,6 +47,8 @@ builder.Services.AddAuthorization(o=>
 builder.Services.AddRateLimiter(o=>
 {
     o.RejectionStatusCode=429;
+    o.AddPolicy("consultation",ctx=>RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString()??"unknown",
+        _=>new FixedWindowRateLimiterOptions{PermitLimit=20,Window=TimeSpan.FromMinutes(5),QueueLimit=0}));
     o.AddPolicy("login",ctx=>RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString()??"unknown",
         _=>new FixedWindowRateLimiterOptions {PermitLimit=10,Window=TimeSpan.FromMinutes(1),QueueLimit=0}));
 });
@@ -71,6 +73,38 @@ builder.Services.AddHostedService<ExpiryWorker>();
 
 
 var app=builder.Build();
+if(args.Contains("--reset-main-passwords"))
+{
+    using var scope=app.Services.CreateScope();await MainPasswordReset.Run(scope.ServiceProvider.GetRequiredService<MyThuatDbContext>(),app.Environment.ContentRootPath);return;
+}
+if(args.Contains("--report-main"))
+{
+    using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();
+    await MainDataValidation.Check(db);await MainDataReport.Save(db,app.Environment.ContentRootPath);return;
+}
+if(args.Contains("--finalize-main"))
+{
+    using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();
+    await db.Database.ExecuteSqlRawAsync("UPDATE h SET TrangThai='DA_HOAN_THANH' FROM HoSoTheoHoc h JOIN DangKy d ON d.HoSoTheoHocId=h.Id WHERE d.MaDangKy LIKE 'MAIN_DK%' AND h.TrangThai='HOAN_THANH'; UPDATE KetQuaKhoaHoc SET KetLuan='HOAN_THANH' WHERE SoXacNhan LIKE 'MAIN-CN-%' AND KetLuan='DAT';");
+    await MainDataValidation.Check(db);await MainDataReport.Save(db,app.Environment.ContentRootPath);return;
+}
+if(args.Contains("--prepare-main"))
+{
+    using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();
+    await MainDatabaseSetup.Backup(db,app.Environment.ContentRootPath);
+    var sql=await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","007_WebsiteMain.sql"));
+    await db.Database.ExecuteSqlRawAsync(sql);
+    await MainData.Seed(db,app.Environment.ContentRootPath);await MainDataExtras.Seed(db);await MainDataReport.Save(db,app.Environment.ContentRootPath);return;
+}
+if(args.Contains("--check-main"))
+{
+    using var scope=app.Services.CreateScope();await MainDataValidation.Check(scope.ServiceProvider.GetRequiredService<MyThuatDbContext>());return;
+}
+if(args.Contains("--backup-main"))
+{
+    using var scope=app.Services.CreateScope();
+    await MainDatabaseSetup.Backup(scope.ServiceProvider.GetRequiredService<MyThuatDbContext>(),app.Environment.ContentRootPath);return;
+}
 if(args.Contains("--seed-demo"))
 {
     using var scope=app.Services.CreateScope();
