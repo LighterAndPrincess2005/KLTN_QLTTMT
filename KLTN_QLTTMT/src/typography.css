@@ -1,0 +1,8 @@
+/* Balance headings without forcing long Vietnamese copy into a single line. */
+:where(h1,h2,h3,h4){text-wrap:balance;word-break:normal;overflow-wrap:normal}
+:where(.section-head,.gallery-head,.finder-title,.quick-signup-grid,.method-grid,.introduction-grid,.history-layout)>div{min-width:0}
+.quick-signup-copy{container-type:inline-size}
+.quick-signup-copy h2{font-size:clamp(30px,9.7cqw,46px);line-height:1.3}
+.quick-signup-copy h2 em{font-size:inherit;line-height:inherit;text-wrap:balance}
+.section-head h2,.gallery-head h2,.finder-title h2{max-width:100%}
+@media(max-width:680px){.section h2{font-size:clamp(28px,7.8vw,38px);line-height:1.2}.quick-signup-copy h2{font-size:clamp(28px,8.8cqw,38px)}.inner-page-hero h1{font-size:clamp(30px,8.5vw,42px)}.course-content h3{font-size:clamp(21px,5.6vw,26px)}}

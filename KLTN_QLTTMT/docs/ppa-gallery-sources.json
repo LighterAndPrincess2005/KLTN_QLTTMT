@@ -1,0 +1,68 @@
+{
+  "downloadedOn": "2026-10-08",
+  "usage": "Ảnh minh họa trong bản đồ án, không xác thực tác phẩm học viên LHL Art.",
+  "reusePermission": "Chưa xác nhận quyền tái sử dụng; không tìm thấy giấy phép trên các trang đã xem.",
+  "transformation": "Giữ toàn bộ nội dung, chữ ký và watermark; chỉ đổi định dạng WebP và giảm kích thước phục vụ web.",
+  "assets": [
+    {
+      "key": "watercolor-02",
+      "image": "ppa-watercolor-study",
+      "title": "Sắc màu trên giấy",
+      "medium": "Màu nước",
+      "alt": "Ảnh minh họa các bài vẽ màu nước được bày trên mặt bàn",
+      "url": "https://ppa.vn/multidata/mau-nuoc-co-ban.jpg",
+      "sourcePage": "https://ppa.vn/mau-nuoc-scabv17.html",
+      "file": "public/gallery/ppa-watercolor-study.webp",
+      "originalDimensions": [
+        1200,
+        800
+      ],
+      "bytes": 167660
+    },
+    {
+      "key": "acrylic-04",
+      "image": "ppa-still-life",
+      "title": "Tĩnh vật và hòa sắc",
+      "medium": "Sơn dầu / Acrylic",
+      "alt": "Ảnh minh họa tranh tĩnh vật bình hoa và trái cây",
+      "url": "https://ppa.vn/multidata/hoc-ve-tranh-son-dau-lop-ve-cho-nguoi-lon-hoc-ve-co-ban-lop-ve-mau-acrylic-my-thuat-ppa-lop-ve-cho-nguoi-bat-dau-(5).jpg",
+      "sourcePage": "https://ppa.vn/phong-trung-bay.html",
+      "file": "public/gallery/ppa-still-life.webp",
+      "originalDimensions": [
+        2560,
+        1836
+      ],
+      "bytes": 203710
+    },
+    {
+      "key": "acrylic-13",
+      "image": "ppa-seascape",
+      "title": "Biển và sắc xanh",
+      "medium": "Sơn dầu / Acrylic",
+      "alt": "Ảnh minh họa tranh sóng biển xanh được đặt trên giá vẽ",
+      "url": "https://ppa.vn/multidata/up110321-lopvesondau-hoc-ve-tranh-son-dau-hoc-ve-tranh-co-ban-lop-hoc-danh-cho-nguoi-lon-lop-hoc-ve-tranh-tphcm-trung-tam-my-thuat-ppa-cac-trung-tam-my-thuat-up-tinh-tphcm-top-cac-trung-tam-my-thuat-tphcm-(4).jpg",
+      "sourcePage": "https://ppa.vn/phong-trung-bay.html",
+      "file": "public/gallery/ppa-seascape.webp",
+      "originalDimensions": [
+        2221,
+        1920
+      ],
+      "bytes": 289898
+    },
+    {
+      "key": "acrylic-15",
+      "image": "ppa-flower-study",
+      "title": "Một góc hoa nở",
+      "medium": "Sơn dầu / Acrylic",
+      "alt": "Ảnh minh họa tranh hoa màu hồng trên nền xanh trong khung gỗ",
+      "url": "https://ppa.vn/multidata/up110321-lopvesondau-hoc-ve-tranh-son-dau-hoc-ve-tranh-co-ban-lop-hoc-danh-cho-nguoi-lon-lop-hoc-ve-tranh-tphcm-trung-tam-my-thuat-ppa-cac-trung-tam-my-thuat-up-tinh-tphcm-top-cac-trung-tam-my-thuat-tphcm-(3).jpg",
+      "sourcePage": "https://ppa.vn/phong-trung-bay.html",
+      "file": "public/gallery/ppa-flower-study.webp",
+      "originalDimensions": [
+        2368,
+        1920
+      ],
+      "bytes": 273778
+    }
+  ]
+}

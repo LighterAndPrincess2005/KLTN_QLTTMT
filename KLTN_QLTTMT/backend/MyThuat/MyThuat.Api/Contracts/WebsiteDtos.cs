@@ -1,0 +1,12 @@
+using System.ComponentModel.DataAnnotations;
+namespace MyThuat.Api.Contracts;
+public sealed record LearningSuggestion(long DiemDanhId,[Required]string LoaiYeuCau,[Required,StringLength(1500)]string LyDo,[StringLength(300)]string? KhungGioMongMuon);
+public sealed record ConsultationRequest([Required,StringLength(150)]string HoTen,[Required,EmailAddress,StringLength(254)]string Email,[StringLength(25)]string? DienThoai,[Required,StringLength(200)]string ChuDe,[Required,StringLength(4000)]string NoiDung,long? KhoaHocId);
+public sealed record ConsultationAccess([Required,StringLength(40)]string MaTraCuu,[Required,StringLength(100)]string KhoaTraCuu);
+public sealed record ConsultationMessage([Required,StringLength(4000)]string NoiDung,[Required]string RowVersion);
+public sealed record ConsultationFollowup([Required,StringLength(40)]string MaTraCuu,[Required,StringLength(100)]string KhoaTraCuu,[Required,StringLength(4000)]string NoiDung);
+public sealed record ConsultationState([Required]string TrangThai,[Required]string RowVersion);
+public sealed record ReadingSection([Required,StringLength(200)]string Title,[Required,StringLength(5000)]string Text);
+public sealed record ArticleRequest([Required,StringLength(180)]string Slug,[Required,StringLength(250)]string Title,[Required,StringLength(100)]string Category,[Required,StringLength(1000)]string Image,[Required,StringLength(2000)]string Intro,List<ReadingSection> Sections,[Required,StringLength(4000)]string Exercise,[StringLength(1000)]string Source,List<string> Gallery,[Required]string Status,string? RowVersion);
+public sealed record TeacherIntroRequest([Required,StringLength(1000)]string AnhDaiDien,[Required,StringLength(3000)]string GioiThieu,[Required,StringLength(200)]string KhuVuc,List<string> TacPham,bool CongKhai,string? RowVersion);
+public sealed record CourseIntroRequest([Required,StringLength(1000)]string AnhDaiDien,List<string> DauRa,[Required,StringLength(3000)]string HoaCuBaoGom,[Required,StringLength(3000)]string CanChuanBi,List<string> ThanhPham,string? RowVersion);

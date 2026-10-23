@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms><EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <RootNamespace>LhlArt</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup><Compile Remove="Tests/**/*.cs;ConnectionChecks/**/*.cs;IntegrationChecks/**/*.cs;Backup_truoc_ket_noi_API/**/*.cs" /><EmbeddedResource Include="Assets/lhl-art.jpg" /><EmbeddedResource Include="Assets/classroom.jpg" /><Content Include="api.config.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /></ItemGroup>
+</Project>
