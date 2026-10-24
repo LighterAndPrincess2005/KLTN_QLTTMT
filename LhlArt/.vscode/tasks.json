@@ -1,0 +1,1 @@
+{"version":"2.0.0","tasks":[{"label":"Chạy WinForms","type":"process","command":"dotnet","args":["run","--project","LhlArt.csproj"],"problemMatcher":"$msCompile","group":{"kind":"build","isDefault":true}},{"label":"Kiểm tra build","type":"process","command":"dotnet","args":["build","LhlArt.csproj"],"problemMatcher":"$msCompile"}]}

@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+.vs/
+.local/
+BanChay*/
+Backup_truoc_ket_noi_API/
+*.user
+*.suo
+*.log
+*.bak
+data.json
+api.config.Local.json

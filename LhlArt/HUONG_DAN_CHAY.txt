@@ -1,0 +1,15 @@
+LHL ART — WINFORMS GHÉP VỚI MAIN NGÀY 22/10/2026
+
+1. Giữ API mới của nhóm đang chạy, cùng API mà website sử dụng.
+2. Kiểm tra LhlArt/api.config.json, mặc định http://127.0.0.1:5080/.
+3. VS Code mở thư mục gốc có backend, src, LhlArt. Terminal chạy:
+   dotnet run --project LhlArt/LhlArt.csproj -c Release
+4. Dùng tài khoản nhân viên hiện có. Không nạp lại dữ liệu, không reset mật khẩu.
+5. Nếu chỉ mở thư mục LhlArt, chạy:
+   dotnet run --project LhlArt.csproj -c Release
+
+Hướng dẫn thao tác mới: README.md trong thư mục LhlArt.
+Kết quả kiểm tra: KIEM_TRA_BAN_CAP_NHAT.md.
+Phần cần phối hợp nhóm API: YEU_CAU_API.md.
+
+Bản này chỉ sử dụng API. Không dùng chế độ --local của phiên bản cũ.

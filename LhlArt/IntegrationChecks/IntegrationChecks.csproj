@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors></PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="../../backend/MyThuat/MyThuat.Api/MyThuat.Api.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.25" />
+    <Compile Include="../../backend/MyThuat/MyThuat.Checks/CheckDbContext.cs" Link="CheckDbContext.cs" />
+    <Compile Include="../Networking/ArtApiClient.cs" Link="ArtApiClient.cs" />
+    <Compile Include="../Services/ApiDataService.cs" Link="ApiDataService.cs" />
+    <Compile Include="../Services/ApiDisplayService.cs" Link="ApiDisplayService.cs" />
+    <Compile Include="../Services/BusinessTime.cs" Link="BusinessTime.cs" />
+    <Compile Include="../Services/ClassPlanRules.cs" Link="ClassPlanRules.cs" />
+    <Compile Include="../Services/ClassScheduleWorkflow.cs" Link="ClassScheduleWorkflow.cs" />
+  </ItemGroup>
+</Project>
