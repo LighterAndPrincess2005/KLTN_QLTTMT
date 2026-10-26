@@ -27,7 +27,7 @@ internal sealed class ApiPeopleController(ArtApiClient api)
         form.Add("HoTen", "Họ tên chủ tài khoản");
         form.Add("NgaySinh", "Ngày sinh", BusinessTime.Now.Date.AddYears(-18));
         form.Add("DienThoai", "Điện thoại");
-        form.Add("Email", "Email");
+        form.Add("Email", "Email (bắt buộc)");
         form.SaveAsync = async () =>
         {
             ProfileRules.Password(form.TextValue("MatKhau"), form.TextValue("LapLai"));
@@ -39,7 +39,7 @@ internal sealed class ApiPeopleController(ArtApiClient api)
                 TenDangNhap = username, MatKhau = form.TextValue("MatKhau"),
                 HoTen = ProfileRules.Required(form.TextValue("HoTen"), "Họ tên"),
                 DienThoai = ProfileRules.Required(form.TextValue("DienThoai"), "Điện thoại", 25),
-                Email = Optional(form.TextValue("Email")), NgaySinh = Date(form.Date("NgaySinh"))
+                Email = RequiredEmail(form.TextValue("Email")), NgaySinh = Date(form.Date("NgaySinh"))
             });
             MessageBox.Show(owner, $"Đã tạo tài khoản {username}. Có thể đăng nhập website ngay.\nMã hồ sơ thành viên: {T(result, "thanhVienId")}.\nThêm hoặc liên kết học viên tại mục Hồ sơ học viên khi cần; chưa đăng ký lớp.", "Tạo tài khoản thành công");
         };
@@ -47,6 +47,12 @@ internal sealed class ApiPeopleController(ArtApiClient api)
         return Task.CompletedTask;
     }
     static string? Optional(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    internal static string RequiredEmail(string value){
+        var email=value.Trim();
+        if(email.Length==0)throw new InvalidOperationException("Vui lòng nhập email.");
+        if(email.Length>254||!new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email))throw new InvalidOperationException("Email không đúng định dạng.");
+        return email.ToLowerInvariant();
+    }
 
     public Task Member(IWin32Window owner, JsonElement? row)
     {

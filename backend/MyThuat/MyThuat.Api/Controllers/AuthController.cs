@@ -47,15 +47,16 @@ public sealed class AuthController(MyThuatDbContext db, IPasswordHasher<TaiKhoan
     public async Task<IActionResult> Signup(SignupRequest request,CancellationToken ct)
     {
         Password(request.MatKhau);
+        var email=request.Email.Trim().ToLowerInvariant();
         ApiError.Require(request.NgaySinh is null||(request.NgaySinh.Value.Year>=1900&&request.NgaySinh<=BusinessClock.Today),"Ngày sinh phải từ năm 1900 và không ở tương lai.");
         await using var tx=await db.Database.BeginTransactionAsync(IsolationLevel.Serializable,ct);
         ApiError.Require(await db.TaiKhoan.AnyAsync(ct),"Cần thiết lập quản trị trước.",409);
         var name=Normalize(request.TenDangNhap);
         ApiError.Require(!await db.TaiKhoan.AnyAsync(x=>x.TenDangNhap==name,ct),"Tên đăng nhập đã tồn tại.",409);
         var member=new ThanhVien {MaThanhVien="TV"+Guid.NewGuid().ToString("N")[..16],HoTen=request.HoTen,
-            DienThoai=request.DienThoai,Email=request.Email,NgaySinh=request.NgaySinh,TrangThai="HOAT_DONG",XacNhanThanhVienLuc=BusinessClock.Now};
+            DienThoai=request.DienThoai,Email=email,NgaySinh=request.NgaySinh,TrangThai="HOAT_DONG",XacNhanThanhVienLuc=BusinessClock.Now};
         db.ThanhVien.Add(member); await db.SaveChangesAsync(ct);
-        var account=new TaiKhoan {TenDangNhap=name,ThanhVienId=member.Id,Email=request.Email,
+        var account=new TaiKhoan {TenDangNhap=name,ThanhVienId=member.Id,Email=email,
             VaiTroChinh="THANH_VIEN",TrangThai="HOAT_DONG",PhienBanBaoMat=1};
         account.PasswordHash=hasher.HashPassword(account,request.MatKhau);
         db.TaiKhoan.Add(account); await db.SaveChangesAsync(ct);
@@ -95,7 +96,12 @@ public sealed class AuthController(MyThuatDbContext db, IPasswordHasher<TaiKhoan
         ApiError.Require(member.TrangThai=="HOAT_DONG","Thành viên không hoạt động.",403);
         ApiError.Require(Convert.ToBase64String(member.RowVersion)==r.RowVersion,"Thông tin đã thay đổi. Đóng và mở lại để tải bản mới nhất.",409);
         member.HoTen=r.HoTen.Trim();member.DienThoai=r.DienThoai.Trim();member.Email=string.IsNullOrWhiteSpace(r.Email)?null:r.Email.Trim();member.NgaySinh=r.NgaySinh;
-        var account=await db.TaiKhoan.SingleAsync(x=>x.Id==User.AccountId(),ct);account.Email=member.Email;
+        var account=await db.TaiKhoan.SingleAsync(x=>x.Id==User.AccountId(),ct);
+        if(!string.Equals(account.Email,member.Email,StringComparison.OrdinalIgnoreCase)){
+            account.EmailXacNhanLuc=null;
+            foreach(var request in await db.KhoiPhucTaiKhoan.Where(x=>x.TaiKhoanId==account.Id&&x.DaDungLuc==null).ToListAsync(ct))request.DaDungLuc=BusinessClock.Now;
+        }
+        account.Email=member.Email?.Trim().ToLowerInvariant();
         audit.Add("ThanhVien",member.Id,"SUA_THONG_TIN_TU_PHUC_VU");await db.SaveChangesAsync(ct);return NoContent();
     }
 
@@ -126,7 +132,7 @@ public sealed class AuthController(MyThuatDbContext db, IPasswordHasher<TaiKhoan
         ApiError.Require(request.VaiTro!="GIAO_VIEN" || request.GiaoVienId.HasValue,"Tài khoản giáo viên phải liên kết hồ sơ giáo viên.");
         ApiError.Require(request.VaiTro!="THANH_VIEN" || request.ThanhVienId.HasValue,"Tài khoản thành viên phải liên kết thành viên.");
         var account=new TaiKhoan {TenDangNhap=Normalize(request.TenDangNhap),VaiTroChinh=request.VaiTro,
-            HoTenNhanVien=request.HoTen,GiaoVienId=request.GiaoVienId,ThanhVienId=request.ThanhVienId,
+            HoTenNhanVien=request.HoTen,Email=request.Email!.Trim().ToLowerInvariant(),GiaoVienId=request.GiaoVienId,ThanhVienId=request.ThanhVienId,
             QuyenBoSung=request.QuyenBoSung,TrangThai="HOAT_DONG",PhienBanBaoMat=1};
         account.PasswordHash=hasher.HashPassword(account,request.MatKhau);
         await using var tx=await db.Database.BeginTransactionAsync(ct);

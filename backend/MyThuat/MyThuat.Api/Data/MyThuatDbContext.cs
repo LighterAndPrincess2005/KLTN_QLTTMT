@@ -38,6 +38,7 @@ public class MyThuatDbContext(DbContextOptions<MyThuatDbContext> options) : DbCo
     public DbSet<PhieuKho> PhieuKho => Set<PhieuKho>();
     public DbSet<ChiTietPhieuKho> ChiTietPhieuKho => Set<ChiTietPhieuKho>();
     public DbSet<TaiKhoan> TaiKhoan => Set<TaiKhoan>();
+    public DbSet<KhoiPhucTaiKhoan> KhoiPhucTaiKhoan=>Set<KhoiPhucTaiKhoan>();
     public DbSet<QuyDinh> QuyDinh => Set<QuyDinh>();
     public DbSet<NhatKyThayDoi> NhatKyThayDoi => Set<NhatKyThayDoi>();
 
@@ -55,6 +56,15 @@ public class MyThuatDbContext(DbContextOptions<MyThuatDbContext> options) : DbCo
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
     WebsiteMapping.Configure(modelBuilder);
+    modelBuilder.Entity<KhoiPhucTaiKhoan>(e=>{
+        e.ToTable("KhoiPhucTaiKhoan");e.HasKey(x=>x.Id);
+        e.Property(x=>x.MaYeuCau).HasMaxLength(32).IsUnicode(false);e.HasIndex(x=>x.MaYeuCau).IsUnique();
+        e.Property(x=>x.MucDich).HasMaxLength(20).IsUnicode(false);
+        e.Property(x=>x.EmailNhan).HasMaxLength(254);e.Property(x=>x.MaBam).HasMaxLength(512).IsUnicode(false);
+        e.Property(x=>x.RowVersion).IsRowVersion();
+        e.HasIndex(x=>new{x.TaiKhoanId,x.MucDich,x.CreatedAt});
+        e.HasOne(x=>x.TaiKhoan).WithMany().HasForeignKey(x=>x.TaiKhoanId).OnDelete(DeleteBehavior.Restrict);
+    });
     {
         var e = modelBuilder.Entity<LoaiKhoaHoc>();
         e.ToTable("LoaiKhoaHoc");

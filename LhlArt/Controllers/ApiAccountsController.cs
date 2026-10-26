@@ -21,6 +21,7 @@ internal sealed class ApiAccountsController(ArtApiClient api)
         var teachers = await new ApiDataService(api).All("api/quan-ly/giao-vien");
         using var form = new InputForm("Tạo tài khoản nhân viên");
         form.Add("TenDangNhap", "Tên đăng nhập");form.Add("HoTen", "Họ tên nhân viên");
+        form.Add("Email","Email (bắt buộc)");
         form.Add("MatKhau", "Mật khẩu", password:true);form.Add("LapLai", "Nhập lại mật khẩu", password:true);
         form.Add("VaiTro", "Vai trò", "HOC_VU", Roles);
         form.Add("GiaoVienId", "Hồ sơ giáo viên", "", teachers.Where(x=>ArtApiClient.Text(x,"trangThai")=="HOAT_DONG").Select(x=>new Choice(ApiDataService.Id(x).ToString(),ArtApiClient.Text(x,"hoTen"))));
@@ -32,7 +33,7 @@ internal sealed class ApiAccountsController(ArtApiClient api)
             if(username.Length<3)throw new InvalidOperationException("Tên đăng nhập cần ít nhất 3 ký tự.");
             long? teacher=null;
             if(form.TextValue("VaiTro")=="GIAO_VIEN")teacher=long.TryParse(form.TextValue("GiaoVienId"),out var id)?id:throw new InvalidOperationException("Chọn hồ sơ giáo viên.");
-            await api.Post("api/tai-khoan",new {TenDangNhap=username,MatKhau=form.TextValue("MatKhau"),HoTen=ProfileRules.Required(form.TextValue("HoTen"),"Họ tên"),VaiTro=form.TextValue("VaiTro"),GiaoVienId=teacher,ThanhVienId=(long?)null,QuyenBoSung=0});
+            await api.Post("api/tai-khoan",new {TenDangNhap=username,MatKhau=form.TextValue("MatKhau"),Email=ApiPeopleController.RequiredEmail(form.TextValue("Email")),HoTen=ProfileRules.Required(form.TextValue("HoTen"),"Họ tên"),VaiTro=form.TextValue("VaiTro"),GiaoVienId=teacher,ThanhVienId=(long?)null,QuyenBoSung=0});
         };
         form.ShowDialog(owner);
     }

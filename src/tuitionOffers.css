@@ -1,0 +1,84 @@
+/* Decorative offer labels never participate in course-card layout. */
+.intro-course .course-image { position: relative; overflow: hidden; }
+.intro-course .course-image > .tuition-offer--sticker {
+  position: absolute;
+  top: 15px;
+  right: 16px;
+  z-index: 2;
+}
+.tuition-offer--sticker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 88px;
+  min-height: 91px;
+  padding: 20px 6px 11px;
+  border: 1px solid #ffe7ad;
+  border-radius: 6px 6px 14px 14px;
+  background: #ffe2a0;
+  color: #953713;
+  box-shadow: 0 5px 12px #25372b26;
+  transform: rotate(5deg);
+}
+.tuition-offer--sticker::before {
+  content: '';
+  position: absolute;
+  left: calc(50% - 1px);
+  top: -20px;
+  width: 2px;
+  height: 30px;
+  background: #fff9eb;
+  box-shadow: 1px 0 1px #583a2926;
+}
+.tuition-offer--sticker::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: calc(50% - 3px);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #b27640;
+  border: 1px solid #fff2ce;
+}
+.tuition-offer-caption,.tuition-offer-foot {
+  font-size: 9px;
+  line-height: 1.3;
+  font-weight: 800;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+.tuition-offer-value { display: inline-flex; align-items: baseline; flex-shrink: 0; white-space: nowrap; line-height: 1.1; }
+.tuition-offer--sticker .tuition-offer-value { font-size: 29px; font-weight: 800; letter-spacing: -.05em; }
+.tuition-offer--sticker .tuition-offer-value > span { font-size: 17px; margin-left: 1px; }
+.tuition-offer--inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+  max-width: 100%;
+  padding: 4px 9px;
+  margin-top: 0;
+  color: #9c3915;
+  background: #fff0db;
+  border: 1px solid #e9c494;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.tuition-offer--inline svg { flex-shrink: 0; }
+.tuition-offer--inline .tuition-offer-value { font-size: 14px; }
+.class-name-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 10px; }
+.class-main .class-name-line h3 { margin: 0; min-width: 0; }
+.class-main .class-name-line { margin: 3px 0 5px; }
+.intro-course .course-content { display: flex; flex-direction: column; flex: 1; }
+.intro-course .course-content > p { flex: 1; }
+.intro-course .course-content > .course-link { margin-top: auto; align-self: flex-start; }
+@media(max-width:680px) {
+  .intro-course .course-image > .tuition-offer--sticker { top: 12px; right: 14px; }
+  .tuition-offer--sticker { width: 80px; min-height: 85px; }
+  .tuition-offer--sticker .tuition-offer-value { font-size: 27px; }
+}

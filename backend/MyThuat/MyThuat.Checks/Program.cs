@@ -111,9 +111,9 @@ try
         var b=new LopHoc{KhoaHocId=course.Id,MaLop="B",TenLop="Lớp B",NgayKhaiGiangDuKien=DateOnly.FromDateTime(start),SoBuoiKeHoach=4,LichHocDuKien="Hàng tuần",SiSoToiThieu=1,SiSoToiDa=1,HocPhiApDung=100000,MoDangKyLuc=BusinessClock.Now.AddDays(-1),DongDangKyLuc=start.AddHours(-48),TrangThai="NHAP"};
         db.LopHoc.AddRange(a,b);await db.SaveChangesAsync();classA=a.Id;classB=b.Id;
     }
-    await Call("POST","/api/tai-khoan",new StaffAccountRequest("member","MyThuatTest2026!","THANH_VIEN","Thành viên",null,memberId),token:adminToken);
-    await Call("POST","/api/tai-khoan",new StaffAccountRequest("teacher","MyThuatTest2026!","GIAO_VIEN","Giáo viên",teacherId,null),token:adminToken);
-    await Call("POST","/api/tai-khoan",new StaffAccountRequest("cashier","MyThuatTest2026!","THU_NGAN","Thu ngân",null,null),token:adminToken);
+    await Call("POST","/api/tai-khoan",new StaffAccountRequest("member","MyThuatTest2026!","THANH_VIEN","Thành viên",null,memberId,Email:"member@example.invalid"),token:adminToken);
+    await Call("POST","/api/tai-khoan",new StaffAccountRequest("teacher","MyThuatTest2026!","GIAO_VIEN","Giáo viên",teacherId,null,Email:"teacher@example.invalid"),token:adminToken);
+    await Call("POST","/api/tai-khoan",new StaffAccountRequest("cashier","MyThuatTest2026!","THU_NGAN","Thu ngân",null,null,Email:"cashier@example.invalid"),token:adminToken);
     var memberToken=await Login("member");var teacherToken=await Login("teacher");var cashierToken=await Login("cashier");
     await Call("GET","/api/quan-ly/hoc-vien",expected:403,token:memberToken);
     await Call("GET","/api/quan-ly/hoc-vien",expected:403,token:cashierToken);

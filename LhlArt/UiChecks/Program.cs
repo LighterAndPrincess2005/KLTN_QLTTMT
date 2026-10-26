@@ -140,6 +140,11 @@ internal static class Program
             if(args.Length>0){using var shot=new Bitmap(login.Width,login.Height);login.DrawToBitmap(shot,new Rectangle(Point.Empty,login.Size));shot.Save(Path.Combine(Path.GetDirectoryName(args[0])!,"login-remember.png"));}
             rememberBox.Checked=false;Check(!login.RememberLogin,"Người dùng có thể bỏ chọn ghi nhớ");login.Close();
         }
+        foreach(var invalidEmail in new[]{"","   ","email-khong-hop-le"}){
+            var blockedEmail=false;try{ApiPeopleController.RequiredEmail(invalidEmail);}catch(InvalidOperationException){blockedEmail=true;}
+            Check(blockedEmail,"WinForms chặn email thiếu hoặc sai định dạng trước khi gửi API");
+        }
+        Check(ApiPeopleController.RequiredEmail("TEST@example.invalid")=="test@example.invalid","Email hợp lệ được chuẩn hóa trước khi tạo tài khoản");
         Console.WriteLine($"ALL {passed} WINDOWS FORM CHECKS PASSED");
     }
     static void Pump(Func<bool> done){var until=DateTime.UtcNow.AddSeconds(5);while(!done()&&DateTime.UtcNow<until){Application.DoEvents();Thread.Sleep(5);}if(!done())throw new Exception("Timed out waiting for form save");}

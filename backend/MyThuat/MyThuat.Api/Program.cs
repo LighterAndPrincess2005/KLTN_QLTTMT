@@ -15,6 +15,7 @@ using MyThuat.Api.Services;
 
 var builder=WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json",optional:true,reloadOnChange:true);
+builder.Configuration.AddJsonFile(Path.Combine(".local","mail.json"),optional:true,reloadOnChange:true).AddEnvironmentVariables();
 builder.Services.AddControllers().AddJsonOptions(o=>o.JsonSerializerOptions.MaxDepth=32);
 builder.Services.AddProblemDetails();
 builder.Services.AddHttpContextAccessor();
@@ -47,6 +48,8 @@ builder.Services.AddAuthorization(o=>
 builder.Services.AddRateLimiter(o=>
 {
     o.RejectionStatusCode=429;
+    o.AddPolicy("recovery",ctx=>RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString()??"unknown",
+        _=>new FixedWindowRateLimiterOptions{PermitLimit=12,Window=TimeSpan.FromMinutes(5),QueueLimit=0}));
     o.AddPolicy("consultation",ctx=>RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString()??"unknown",
         _=>new FixedWindowRateLimiterOptions{PermitLimit=20,Window=TimeSpan.FromMinutes(5),QueueLimit=0}));
     o.AddPolicy("login",ctx=>RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString()??"unknown",
@@ -69,10 +72,18 @@ builder.Services.AddScoped<LearningService>();
 builder.Services.AddScoped<ChangeService>();
 builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<ClassLifecycleService>();
+builder.Services.AddScoped<IRecoveryMail,RecoveryMail>();builder.Services.AddScoped<AccountRecoveryService>();
 builder.Services.AddHostedService<ExpiryWorker>();
 
 
 var app=builder.Build();
+if(args.Contains("--preview-recovery-email")){await RecoveryEmailTemplate.WritePreview(app.Environment.ContentRootPath);return;}
+if(args.Contains("--upgrade-recovery")){
+    using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();
+    await MainDatabaseSetup.Backup(db,app.Environment.ContentRootPath);
+    await db.Database.ExecuteSqlRawAsync(await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","009_KhoiPhucTaiKhoan.sql")));
+    Console.WriteLine("Đã bổ sung bảng khôi phục tài khoản; không đổi mật khẩu hoặc email hiện có.");return;
+}
 if(args.Contains("--upgrade-promotions"))
 {
     using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();

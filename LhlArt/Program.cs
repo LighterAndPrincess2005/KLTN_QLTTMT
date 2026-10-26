@@ -40,6 +40,10 @@ internal static class Program
         {
             using var login = new LoginForm();
             login.Text = "LHL ART | Chào mừng trở lại";
+            login.ForgotPasswordRequested+=async()=>{
+                try{if(await new ApiRecoveryController(api).Open(login)){rememberedStore.Clear();login.PasswordResetSucceeded();}}
+                catch(Exception ex){login.LoginFailed(ex.Message);}
+            };
             if(remembered is not null){login.SetRememberedLogin(remembered.Username,remembered.Password);remembered=null;}
             login.LoginRequested += async (name, password) =>
             {

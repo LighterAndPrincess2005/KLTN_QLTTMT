@@ -9,8 +9,9 @@ public sealed record AdminSetupRequest([Required, StringLength(100,MinimumLength
     [Required, StringLength(128,MinimumLength=8)] string MatKhau, [Required, StringLength(150)] string HoTen);
 public sealed record SignupRequest([Required, StringLength(100,MinimumLength=3)] string TenDangNhap,
     [Required, StringLength(128,MinimumLength=8)] string MatKhau, [Required, StringLength(150)] string HoTen,
-    [Required, StringLength(25)] string DienThoai, [EmailAddress, StringLength(254)] string? Email, DateOnly? NgaySinh = null);
+    [Required, StringLength(25)] string DienThoai, [Required(ErrorMessage="Vui lòng nhập email."),EmailAddress(ErrorMessage="Email không đúng định dạng."),StringLength(254)] string Email, DateOnly? NgaySinh = null);
 public sealed record StaffAccountRequest([Required, StringLength(100,MinimumLength=3)] string TenDangNhap,
     [Required, StringLength(128,MinimumLength=8)] string MatKhau, [Required, StringLength(30)] string VaiTro,
-    [Required, StringLength(150)] string HoTen, long? GiaoVienId, long? ThanhVienId, long QuyenBoSung=0);
+    [Required, StringLength(150)] string HoTen, long? GiaoVienId, long? ThanhVienId, long QuyenBoSung=0,
+    [Required(ErrorMessage="Vui lòng nhập email."),EmailAddress(ErrorMessage="Email không đúng định dạng."),StringLength(254)] string? Email=null);
 public sealed record AccountRoleRequest([Required] string VaiTro, long QuyenBoSung, bool HoatDong);

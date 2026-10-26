@@ -1,10 +1,9 @@
 import {Tag} from 'lucide-react';
 import type {ArtClass} from '../types';
 
-export function PromotionHighlight({promotion}:{promotion:NonNullable<ArtClass['promotion']>}) {
+export function PromotionHighlight({promotion,variant='inline'}:{promotion:NonNullable<ArtClass['promotion']>;variant?:'sticker'|'inline'}) {
  const percent=promotion.percent.toLocaleString('vi-VN',{maximumFractionDigits:2});
- return <div className="promotion-highlight" aria-label={`Ưu đãi học phí ${percent} phần trăm. ${promotion.label}. Tự động áp dụng`}>
-   <div className="promotion-value"><Tag size={18} aria-hidden="true"/><strong>−{percent}<span>%</span></strong></div>
-   <div className="promotion-description"><span className="promotion-eyebrow">ƯU ĐÃI HỌC PHÍ</span><b>Thêm sắc màu, nhẹ học phí.</b><span className="promotion-code">Tự động áp dụng · không cần mã</span></div>
+ return <div className={`tuition-offer tuition-offer--${variant}`} title={`${promotion.label}. Tự động áp dụng, không cần mã.`} aria-label={`Ưu đãi học phí ${percent} phần trăm. ${promotion.label}. Tự động áp dụng, không cần mã`}>
+   {variant==='sticker'?<><span className="tuition-offer-caption">ƯU ĐÃI</span><strong className="tuition-offer-value">−{percent}<span>%</span></strong><span className="tuition-offer-foot">HỌC PHÍ</span></>:<><Tag size={13} aria-hidden="true"/><strong className="tuition-offer-value">−{percent}<span>%</span></strong><span>học phí</span></>}
  </div>;
 }

@@ -11,6 +11,8 @@ public sealed class LoginForm : Form
     bool autoLogin;
     public void SetRememberedLogin(string name,string secret){username.Text=name;password.Text=secret;remember.Checked=true;autoLogin=true;}
     public event Action<string,string>? LoginRequested;
+    public event Action? ForgotPasswordRequested;
+    public void PasswordResetSucceeded(){password.Clear();remember.Checked=false;error.ForeColor=Theme.Teal;error.Text="Đã đặt lại mật khẩu. Vui lòng đăng nhập bằng mật khẩu mới.";password.Focus();}
     public LoginForm()
     {
         Text="Đăng nhập | Mỹ Thuật Bụi";ClientSize=new Size(1080,680);MinimumSize=new Size(1000,700);
@@ -31,7 +33,7 @@ public sealed class LoginForm : Form
         brandLayout.Controls.Add(new StudioPhoto {Dock=DockStyle.Fill,Margin=new Padding(0,12,0,6)},0,3);
         brandLayout.Controls.Add(new Label {Text="MỸ THUẬT  /  CẢM HỨNG  /  KẾT NỐI",Dock=DockStyle.Fill,Font=Theme.Font(8,FontStyle.Bold),ForeColor=Theme.Teal,TextAlign=ContentAlignment.BottomLeft},0,4);
         brand.Controls.Add(brandLayout);
-        var right=new Panel {Dock=DockStyle.Fill,Padding=new Padding(40,32,20,10)};
+        var right=new Panel {Dock=DockStyle.Fill,AutoScroll=true,Padding=new Padding(40,32,20,10)};
         var fields=new TableLayoutPanel {Dock=DockStyle.Top,AutoSize=true,ColumnCount=1,RowCount=13};fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
         Label Copy(string text,float size,Color color,int height,bool bold=false)=>new(){Text=text,Dock=DockStyle.Fill,Height=height,AutoSize=false,Font=Theme.Font(size,bold?FontStyle.Bold:FontStyle.Regular),ForeColor=color,Margin=new Padding(0)};
         fields.Controls.Add(Copy("KHÔNG GIAN QUẢN LÝ",9,Theme.Teal,36,true));
@@ -48,13 +50,15 @@ public sealed class LoginForm : Form
         fields.Controls.Add(remember);
         submit=Theme.Button("Đăng nhập   →",true);submit.AutoSize=false;submit.Height=52;submit.Dock=DockStyle.Fill;submit.Font=Theme.Font(12,FontStyle.Bold);submit.Margin=new Padding(0,0,0,8);
         fields.Controls.Add(submit);AcceptButton=submit;
+        var forgot=Theme.Button("Quên mật khẩu?");forgot.Name="forgot-password";forgot.Dock=DockStyle.Fill;forgot.Height=36;
+        forgot.Click+=(_,_)=>ForgotPasswordRequested?.Invoke();fields.Controls.Add(forgot);
         error.Height=60;error.Dock=DockStyle.Fill;error.ForeColor=Color.FromArgb(173,59,59);error.Font=Theme.Font(9);error.Margin=new Padding(0,5,0,0);fields.Controls.Add(error);
         fields.Controls.Add(Copy("Dành cho đội ngũ Mỹ Thuật Bụi.\nCần hỗ trợ? Liên hệ quản trị viên trung tâm.",9,Theme.Muted,50));
         right.Controls.Add(fields);layout.Controls.Add(brand,0,0);layout.Controls.Add(right,1,0);Controls.Add(layout);
         submit.Click+=(_,_)=>{error.Text="";if(string.IsNullOrWhiteSpace(username.Text)||password.Text.Length==0){error.Text="Bạn nhập tên đăng nhập và mật khẩu nhé.";return;}LoginRequested?.Invoke(username.Text.Trim(),password.Text);};
         Shown+=(_,_)=>{username.Focus();if(autoLogin){autoLogin=false;BeginInvoke(new Action(()=>{if(!IsDisposed)submit.PerformClick();}));}};
     }
-    public void LoginFailed(string message){error.Text=message;password.SelectAll();password.Focus();}
+    public void LoginFailed(string message){error.ForeColor=Color.Firebrick;error.Text=message;password.SelectAll();password.Focus();}
     public void SetBusy(bool busy){UseWaitCursor=busy;foreach(Control control in Controls)control.Enabled=!busy;submit.Text=busy?"Đang đăng nhập…":"Đăng nhập   →";}
     public void LoginSucceeded(){DialogResult=DialogResult.OK;Close();}
 }

@@ -1,0 +1,35 @@
+.study-pending-highlight {
+  border: 1px solid #e5a7a3;
+  border-left: 5px solid #b42318;
+  border-radius: 20px;
+  background: #fff7f6;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.pending-payments-heading { display: flex; align-items: flex-start; gap: 12px; }
+.pending-payments-heading > svg { flex-shrink: 0; color: #b42318; margin-top: 3px; }
+.study-pending-highlight .pending-payments-heading h2 { color: #b42318; font-size: 20px; line-height: 1.4; margin: 0 0 8px; }
+.pending-payments-heading p { margin: 0; color: var(--muted); line-height: 1.7; }
+.pending-payments-list { display: grid; gap: 16px; margin-top: 20px; }
+.pending-payment-card { min-width: 0; background: #fff; border: 1px solid #efd2cf; border-radius: 14px; padding: 20px; }
+.pending-payment-title { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+.pending-payment-title h3 { font-size: 17px; line-height: 1.5; margin: 0 0 5px; }
+.pending-payment-title p { margin: 0; color: var(--muted); line-height: 1.6; }
+.pending-payment-status { color: #b42318; background: #fff0ee; border: 1px solid #efb8b2; border-radius: 999px; padding: 6px 12px; font-weight: 700; font-size: 13px; }
+.pending-payment-code { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; margin: 12px 0; }
+.pending-payment-deadline { display: grid; gap: 6px; color: #b42318; line-height: 1.7; margin: 14px 0 20px; }
+.pending-payment-deadline b { display: flex; align-items: flex-start; gap: 8px; }
+.pending-payment-deadline svg { flex-shrink: 0; margin-top: 5px; }
+.pending-payment-deadline > span { font-weight: 700; padding-left: 25px; }
+.pending-payment-details > summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 46px; padding: 12px 16px; border: 1px solid #b42318; border-radius: 10px; color: #b42318; font-weight: 700; background: #fff7f6; cursor: pointer; list-style: none; }
+.pending-payment-details > summary::-webkit-details-marker { display: none; }
+.pending-payment-details > summary:hover { background: #ffe9e6; }
+.pending-payment-details > summary:focus-visible { outline: 3px solid #b42318; outline-offset: 3px; }
+.pending-payment-details[open] > summary svg { transform: rotate(180deg); }
+.pending-payment-details > .debt-row { margin-top: 16px; }
+.pending-payment-expired p { color: #b42318; line-height: 1.7; }
+@media (max-width: 680px) {
+  .study-pending-highlight { padding: 18px 14px; }
+  .pending-payment-card { padding: 16px 12px; }
+  .study-pending-highlight .pending-payments-heading h2 { font-size: 18px; }
+}

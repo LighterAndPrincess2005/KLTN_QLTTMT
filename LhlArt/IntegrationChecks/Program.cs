@@ -37,13 +37,14 @@ builder.Services.AddScoped<IPasswordHasher<TaiKhoan>,PasswordHasher<TaiKhoan>>()
 builder.Services.AddScoped<AuditService>();builder.Services.AddScoped<AccessService>();builder.Services.AddScoped<PolicyService>();
 builder.Services.AddScoped<DanhMucService>();builder.Services.AddScoped<ManagementValidation>();builder.Services.AddScoped<ManagementService>();
 builder.Services.AddScoped<ScheduleService>();builder.Services.AddScoped<EnrollmentService>();builder.Services.AddScoped<FinanceService>();
+var recoveryMail=new CaptureRecoveryMail();builder.Services.AddSingleton<IRecoveryMail>(recoveryMail);builder.Services.AddScoped<AccountRecoveryService>();
 builder.Services.AddScoped<LearningService>();builder.Services.AddScoped<ChangeService>();builder.Services.AddScoped<InventoryService>();builder.Services.AddScoped<ClassLifecycleService>();
 builder.Services.AddAuthentication("Bearer").AddScheme<AuthenticationSchemeOptions,BearerAuthenticationHandler>("Bearer",_=>{});
 builder.Services.AddAuthorization(o=>{
     o.FallbackPolicy=new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
     foreach(var p in Enum.GetValues<Permission>().Where(x=>x!=Permission.None))o.AddPolicy(p.ToString(),b=>b.RequireAuthenticatedUser().RequireAssertion(c=>p is Permission.TaiKhoan or Permission.NhatKy?c.User.IsInRole("QUAN_TRI"):c.User.Has(p)));
 });
-builder.Services.AddRateLimiter(o=>{o.AddFixedWindowLimiter("login",v=>{v.PermitLimit=1000;v.Window=TimeSpan.FromMinutes(1);});o.AddFixedWindowLimiter("consultation",v=>{v.PermitLimit=1000;v.Window=TimeSpan.FromMinutes(1);});});
+builder.Services.AddRateLimiter(o=>{foreach(var name in new[]{"login","consultation","recovery"})o.AddFixedWindowLimiter(name,v=>{v.PermitLimit=1000;v.Window=TimeSpan.FromMinutes(1);});});
 var app=builder.Build();
 app.Use(async(ctx,next)=>{try{await next(ctx);}catch(Exception ex){ctx.Response.StatusCode=ex is ApiError e?e.Status:ex is DbUpdateException?409:500;await ctx.Response.WriteAsJsonAsync(new{error=ex.Message});}});
 app.UseRouting();app.UseRateLimiter();app.UseAuthentication();app.UseAuthorization();app.MapControllers();
@@ -84,6 +85,10 @@ try
         }
         await db.SaveChangesAsync();
     }
+    foreach(var invalidEmail in new string?[]{null,"","   ","email-khong-hop-le"}){
+        await Web("POST","api/tai-khoan/dang-ky",new{TenDangNhap="email_invalid",MatKhau=password,HoTen="Thử ràng buộc email",DienThoai="0900000000",Email=invalidEmail},HttpStatusCode.BadRequest);
+    }
+    Check(true,"Đăng ký bị chặn nếu thiếu email, để trống, chỉ khoảng trắng hoặc sai định dạng");
     var signup=await staff.Post("api/tai-khoan/dang-ky",new{TenDangNhap="phuhuynh",MatKhau=password,HoTen="Nguyễn Thị Ánh",DienThoai="0900000000",Email="parent@example.invalid",NgaySinh="1985-06-17"});var memberId=Id(signup,"thanhVienId");
     var login=await Web("POST","api/tai-khoan/dang-nhap",new{TenDangNhap="phuhuynh",MatKhau=password});web.DefaultRequestHeaders.Authorization=new AuthenticationHeaderValue("Bearer",T(login,"accessToken"));
     var me=await Web("GET","api/tai-khoan/toi");Check(T(me,"hoTen")=="Nguyễn Thị Ánh"&&T(me,"ngaySinh")=="1985-06-17","Tạo tài khoản qua WinForms, web đăng nhập ngay và đọc đúng tiếng Việt / ngày sinh");
@@ -180,7 +185,8 @@ try
     Check((await Web("GET","api/dang-ky/toi")).EnumerateArray().Any(x=>Id(x)==enrollmentId),"Ngừng học viên không xóa đăng ký và học phí đã thu");
     await staff.Put("api/quan-ly/dai-dien/"+Id(link),new{HieuLucDen=Stamp(BusinessClock.Now),LaLienHeChinh=false},T(link,"rowVersion"));
     Check(!(await Web("GET","api/hoc-vien/toi")).EnumerateArray().Any(x=>Id(x,"hocVienId")==Id(student)),"Gỡ liên kết trên WinForms: web mất quyền với đúng hồ sơ");
-    await staff.Post("api/tai-khoan",new{TenDangNhap="cashiercrud",MatKhau=password,VaiTro="THU_NGAN",HoTen="Thu ngân thử",QuyenBoSung=0});
+    await staff.Post("api/tai-khoan",new{TenDangNhap="cashiercrud",MatKhau=password,VaiTro="THU_NGAN",HoTen="Thu ngân thử",Email="cashier@example.invalid",QuyenBoSung=0});
+    await using(var db=new CheckDbContext(options))Check((await db.TaiKhoan.SingleAsync(x=>x.TenDangNhap=="cashiercrud")).Email=="cashier@example.invalid","Tạo tài khoản nhân viên từ Win lưu email để khôi phục mật khẩu");
     using(var cashier=new ArtApiClient(baseUrl:address)){
         await cashier.Login("cashiercrud",password);bool blocked=false;try{await cashier.Post("api/quan-ly/hoc-vien",new{MaHocVien="HVNO",HoTen="Không được lưu",NgaySinh="2000-01-01",LienHeKhanCapTen="Liên hệ",LienHeKhanCapSDT="0900000000",TrangThai="HOAT_DONG"});}catch(InvalidOperationException){blocked=true;}
         Check(blocked,"Thu ngân không được thêm học viên thay học vụ");
@@ -193,6 +199,43 @@ try
     bool expired=false;try{await staff.Read("api/tai-khoan/toi");}catch(ApiSessionExpiredException){expired=true;}
     Check(expired,"Đổi mật khẩu từ WinForms thu hồi phiên cũ");
     await staff.Login("root","WinFormsNew2026!");Check(T(await staff.Read("api/tai-khoan/toi"),"tenDangNhap")=="root","Đăng nhập lại thành công bằng mật khẩu mới");
+    Check(recoveryMail.Count==0,"Tạo tài khoản và nghiệp vụ bình thường không gửi email xác minh hoặc chào mừng");
+    web.DefaultRequestHeaders.Authorization=null;
+    var unknown=await Web("POST","api/tai-khoan/quen-mat-khau",new{TenDangNhap="not_present"});
+    var mismatch=await Web("POST","api/tai-khoan/quen-mat-khau",new{TenDangNhap="not_present_2"});
+    Check(T(unknown,"thongBao")==T(mismatch,"thongBao")&&recoveryMail.Count==0,"Tên không tồn tại trả thông báo chung và không gửi thư");
+    var forgot=await Web("POST","api/tai-khoan/quen-mat-khau",new{TenDangNhap="phuhuynh",Email="attacker@example.invalid"});var recoveryCode=recoveryMail.LastCode;
+    Check(recoveryMail.Count==1&&recoveryCode.Length==6&&recoveryMail.LastRecipient=="parent@example.invalid","Mã 6 chữ số chỉ gửi email trong DB, không nhận địa chỉ khác từ client");
+    Check(T(forgot,"emailNhanDaAn")=="par***@e***.invalid"&&!forgot.GetRawText().Contains("parent@example.invalid"),"Thông báo chỉ trả email che một phần, không trả địa chỉ đầy đủ");
+    await using(var db=new CheckDbContext(options)){
+        var token=await db.KhoiPhucTaiKhoan.SingleAsync();Check(token.MaBam!=recoveryCode&&token.MaBam.Length>64&&token.HetHanLuc>BusinessClock.Now,"Database lưu mã băm chậm có salt, không lưu OTP gốc");
+    }
+    var cooldown=await Web("POST","api/tai-khoan/quen-mat-khau",new{TenDangNhap="phuhuynh",Email="parent@example.invalid"});
+    Check(recoveryMail.Count==1&&T(cooldown,"maYeuCau")==T(forgot,"maYeuCau"),"Trong 60 giây giữ đúng yêu cầu trước để mã đã nhận vẫn dùng được, không gửi thêm thư");
+    var badCode=recoveryCode=="000000"?"111111":"000000";
+    for(var attempt=0;attempt<5;attempt++)await Web("POST","api/tai-khoan/dat-lai-mat-khau",new{MaYeuCau=T(forgot,"maYeuCau"),Ma=badCode,MatKhauMoi="NewRecovery2026!"},HttpStatusCode.BadRequest);
+    await Web("POST","api/tai-khoan/dat-lai-mat-khau",new{MaYeuCau=T(forgot,"maYeuCau"),Ma=recoveryCode,MatKhauMoi="NewRecovery2026!"},HttpStatusCode.BadRequest);Check(true,"Đủ 5 lần sai: mã bị vô hiệu dù nhập đúng sau đó");
+    async Task AgeRecovery(){await using var db=new CheckDbContext(options);await db.KhoiPhucTaiKhoan.ExecuteUpdateAsync(s=>s.SetProperty(x=>x.CreatedAt,BusinessClock.Now.AddMinutes(-2)));}
+    await AgeRecovery();var expiredRecovery=await Web("POST","api/tai-khoan/quen-mat-khau",new{TenDangNhap="phuhuynh",Email="parent@example.invalid"});var expiredCode=recoveryMail.LastCode;
+    var expiredRecoveryId=T(expiredRecovery,"maYeuCau");
+    await using(var db=new CheckDbContext(options))await db.KhoiPhucTaiKhoan.Where(x=>x.MaYeuCau==expiredRecoveryId).ExecuteUpdateAsync(s=>s.SetProperty(x=>x.HetHanLuc,BusinessClock.Now.AddMinutes(-1)));
+    await Web("POST","api/tai-khoan/dat-lai-mat-khau",new{MaYeuCau=T(expiredRecovery,"maYeuCau"),Ma=expiredCode,MatKhauMoi="NewRecovery2026!"},HttpStatusCode.BadRequest);Check(true,"Mã quá hạn không đặt lại được mật khẩu");
+    await AgeRecovery();var beforeNew=await Web("POST","api/tai-khoan/quen-mat-khau",new{TenDangNhap="phuhuynh",Email="parent@example.invalid"});var beforeNewCode=recoveryMail.LastCode;
+    await AgeRecovery();var validRecovery=await Web("POST","api/tai-khoan/quen-mat-khau",new{TenDangNhap="phuhuynh",Email="parent@example.invalid"});var validCode=recoveryMail.LastCode;
+    await Web("POST","api/tai-khoan/dat-lai-mat-khau",new{MaYeuCau=T(beforeNew,"maYeuCau"),Ma=beforeNewCode,MatKhauMoi="NewRecovery2026!"},HttpStatusCode.BadRequest);Check(true,"Gửi mã mới vô hiệu mã trước");
+    var oldLogin=await Web("POST","api/tai-khoan/dang-nhap",new{TenDangNhap="phuhuynh",MatKhau=password});
+    await Web("POST","api/tai-khoan/dat-lai-mat-khau",new{MaYeuCau=T(validRecovery,"maYeuCau"),Ma=validCode,MatKhauMoi="NewRecovery2026!"},HttpStatusCode.NoContent);
+    await Web("POST","api/tai-khoan/dat-lai-mat-khau",new{MaYeuCau=T(validRecovery,"maYeuCau"),Ma=validCode,MatKhauMoi="OtherRecovery2026!"},HttpStatusCode.BadRequest);Check(true,"Đặt lại thành công; mã chỉ dùng một lần");
+    await Web("POST","api/tai-khoan/dang-nhap",new{TenDangNhap="phuhuynh",MatKhau=password},HttpStatusCode.Unauthorized);
+    var newLogin=await Web("POST","api/tai-khoan/dang-nhap",new{TenDangNhap="phuhuynh",MatKhau="NewRecovery2026!"});Check(T(newLogin,"accessToken").Length>0,"Mật khẩu cũ bị từ chối, mật khẩu mới đăng nhập được");
+    web.DefaultRequestHeaders.Authorization=new AuthenticationHeaderValue("Bearer",T(oldLogin,"accessToken"));await Web("GET","api/tai-khoan/toi",expected:HttpStatusCode.Unauthorized);web.DefaultRequestHeaders.Authorization=null;Check(true,"Đặt lại mật khẩu thu hồi phiên web/WinForms cũ");
+    recoveryMail.Configured=false;await Web("POST","api/tai-khoan/quen-mat-khau",new{TenDangNhap="phuhuynh",Email="parent@example.invalid"},HttpStatusCode.ServiceUnavailable);Check(true,"Chưa cấu hình Gmail: báo chưa bật gửi email, không giả vờ đã gửi");
+    var emailTemplate=RecoveryEmailTemplate.Create("000000");
+    Check(emailTemplate.Html.Contains("000000")&&emailTemplate.Html.Contains("cid:"+RecoveryEmailTemplate.LogoContentId),"Recovery HTML includes selectable code and embedded brand logo");
+    Check(emailTemplate.PlainText.Contains("000000")&&emailTemplate.PlainText.Contains("10 phút")&&!emailTemplate.Subject.Contains("000000"),"Recovery has plain text fallback and keeps code out of subject");
+    using(var emailLogo=RecoveryEmailTemplate.OpenLogo())Check(emailLogo.Length>0,"Recovery logo is bundled with API deployment");
+    var invalidCodeRejected=false;try{RecoveryEmailTemplate.Create("<test>");}catch(ArgumentException){invalidCodeRejected=true;}
+    Check(invalidCodeRejected,"Recovery template rejects non-digit code input");
     Console.WriteLine($"ALL {checks} WINFORMS/API INTEGRATION CHECKS PASSED ({(sql?"SQL Server":"SQLite temporary store")}).");
 }
 finally
@@ -201,4 +244,10 @@ finally
     if(storeCreated){await using var db=new CheckDbContext(options);await db.Database.EnsureDeletedAsync();}
     Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
     if(Directory.Exists(folder))Directory.Delete(folder,true);
+}
+sealed class CaptureRecoveryMail:IRecoveryMail
+{
+    public int Count;public string LastCode="",LastRecipient="";public bool Configured=true;
+    public void EnsureConfigured(){if(!Configured)throw new ApiError(503,"Chưa bật gửi email khôi phục.");}
+    public Task Send(string recipient,string code,bool verify,CancellationToken ct){EnsureConfigured();Count++;LastCode=code;LastRecipient=recipient;return Task.CompletedTask;}
 }

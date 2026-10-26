@@ -254,5 +254,12 @@ internal static class ApiColumnLabels
     DangMuon=Đang mượn
     DuTru=Dự trữ
     KhaDung=Khả dụng
+    MaYeuCau=Mã yêu cầu
+    MucDich=Mục đích
+    EmailNhan=Email nhận
+    MaBam=Mã băm
+    SoLanSai=Số lần nhập sai
+    HetHanLuc=Hết hạn lúc
+    DaDungLuc=Đã dùng lúc
     """;
 }
