@@ -18,6 +18,7 @@ internal static class Program
         CultureInfo.DefaultThreadCurrentCulture=CultureInfo.GetCultureInfo("vi-VN");Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);Application.EnableVisualStyles();
         using var handler=new Handler();using var api=new ArtApiClient(handler,"http://ui-check.invalid");api.Login("admin","Test2026!").GetAwaiter().GetResult();
         var course=Json(new{id=1,tenKhoa="Foundation 1",soBuoi=16,soTietMoiBuoi=3,phutMoiTiet=30,hocPhi=3600000.00m,trangThai="HOAT_DONG"});
+        Check(ClassPlanRules.Parse("Thứ Bảy · 09:00–10:30 · Hàng tuần").Day==6,"Thứ Bảy không bị đọc nhầm thành Thứ Ba");
         var start=ClassPlanRules.NextDay(BusinessTime.Now.AddDays(30),6);
         using(var form=new ApiClassController(api).CreateForm([course],null,[])){
             form.Set("KhoaHocId","1");Check(form.Number("SoBuoiKeHoach")==16,"Chọn khóa tự điền 16 buổi");Check(form.Number("HocPhiApDung")==3600000m,"Học phí không bị sai dấu thập phân theo locale vi-VN");
@@ -32,11 +33,13 @@ internal static class Program
             form.Set("HocPhiApDung",-1m);Check(form.FieldError("HocPhiApDung")!="","Cảnh báo học phí âm");form.Set("HocPhiApDung",3600000m);
             form.Set("DongDangKyLuc",start);Check(form.FieldError("DongDangKyLuc").Contains("48"),"Cảnh báo đóng đăng ký quá sát ngày học");form.Set("DongDangKyLuc",start.AddDays(-3));
             form.Set("ThuHoc","1");Check(form.Date("NgayKhaiGiangDuKien").DayOfWeek==DayOfWeek.Monday,"Chọn Thứ Hai tự căn ngày khai giảng kế tiếp");
-            form.Set("CachTuan",0);Check(form.FieldError("CachTuan")!="","Cảnh báo khoảng tuần không hợp lệ");form.Set("CachTuan",1);
+            Check(((NumericUpDown)form.Controls.Find("CachTuan",true).Single()).Minimum==1,"Chu kỳ tuần có giới hạn tối thiểu 1");
+            form.Set("SoBuoiMoiTuan",2);form.Set("ThuHoc2","3");Check(form.ValidateFields()&&form.TextValue("LichHocDuKien").Contains("2 buổi/tuần"),"Hai thứ học trong tuần cập nhật lịch dự kiến");
+            form.Set("SoBuoiMoiTuan",1);
             form.Set("GioBatDau",new TimeSpan(23,30,0));Check(form.FieldError("GioBatDau")!="","Không cho buổi học vượt qua ngày mới");
             form.Set("GioBatDau",new TimeSpan(9,0,0));form.Set("CachTuan",2);Check(form.ValidateFields(),"Sửa hết lỗi: biểu mẫu hợp lệ trước khi lưu");
             handler.AllowSave=true;form.SaveAsync!().GetAwaiter().GetResult();
-            var savedPayload=handler.Saved!.Value;Check(ArtApiClient.Text(savedPayload,"lichHocDuKien").Contains("Mỗi 2 tuần")&&ArtApiClient.Text(savedPayload,"soBuoiKeHoach")=="16"&&!ArtApiClient.TryGet(savedPayload,"ThuHoc",out _),"Payload gửi API giữ đúng 16 buổi, lịch đã chọn và không thêm cột API không hỗ trợ");
+            var savedPayload=handler.Saved!.Value;Check(ArtApiClient.Text(savedPayload,"lichHocDuKien").Contains("Mỗi 2 tuần")&&ArtApiClient.Text(savedPayload,"soBuoiKeHoach")=="16"&&!ArtApiClient.TryGet(savedPayload,"ThuHoc",out _)&&!ArtApiClient.TryGet(savedPayload,"MaLop",out _),"Payload gửi API giữ đúng 16 buổi, lịch đã chọn và để API tự sinh mã");
         }
         var saved=Json(new{id=7,khoaHocId=1,maLop="CLASS",tenLop="Lớp đã có lịch",ngayKhaiGiangDuKien=start.ToString("yyyy-MM-dd"),soBuoiKeHoach=16,lichHocDuKien="Thứ Bảy · 09:00–10:30 · Hàng tuần",siSoToiThieu=6,siSoToiDa=12,hocPhiApDung=3600000m,moDangKyLuc=BusinessTime.Now.Date.ToString("s"),dongDangKyLuc=start.AddDays(-3).ToString("s"),trangThai="NHAP",rowVersion="AQ=="});
         using(var form=new ApiClassController(api).CreateForm([course],saved,[Json(new{lopHocId=7,batDau=start.AddHours(9).ToString("s"),ketThuc=start.AddHours(10.5).ToString("s")})])){
@@ -52,7 +55,7 @@ internal static class Program
                 Check(guard.PreFilterMessage(ref wheel)&&number.Value==16&&scroll.AutoScrollPosition.Y<oldY,"Lăn trên ô số (kể cả ô đang nhập): cuộn form, không đổi 16 buổi");
                 var day=(ComboBox)form.Controls.Find("ThuHoc",true).Single();var selected=day.SelectedIndex;wheel=Message.Create(day.Handle,0x020A,new IntPtr(-120<<16),IntPtr.Zero);guard.PreFilterMessage(ref wheel);Check(day.SelectedIndex==selected,"Lăn trên danh sách đóng không tự đổi thứ học");
                 var time=(DateTimePicker)form.Controls.Find("GioBatDau",true).Single();var oldTime=time.Value;wheel=Message.Create(time.Handle,0x020A,new IntPtr(120<<16),IntPtr.Zero);guard.PreFilterMessage(ref wheel);Check(time.Value==oldTime,"Lăn trên giờ học không tự đổi giờ/phút");
-                var oldValue=number.Value;number.UpButton();Check(number.Value==oldValue+1,"Nút mũi tên tăng số vẫn sử dụng được");form.Set("SoBuoiKeHoach",16);
+                Check(!number.Enabled,"Số buổi lớp lấy từ khóa học và khóa sửa trực tiếp");
             }
             var save=(Button)form.Controls.Find("save-continue",true).Single();var confirm=(Button)form.Controls.Find("confirm-save",true).Single();var writes=handler.Writes;
             Check(save.Visible&&save.Parent==confirm.Parent,"Có nút Lưu ngay cạnh Xác nhận");save.PerformClick();Pump(()=>handler.Writes>writes&&save.Enabled);
@@ -174,7 +177,7 @@ internal static class Program
             if(request.Method==HttpMethod.Get&&request.RequestUri.AbsolutePath.EndsWith("quan-ly/loai-khoa-hoc")){CatalogReads++;return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK){Content=new StringContent("{\"tongSo\":1,\"duLieu\":[{\"id\":1,\"maLoai\":\"CORE\",\"tenLoai\":\"Chính khóa\",\"moTa\":\"Chương trình chính\",\"trangThai\":\"HOAT_DONG\"}]}")});}
             if(request.RequestUri.AbsolutePath.EndsWith("dang-xuat")){SignedOut=true;return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));}
             if(!request.RequestUri!.AbsolutePath.EndsWith("dang-nhap")){
-                Writes++;if(!AllowSave)throw new Exception("Unexpected API write");LastMethod=request.Method.Method;LastIfMatch=request.Headers.TryGetValues("If-Match",out var values)?values.Single():"";Saved=JsonDocument.Parse(request.Content!.ReadAsStringAsync(ct).GetAwaiter().GetResult()).RootElement.Clone();return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK){Content=new StringContent(JsonSerializer.Serialize(new{id=10,rowVersion=Convert.ToBase64String(BitConverter.GetBytes(Writes))}))});
+                Writes++;if(!AllowSave)throw new Exception("Unexpected API write");LastMethod=request.Method.Method;LastIfMatch=request.Headers.TryGetValues("If-Match",out var values)?values.Single():"";Saved=JsonDocument.Parse(request.Content!.ReadAsStringAsync(ct).GetAwaiter().GetResult()).RootElement.Clone();return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK){Content=new StringContent(JsonSerializer.Serialize(new{id=10,maLop="LOP-0001",rowVersion=Convert.ToBase64String(BitConverter.GetBytes(Writes))}))});
             }
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK){Content=new StringContent(JsonSerializer.Serialize(new{vaiTroChinh=Role,accessToken="ui-only",tenDangNhap="admin",quyen=Rights}))});
         }

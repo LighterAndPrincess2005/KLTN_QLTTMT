@@ -16,6 +16,8 @@ public class InputForm : Form
     FormMouseWheelGuard? wheelGuard;
     public bool ShowSaveButton { set=>saveButton.Visible=value; }
     int row;
+    bool compactPending;
+    public bool CompactColumns { get; set; }
     public Action? ValidateAndSave { get; set; }
     public Func<Task>? SaveAsync { get; set; }
     public Func<IReadOnlyDictionary<string,string>>? FieldValidation { get; set; }
@@ -32,7 +34,7 @@ public class InputForm : Form
         Text = title + " | Mỹ Thuật Bụi";
         Font = Theme.Font();
         StartPosition = FormStartPosition.CenterParent;
-        Size = new Size(760, 720);
+        Size = new Size(820, 660);
         MinimumSize = new Size(650, 500);
         BackColor = Color.White;
         AutoScaleMode = AutoScaleMode.Dpi;
@@ -107,7 +109,7 @@ public class InputForm : Form
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         table.RowStyles.Add(new RowStyle(SizeType.AutoSize));table.Controls.Add(formError,0,row++);table.SetColumnSpan(formError,2);
         table.SizeChanged+=(_,_)=>{
-            var width=Math.Max(120,table.ClientSize.Width-245);
+            var width=Math.Max(120,table.ClientSize.Width-(CompactColumns?430:245));
             formError.MaximumSize=new Size(Math.Max(120,table.ClientSize.Width-10),0);
             foreach(var error in errors.Values)error.MaximumSize=new Size(width,0);
         };
@@ -125,11 +127,12 @@ public class InputForm : Form
         {
             var combo = new ComboBox
             {
-                DropDownStyle = ComboBoxStyle.DropDownList,
+                DropDownStyle = key.EndsWith("Id",StringComparison.Ordinal)&&options.Count()>10?ComboBoxStyle.DropDown:ComboBoxStyle.DropDownList,
                 DropDownWidth = 440,
                 IntegralHeight = false,
                 MaxDropDownItems = 12
             };
+            if(combo.DropDownStyle==ComboBoxStyle.DropDown){combo.AutoCompleteMode=AutoCompleteMode.SuggestAppend;combo.AutoCompleteSource=AutoCompleteSource.ListItems;}
             foreach (var option in options)
                 combo.Items.Add(option);
             int selected = combo.Items.Cast<Choice>().ToList().FindIndex(x => x.Id == Convert.ToString(value));
@@ -149,7 +152,7 @@ public class InputForm : Form
             control = new DateTimePicker
             {
                 Format = DateTimePickerFormat.Custom,
-                CustomFormat = key is "Birth" or "MemberSince" or "NgaySinh" or "HieuLucTu" or "NgayKhaiGiangDuKien" ? "dd/MM/yyyy" : "dd/MM/yyyy HH:mm",
+                CustomFormat = key is "Birth" or "MemberSince" or "NgaySinh" or "HieuLucTu" or "NgayKhaiGiangDuKien" or "NgayKetThucDuKien" ? "dd/MM/yyyy" : "dd/MM/yyyy HH:mm",
                 Value = date.Year < 1900 ? DateTime.Today : date
             };
         else if (value is int || value is decimal)
@@ -182,6 +185,8 @@ public class InputForm : Form
         control.Enabled = !readOnly;
         controls[key] = control;
         if (key is "NgaySinh" or "Birth" && control is DateTimePicker birth) { birth.MinDate = new DateTime(1900, 1, 1); birth.MaxDate = Services.BusinessTime.Now.Date; }
+        if(control is NumericUpDown numeric && key is ("SoBuoi" or "SoBuoiKeHoach" or "PhutMoiBuoi" or "SoBuoiMoiTuan" or "CachTuan"))numeric.Minimum=1;
+        if(control is NumericUpDown weekly && key=="SoBuoiMoiTuan")weekly.Maximum=3;
         Control field = control;
         if ((value is int || value is decimal) && Theme.IsMoney(key))
         {
@@ -200,11 +205,18 @@ public class InputForm : Form
             field = moneyField;
         }
 
-        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        table.Controls.Add(new Label { UseMnemonic = false, Text = label, AutoSize = true, MaximumSize = new Size(215, 0), ForeColor = Theme.Ink, Margin = new Padding(0, 15, 18, 12) }, 0, row);
-        table.Controls.Add(field, 1, row++);
+        var pair=CompactColumns&&!multiline&&key is not ("TenKhoa" or "TenLop" or "LichHocDuKien" or "ScheduleNote");
+        if(CompactColumns&&table.ColumnCount==2){table.ColumnCount=4;table.ColumnStyles.Clear();table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,140));table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,50));table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,140));table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,50));table.SetColumnSpan(formError,4);}
+        if(!pair&&compactPending){row+=2;compactPending=false;}
+        var column=pair&&compactPending?2:0;
+        if(!compactPending){table.RowStyles.Add(new RowStyle(SizeType.AutoSize));table.RowStyles.Add(new RowStyle(SizeType.AutoSize));}
+        table.Controls.Add(new Label { UseMnemonic = false, Text = label, AutoSize = true, MaximumSize = new Size(CompactColumns?130:215, 0), ForeColor = Theme.Ink, Margin = new Padding(0, 15, 12, 12) }, column, row);
+        table.Controls.Add(field, column+1, row);
+        if(!pair&&CompactColumns)table.SetColumnSpan(field,3);
         var errorLabel=new Label {AutoSize=true,ForeColor=Color.Firebrick,Visible=false,UseMnemonic=false,AccessibleName="Lỗi: "+label,Margin=new Padding(0,0,0,10),MaximumSize=new Size(400,0)};
-        errors[key]=errorLabel;table.RowStyles.Add(new RowStyle(SizeType.AutoSize));table.Controls.Add(errorLabel,1,row++);
+        errors[key]=errorLabel;table.Controls.Add(errorLabel,column+1,row+1);
+        if(!pair&&CompactColumns)table.SetColumnSpan(errorLabel,3);
+        if(pair&&!compactPending)compactPending=true;else{compactPending=false;row+=2;}
     }
 
     public void Changed(string key, Action action)

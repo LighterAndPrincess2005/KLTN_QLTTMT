@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using LhlArt.Networking;
+using LhlArt.Services;
 using LhlArt.Views;
 
 namespace LhlArt.Controllers;
@@ -16,8 +17,8 @@ internal sealed class ApiCatalogController(ArtApiClient api)
     static Field[] Fields(string route) => route.Split('/').Last() switch
     {
         "loai-khoa-hoc" => [Text("MaLoai","Mã loại"),Text("TenLoai","Tên loại"),Text("MoTa","Mô tả"),State()],
-        "khoa-hoc" => [Link("LoaiKhoaHocId","Loại khóa","loai-khoa-hoc","TenLoai"),Text("MaKhoa","Mã khóa"),Text("TenKhoa","Tên khóa"),Number("PhienBan","Phiên bản",1),Text("CapDo","Cấp độ"),Number("TuoiToiThieu","Tuổi tối thiểu",6),Text("YeuCauDauVao","Yêu cầu đầu vào"),Text("MucTieu","Mục tiêu"),Number("SoBuoi","Số buổi",16),Number("SoTietMoiBuoi","Số tiết mỗi buổi",4),Number("PhutMoiTiet","Phút mỗi tiết",30),Number("HocPhi","Học phí"),new("HieuLucTu","Ngày hiệu lực",DateTime.Today),State("NHAP","NHAP","HOAT_DONG","NGUNG")],
-        "noi-dung-buoi" => [Link("KhoaHocId","Khóa học","khoa-hoc","TenKhoa"),Number("ThuTu","Thứ tự buổi",1),Text("ChuDe","Chủ đề"),Text("NoiDung","Nội dung"),Number("SoTiet","Số tiết",4),Text("YeuCauSanPham","Yêu cầu sản phẩm")],
+        "khoa-hoc" => [Link("LoaiKhoaHocId","Loại khóa","loai-khoa-hoc","TenLoai"),Text("MaKhoa","Mã khóa (tự sinh)"),Text("TenKhoa","Tên khóa"),Number("PhienBan","Phiên bản",1),Text("CapDo","Cấp độ"),Number("TuoiToiThieu","Tuổi tối thiểu",6),Text("YeuCauDauVao","Yêu cầu đầu vào"),Text("MucTieu","Mục tiêu"),Number("SoBuoi","Số buổi",16),Number("PhutMoiBuoi","Số phút một buổi",120),Number("HocPhi","Học phí"),new("HieuLucTu","Ngày hiệu lực (tự ghi)",BusinessTime.Now.Date),State("NHAP","NHAP","HOAT_DONG","NGUNG")],
+        "noi-dung-buoi" => [Link("KhoaHocId","Khóa học","khoa-hoc","TenKhoa"),Number("ThuTu","Thứ tự buổi",1),Text("ChuDe","Chủ đề"),Text("NoiDung","Nội dung"),Number("PhutBuoi","Số phút buổi học",120),Text("YeuCauSanPham","Yêu cầu sản phẩm")],
         "lop-hoc" => [Link("KhoaHocId","Khóa học","khoa-hoc","TenKhoa"),Text("MaLop","Mã lớp"),Text("TenLop","Tên lớp"),new("NgayKhaiGiangDuKien","Ngày khai giảng",DateTime.Today.AddDays(21)),Number("SoBuoiKeHoach","Số buổi kế hoạch",16),Text("LichHocDuKien","Mô tả lịch học"),Number("SiSoToiThieu","Sĩ số tối thiểu",6),Number("SiSoToiDa","Sĩ số tối đa",12),Number("HocPhiApDung","Học phí áp dụng"),new("MoDangKyLuc","Mở đăng ký lúc",DateTime.Today),new("DongDangKyLuc","Đóng đăng ký lúc",DateTime.Today.AddDays(18)),State("NHAP","NHAP","DANG_TUYEN_SINH","DANG_HOC","DA_KET_THUC")],
         "giao-vien" => [Text("MaGiaoVien","Mã giáo viên"),Text("HoTen","Họ tên"),Text("DienThoai","Điện thoại"),Text("TrinhDo","Trình độ"),Text("ChuyenMon","Chuyên môn"),Text("CapDoCoTheDay","Cấp độ có thể dạy"),State()],
         "phong-hoc" => [Text("MaPhong","Mã phòng"),Text("TenPhong","Tên phòng"),Number("SucChua","Sức chứa",12),State()],
@@ -48,26 +49,80 @@ internal sealed class ApiCatalogController(ArtApiClient api)
     {
         if(route=="api/quan-ly/lop-hoc"){await new ApiClassController(api).Edit(owner,row);return;}
         var fields=Fields(route);
-        using var form=new InputForm((row.HasValue?"Cập nhật ":"Thêm ")+title.ToLowerInvariant());
+        var course=route.EndsWith("/khoa-hoc",StringComparison.Ordinal);
+        var content=route.EndsWith("/noi-dung-buoi",StringComparison.Ordinal);
+        using var form=new InputForm((row.HasValue?"Cập nhật ":"Thêm ")+title.ToLowerInvariant()){CompactColumns=true};
+        var courseRows=content?await new ApiDataService(api).All("api/quan-ly/khoa-hoc"):new List<JsonElement>();
+        var hasSyllabus=course&&row.HasValue&&(await new ApiDataService(api).All("api/quan-ly/noi-dung-buoi"))
+            .Any(x=>ArtApiClient.Text(x,"khoaHocId")==ArtApiClient.Text(row.Value,"id"));
+        int MinutesPerPart()
+        {
+            var selected=courseRows.FirstOrDefault(x=>ArtApiClient.Text(x,"id")==form.TextValue("KhoaHocId"));
+            return selected.ValueKind==JsonValueKind.Object?ArtApiClient.Get(selected,"phutMoiTiet").GetInt32():0;
+        }
+        var levels=course?(await new ApiDataService(api).All(route)).Select(x=>ArtApiClient.Text(x,"capDo")).Where(x=>x!="").Distinct(StringComparer.OrdinalIgnoreCase).ToList():new List<string>();
+        foreach(var level in new[]{"JUNIOR","FOUNDATION","BASIC","ADVANCED"})if(!levels.Contains(level,StringComparer.OrdinalIgnoreCase))levels.Add(level);
         foreach(var f in fields)
         {
             object value=f.Value;
             if(row.HasValue&&ArtApiClient.TryGet(row.Value,f.Key,out var existing)&&existing.ValueKind!=JsonValueKind.Null)
                 value=f.Value is int?existing.GetInt32():f.Value is decimal?existing.GetDecimal():f.Value is DateTime?DateTime.Parse(existing.GetString()!,CultureInfo.InvariantCulture):existing.ToString();
+            if(course&&f.Key=="PhutMoiBuoi")value=row.HasValue?(int)(ArtApiClient.Get(row.Value,"soTietMoiBuoi").GetInt32()*ArtApiClient.Get(row.Value,"phutMoiTiet").GetInt32()):120;
+            if(content&&f.Key=="PhutBuoi")
+            {
+                var selected=courseRows.FirstOrDefault(x=>ArtApiClient.Text(x,"id")==ArtApiClient.Text(row??default,"khoaHocId"));
+                value=selected.ValueKind==JsonValueKind.Object?ArtApiClient.Get(selected,"soTietMoiBuoi").GetInt32()*ArtApiClient.Get(selected,"phutMoiTiet").GetInt32():120;
+            }
+            var generatedCode=f.Key is "MaLoai" or "MaKhoa" or "MaGiaoVien" or "MaPhong" or "MaHoaCu" or "MaNCC";
+            if(generatedCode&&!row.HasValue)value="Tự sinh khi lưu";
             IEnumerable<Choice>? choices=f.Options?.Select(x=>new Choice(x,x switch {"HOAT_DONG"=>"Hoạt động","NGUNG"=>"Ngừng","NHAP"=>"Bản nháp","DANG_TUYEN_SINH"=>"Đang tuyển sinh","DANG_HOC"=>"Đang học","DA_KET_THUC"=>"Đã kết thúc","TIEU_HAO"=>"Vật tư tiêu hao","DUNG_CHUNG"=>"Dụng cụ dùng chung","BAN_RIENG"=>"Bán riêng",_=>x}));
             if(f.Lookup is not null)choices=await Choices(f.Lookup,f.Name!);
-            form.Add(f.Key,f.Label,value,choices);
+            if(course&&f.Key=="CapDo")choices=new[]{new Choice("","Chọn cấp độ")}.Concat(levels.Select(x=>new Choice(x,x)));
+            form.Add(f.Key,f.Label,value,choices,readOnly:(generatedCode||(course&&(f.Key is ("MaKhoa" or "HieuLucTu")||hasSyllabus&&f.Key is ("SoBuoi" or "PhutMoiBuoi")))||(content&&f.Key=="PhutBuoi")),multiline:f.Key is "YeuCauDauVao" or "MucTieu" or "MoTa" or "NoiDung");
         }
+        if(content)
+        {
+            form.Changed("KhoaHocId",()=>{var selected=courseRows.FirstOrDefault(x=>ArtApiClient.Text(x,"id")==form.TextValue("KhoaHocId"));if(selected.ValueKind==JsonValueKind.Object)form.Set("PhutBuoi",ArtApiClient.Get(selected,"soTietMoiBuoi").GetInt32()*MinutesPerPart());form.ValidateFields();});
+            form.FieldValidation=()=>
+            {
+                var errors=new Dictionary<string,string>();var minutes=MinutesPerPart();
+                if(minutes==0)errors["KhoaHocId"]="Chọn khóa học trước.";
+                return errors;
+            };
+        }
+        if(course)form.FieldValidation=()=>
+        {
+            var errors=new Dictionary<string,string>();
+            if(form.Number("SoBuoi") is <1 or >32767)errors["SoBuoi"]="Số buổi phải từ 1 đến 32.767; API hiện không quy định giới hạn riêng.";
+            if(form.Number("PhutMoiBuoi") is <1 or >=1440)errors["PhutMoiBuoi"]="Thời lượng phải từ 1 đến 1.439 phút để buổi học kết thúc trong ngày.";
+            if(row.HasValue)
+            {
+                var periods=ArtApiClient.Get(row.Value,"soTietMoiBuoi").GetInt32();
+                if(form.Number("PhutMoiBuoi")%periods!=0)errors["PhutMoiBuoi"]=$"Khóa cũ có {periods} phần thời lượng; số phút phải chia hết cho {periods}.";
+            }
+            if(form.TextValue("LoaiKhoaHocId")=="")errors["LoaiKhoaHocId"]="Chọn loại khóa học.";
+            if(string.IsNullOrWhiteSpace(form.TextValue("TenKhoa")))errors["TenKhoa"]="Nhập tên khóa học.";
+            if(form.TextValue("CapDo")=="")errors["CapDo"]="Chọn cấp độ.";
+            if(string.IsNullOrWhiteSpace(form.TextValue("MucTieu")))errors["MucTieu"]="Nhập mục tiêu khóa học.";
+            if(form.Number("PhienBan")<1)errors["PhienBan"]="Phiên bản phải lớn hơn 0.";
+            if(form.Number("TuoiToiThieu") is <0 or >32767)errors["TuoiToiThieu"]="Tuổi tối thiểu không hợp lệ.";
+            if(form.Number("HocPhi")<0)errors["HocPhi"]="Học phí không được âm.";
+            return errors;
+        };
         Dictionary<string,object?>? body=null;
         form.ValidateAndSave=()=>
         {
             body=new();
             foreach(var f in fields)
             {
+                if((f.Key is "MaLoai" or "MaKhoa" or "MaGiaoVien" or "MaPhong" or "MaHoaCu" or "MaNCC") ||
+                   (course&&f.Key is ("PhutMoiBuoi" or "HieuLucTu"))||(content&&f.Key=="PhutBuoi"))continue;
                 object value=f.Value is int?(object)(int)form.Number(f.Key):f.Value is decimal?form.Number(f.Key):f.Value is DateTime?(f.Key=="HieuLucTu"||f.Key=="NgayKhaiGiangDuKien"?form.Date(f.Key).ToString("yyyy-MM-dd"):form.Date(f.Key).ToString("yyyy-MM-ddTHH:mm:ss")):form.TextValue(f.Key);
                 if(f.Lookup is not null)value=long.Parse(form.TextValue(f.Key),CultureInfo.InvariantCulture);
                 body[f.Key]=value;
             }
+            if(course){var periods=row.HasValue?ArtApiClient.Get(row.Value,"soTietMoiBuoi").GetInt32():1;body["SoTietMoiBuoi"]=periods;body["PhutMoiTiet"]=(int)form.Number("PhutMoiBuoi")/periods;}
+            if(content)body["SoTiet"]=(int)form.Number("PhutBuoi")/MinutesPerPart();
         };
         form.SaveAsync=async()=>
         {

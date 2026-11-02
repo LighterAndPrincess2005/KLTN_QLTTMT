@@ -148,11 +148,28 @@ if(args.Contains("--initialize"))
 {
     using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();
     await db.Database.EnsureCreatedAsync();
+    await SchemaCompatibility.EnsureMemberBirthDateAsync(db);
     // Existing databases are never deleted or overwritten. Verify the required model columns.
+    _=await db.ThanhVien.AsNoTracking().Select(x=>new {x.Id,x.NgaySinh}).Take(1).ToListAsync();
     _=await db.TaiKhoan.AsNoTracking().Select(x=>new {x.Id,x.RowVersion,x.CreatedAt,x.UpdatedAt}).Take(1).ToListAsync();
     _=await db.YeuCauThayDoi.AsNoTracking().Select(x=>new {x.RequestFingerprint,x.PhuongAnHoanJson}).Take(1).ToListAsync();
     Console.WriteLine("Database sẵn sàng. Tạo tài khoản quản trị lần đầu trên trang chủ API.");return;
 }
+if(args.Contains("--db-info"))
+{
+    using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();
+    var connection=db.Database.GetDbConnection();
+    Console.WriteLine($"Máy SQL: {connection.DataSource}; Database: {connection.Database}");
+    if(!await db.Database.CanConnectAsync())throw new InvalidOperationException("Không kết nối được database đã cấu hình.");
+    Console.WriteLine($"Thành viên: {await db.ThanhVien.CountAsync()}; Học viên: {await db.HocVien.CountAsync()}; " +
+        $"Giáo viên: {await db.GiaoVien.CountAsync()}; Khóa học: {await db.KhoaHoc.CountAsync()}; " +
+        $"Lớp học: {await db.LopHoc.CountAsync()}; Buổi học: {await db.BuoiHoc.CountAsync()}; " +
+        $"Đăng ký: {await db.DangKy.CountAsync()}; Tài khoản: {await db.TaiKhoan.CountAsync()}");
+    return;
+}
+// Desktop can start the API without --initialize; repair the one known old-schema column.
+using(var scope=app.Services.CreateScope())
+    await SchemaCompatibility.EnsureMemberBirthDateAsync(scope.ServiceProvider.GetRequiredService<MyThuatDbContext>());
 app.UseExceptionHandler(handler=>handler.Run(async ctx=>
 {
     var error=ctx.Features.Get<IExceptionHandlerFeature>()!.Error;

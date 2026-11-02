@@ -53,7 +53,7 @@ public sealed class AuthController(MyThuatDbContext db, IPasswordHasher<TaiKhoan
         ApiError.Require(await db.TaiKhoan.AnyAsync(ct),"Cần thiết lập quản trị trước.",409);
         var name=Normalize(request.TenDangNhap);
         ApiError.Require(!await db.TaiKhoan.AnyAsync(x=>x.TenDangNhap==name,ct),"Tên đăng nhập đã tồn tại.",409);
-        var member=new ThanhVien {MaThanhVien="TV"+Guid.NewGuid().ToString("N")[..16],HoTen=request.HoTen,
+        var member=new ThanhVien {MaThanhVien=await CodeGenerator.NextAsync(db.ThanhVien,x=>x.MaThanhVien,"TV-",ct),HoTen=request.HoTen,
             DienThoai=request.DienThoai,Email=email,NgaySinh=request.NgaySinh,TrangThai="HOAT_DONG",XacNhanThanhVienLuc=BusinessClock.Now};
         db.ThanhVien.Add(member); await db.SaveChangesAsync(ct);
         var account=new TaiKhoan {TenDangNhap=name,ThanhVienId=member.Id,Email=email,
@@ -62,7 +62,7 @@ public sealed class AuthController(MyThuatDbContext db, IPasswordHasher<TaiKhoan
         db.TaiKhoan.Add(account); await db.SaveChangesAsync(ct);
         audit.Add("TaiKhoan",account.Id,"DANG_KY",actor:account.Id);
         await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
-        return Ok(new {account.Id,ThanhVienId=member.Id,ThongBao="Tài khoản đã được tạo. Bạn có thể thêm hồ sơ học viên và chọn lớp."});
+        return Ok(new {account.Id,ThanhVienId=member.Id,member.MaThanhVien,ThongBao="Tài khoản đã được tạo. Bạn có thể thêm hồ sơ học viên và chọn lớp."});
     }
 
     [AllowAnonymous, EnableRateLimiting("login"), HttpPost("dang-nhap")]

@@ -35,7 +35,7 @@ public sealed class ApiManagementForm : Form
     public bool Logout { get; private set; }
     public ApiManagementForm(ArtApiClient client,bool fitToScreen=true)
     {
-        api=client; Text="Mỹ Thuật Bụi | Không gian quản lý";
+        api=client; Text="Mỹ Thuật Bụi | Không gian quản lý · bản 02.11.2026";
         Size=new Size(1440,920); MinimumSize=new Size(1100,740); StartPosition=FormStartPosition.CenterScreen;
         Font=Theme.Font(); BackColor=Theme.Paper; AutoScaleMode=AutoScaleMode.Dpi;
         if(fitToScreen)Load+=(_,_)=>FitWorkArea(Screen.FromControl(this).WorkingArea);
@@ -104,6 +104,20 @@ public sealed class ApiManagementForm : Form
         if(api.Has(16)) {Item("Họa cụ","api/quan-ly/hoa-cu",true);Item("Nhà cung cấp","api/quan-ly/nha-cung-cap",true);Item("Tồn kho","api/kho/ton");Item("Phiếu kho","api/kho/phieu");}
         if(api.Has(4)) Item("Thu tiền chờ đối chiếu","api/giao-dich/cho-doi-chieu");
         if(api.Has(64)) Item("Tài khoản & vai trò","api/tai-khoan");
+        if(api.Role=="QUAN_TRI")
+        {
+            var dataSource=NavButton("Nguồn dữ liệu đang dùng","Quản trị");
+            dataSource.Click+=async(_,_)=>await Run(async()=>
+            {
+                var source=await api.Read("api/he-thong/nguon-du-lieu");
+                string Value(string key)=>ArtApiClient.Text(source,key);
+                MessageBox.Show(this,$"API: {api.BaseUrl}\nMáy SQL: {Value("maySql")}\nDatabase: {Value("tenDatabase")}\n\n"+
+                    $"Thành viên: {Value("thanhVien")} · Học viên: {Value("hocVien")} · Giáo viên: {Value("giaoVien")}\n"+
+                    $"Khóa học: {Value("khoaHoc")} · Lớp học: {Value("lopHoc")} · Buổi học: {Value("buoiHoc")}\n"+
+                    $"Đăng ký: {Value("dangKy")} · Tài khoản: {Value("taiKhoan")}","Nguồn dữ liệu",MessageBoxButtons.OK,MessageBoxIcon.Information);
+            });
+            nav.Controls.Add(dataSource);
+        }
         if(api.Has(32)&&api.Has(4))
         {
             var chart=NavButton("Báo cáo thu / hoàn","Báo cáo");chart.Click+=async(_,_)=>await Run(async()=>{
@@ -201,6 +215,12 @@ public sealed class ApiManagementForm : Form
         }
         else allRecords=await new ApiDataService(api).All(route,paged);
         allRecords=await new ApiDisplayService(api).Enrich(route,allRecords);
+        if(route=="api/quan-ly/khoa-hoc")allRecords=allRecords.Select(x=>ApiDataService.With(x,("phutMoiBuoi",ApiDataService.Id(x,"soTietMoiBuoi")*ApiDataService.Id(x,"phutMoiTiet")))).ToList();
+        if(route=="api/quan-ly/noi-dung-buoi")
+        {
+            var courseMinutes=(await new ApiDataService(api).All("api/quan-ly/khoa-hoc")).ToDictionary(x=>ApiDataService.Id(x),x=>ApiDataService.Id(x,"phutMoiTiet"));
+            allRecords=allRecords.Select(x=>ApiDataService.With(x,("phutBuoi",ApiDataService.Id(x,"soTiet")*courseMinutes.GetValueOrDefault(ApiDataService.Id(x,"khoaHocId"))))).ToList();
+        }
         heading.Text=title;FilterAndBind();ConfigureActions();
     }
     void FilterAndBind()
@@ -222,7 +242,9 @@ public sealed class ApiManagementForm : Form
     void Bind()
     {
         var table=new DataTable();table.Columns.Add("__index",typeof(int));
-        var hidden=new[]{"rowVersion","createdAt","updatedAt","requestFingerprint","phuongAnHoanJson","idempotencyKey"};
+        var hidden=new[]{"rowVersion","createdAt","updatedAt","requestFingerprint","phuongAnHoanJson","idempotencyKey"}.ToList();
+        if(route=="api/quan-ly/khoa-hoc")hidden.AddRange(["soTietMoiBuoi","phutMoiTiet"]);
+        if(route=="api/quan-ly/noi-dung-buoi")hidden.Add("soTiet");
         var preferred=new[]{"hoTen","loaiTaiKhoan","tenHocVien","tenNguoiDaiDien","nguoiDaiDien","kenhHienThi","tenKhoa","tenLop","maLop","maHocVien","batDau","ketThuc","trangThai","thuTuTrongLop","nhanXet","noiDung"};
         var names=records.Where(x=>x.ValueKind==JsonValueKind.Object).SelectMany(x=>x.EnumerateObject()).Select(x=>x.Name).Distinct().Where(x=>!hidden.Contains(x,StringComparer.OrdinalIgnoreCase)).OrderBy(x=>Array.FindIndex(preferred,key=>key.Equals(x,StringComparison.OrdinalIgnoreCase)) is var rank&&rank>=0?rank:100).ToArray();
         foreach(var name in names)table.Columns.Add(name,typeof(string));
@@ -292,7 +314,9 @@ public sealed class ApiManagementForm : Form
         Action("Xem chi tiết",()=>{using var detail=new Form {Text="Chi tiết · "+title,Size=new Size(750,650),StartPosition=FormStartPosition.CenterParent};
             var fields=new DataGridView {Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill};
             detail.Controls.Add(fields);
-            var selected=Selected();fields.DataSource=selected.EnumerateObject().Where(x=>!x.Name.Equals("rowVersion",StringComparison.OrdinalIgnoreCase)).Select(x=>new{Truong=Label(x.Name),GiaTri=Display(selected,x.Name)}).ToList();
+            var selected=Selected();fields.DataSource=selected.EnumerateObject().Where(x=>!x.Name.Equals("rowVersion",StringComparison.OrdinalIgnoreCase)
+                &&!(route=="api/quan-ly/khoa-hoc"&&x.Name is ("soTietMoiBuoi" or "phutMoiTiet"))
+                &&!(route=="api/quan-ly/noi-dung-buoi"&&x.Name=="soTiet")).Select(x=>new{Truong=Label(x.Name),GiaTri=Display(selected,x.Name)}).ToList();
             fields.Columns["Truong"].HeaderText="Thông tin";fields.Columns["GiaTri"].HeaderText="Giá trị";
             detail.ShowDialog(this);return Task.CompletedTask;});
         var people=new ApiPeopleController(api);

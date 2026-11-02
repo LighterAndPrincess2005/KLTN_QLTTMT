@@ -101,7 +101,7 @@ public sealed class ChangeService(MyThuatDbContext db,AccessService access,Enrol
             var remainingCount=await db.BuoiHoc.CountAsync(x=>x.LopHocId==target.Id&&x.TrangThai=="DA_XEP_LICH"&&x.BatDau>BusinessClock.Now,ct);
             var total=(await db.KhoaHoc.SingleAsync(x=>x.Id==target.KhoaHocId,ct)).SoBuoi;
             var fee=decimal.Round(target.HocPhiApDung*remainingCount/total,0,MidpointRounding.AwayFromZero);
-            var next=new DangKy {MaDangKy="DK"+Guid.NewGuid().ToString("N")[..20],HoSoTheoHocId=e.HoSoTheoHocId,LopHocId=target.Id,
+            var next=new DangKy {MaDangKy=await CodeGenerator.NextAsync(db.DangKy,x=>x.MaDangKy,"DK-",ct),HoSoTheoHocId=e.HoSoTheoHocId,LopHocId=target.Id,
                 NguoiDangKyId=e.NguoiDangKyId,DangKyNguonId=e.Id,LapLuc=BusinessClock.Now,HanGiuCho=r.HanThucHien.Value,
                 HocPhiGocChot=fee,TrangThai="CHO_CHUYEN",IdempotencyKey="CHUYEN-"+r.Id,RequestFingerprint=r.RequestFingerprint};
             db.DangKy.Add(next);await db.SaveChangesAsync(ct);r.DangKyDichId=next.Id;

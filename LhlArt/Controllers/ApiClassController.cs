@@ -57,14 +57,14 @@ internal sealed class ApiClassController(ArtApiClient api)
         var workflow=new ClassScheduleWorkflow(api,ApiDataService.Id(row));
         form.SaveAsync=async()=>{
             try{await workflow.Save(new{PhongHocId=long.Parse(form.TextValue("room")),GiaoVienId=long.Parse(form.TextValue("teacher")),
-                TroGiangId=form.TextValue("assistant")=="0"?(long?)null:long.Parse(form.TextValue("assistant")),BuoiDau=slot.First.ToString("yyyy-MM-ddTHH:mm:ss"),CachTuan=slot.Weeks,PhutNghi=(int)form.Number("PhutNghi"),XacNhanDuChuyenMon=form.Flag("qualified")},form.SetSaveStatus);}
-            finally{if(workflow.ScheduleCreated)foreach(var key in new[]{"room","teacher","assistant","NgayKhaiGiangDuKien","PhutNghi","ThuHoc","CaHoc","GioBatDau","CachTuan","qualified"})form.Enable(key,false);}
+                TroGiangId=form.TextValue("assistant")=="0"?(long?)null:long.Parse(form.TextValue("assistant")),BuoiDau=slot.First.ToString("yyyy-MM-ddTHH:mm:ss"),CachTuan=slot.Weeks,NgayHocTrongTuan=slot.Days,PhutNghi=(int)form.Number("PhutNghi"),XacNhanDuChuyenMon=form.Flag("qualified")},form.SetSaveStatus);}
+            finally{if(workflow.ScheduleCreated)foreach(var key in new[]{"room","teacher","assistant","NgayKhaiGiangDuKien","PhutNghi","ThuHoc","ThuHoc2","ThuHoc3","SoBuoiMoiTuan","CaHoc","GioBatDau","CachTuan","qualified"})form.Enable(key,false);}
         };
         form.ValidateFields();form.ShowDialog(owner);
     }
     internal InputForm CreateForm(List<JsonElement> courses,JsonElement? row,List<JsonElement> sessions)
     {
-        var form=new InputForm(row.HasValue?"Cập nhật lớp học":"Thêm lớp học");
+        var form=new InputForm(row.HasValue?"Cập nhật lớp học":"Thêm lớp học"){CompactColumns=true};
         form.ShowSaveButton=true;JsonElement? savedRecord=row;
         var existing=sessions.Count>0;var first=sessions.OrderBy(x=>T(x,"batDau")).FirstOrDefault();
         DateTime? actual=existing?DateTime.Parse(T(first,"batDau"),CultureInfo.InvariantCulture):null;
@@ -74,12 +74,14 @@ internal sealed class ApiClassController(ArtApiClient api)
         JsonElement Course()=>available.FirstOrDefault(x=>T(x,"id")==form.TextValue("KhoaHocId"));
         int CourseNumber(string key)=>int.TryParse(T(Course(),key),out var value)?value:0;
         int Duration()=>CourseNumber("soTietMoiBuoi")*CourseNumber("phutMoiTiet");
-        form.Add("MaLop","Mã lớp",row.HasValue?T(row.Value,"maLop"):"",readOnly:row.HasValue);
+        form.Add("MaLop","Mã lớp (tự sinh)",row.HasValue?T(row.Value,"maLop"):"Tự sinh khi lưu",readOnly:true);
         form.Add("TenLop","Tên lớp",row.HasValue?T(row.Value,"tenLop"):"");
         form.Add("NgayKhaiGiangDuKien","Ngày buổi học đầu tiên",actual??D(row,"ngayKhaiGiangDuKien",BusinessTime.Now.Date.AddDays(21)),readOnly:existing);
-        form.Add("SoBuoiKeHoach","Số buổi kế hoạch",(int)N(row,"soBuoiKeHoach",16));
+        form.Add("SoBuoiKeHoach","Số buổi theo khóa",(int)N(row,"soBuoiKeHoach",16),readOnly:true);
         var actualDuration=existing?(int)(DateTime.Parse(T(first,"ketThuc"),CultureInfo.InvariantCulture)-actual!.Value).TotalMinutes:0;
         var slot=new WeeklyScheduleFields(form,"NgayKhaiGiangDuKien",row.HasValue?T(row.Value,"lichHocDuKien"):"",()=>existing?actualDuration:Duration(),existing,actual);
+        form.Add("NgayKetThucDuKien","Kết thúc dự kiến",row.HasValue&&T(row.Value,"ngayKetThucDuKien")!=""?D(row,"ngayKetThucDuKien",slot.LastFor((int)form.Number("SoBuoiKeHoach"))):slot.LastFor((int)form.Number("SoBuoiKeHoach")),readOnly:true);
+        foreach(var key in new[]{"NgayKhaiGiangDuKien","ThuHoc","ThuHoc2","ThuHoc3","CachTuan","SoBuoiMoiTuan"})form.Changed(key,()=>form.Set("NgayKetThucDuKien",slot.LastFor((int)form.Number("SoBuoiKeHoach"))));
         form.Add("ScheduleNote","Lưu ý về lịch",existing
             ?"Lớp đã có lịch thực tế: không sửa thứ/giờ chỉ bằng mô tả. Muốn đổi phải dời buổi để API kiểm tra phòng, giáo viên và học viên."
             :"Đây là khung giờ dự kiến. Sau khi lưu lớp nháp, dùng Xếp lịch để chọn phòng và giáo viên, tạo các buổi thực tế. Chỉ công bố sau khi đủ lịch.",readOnly:true,multiline:true);
@@ -93,8 +95,6 @@ internal sealed class ApiClassController(ArtApiClient api)
             var failures=ClassPlanRules.ValidateClass(T(Course(),"tenKhoa"),CourseNumber("soBuoi"),form.Number("SoBuoiKeHoach"),form.Number("SiSoToiThieu"),form.Number("SiSoToiDa"),form.Number("HocPhiApDung"),form.Date("MoDangKyLuc"),form.Date("DongDangKyLuc"),slot.First);
             foreach(var pair in slot.Validate())failures[pair.Key]=pair.Value;
             if(form.TextValue("KhoaHocId")=="")failures["KhoaHocId"]="Hãy chọn khóa học hoạt động trước.";
-            if(string.IsNullOrWhiteSpace(form.TextValue("MaLop")))failures["MaLop"]="Mã lớp không được để trống.";
-            else if(form.TextValue("MaLop").Length>30)failures["MaLop"]="Mã lớp không quá 30 ký tự.";
             if(string.IsNullOrWhiteSpace(form.TextValue("TenLop")))failures["TenLop"]="Tên lớp không được để trống.";
             else if(form.TextValue("TenLop").Length>200)failures["TenLop"]="Tên lớp không quá 200 ký tự.";
             if(!row.HasValue&&slot.First<=BusinessTime.Now)failures["NgayKhaiGiangDuKien"]="Buổi đầu của lớp mới phải nằm trong tương lai.";
@@ -107,16 +107,17 @@ internal sealed class ApiClassController(ArtApiClient api)
             var text=ex.Message.ToLowerInvariant();var key=text.Contains("48 giờ")?"DongDangKyLuc":text.Contains("sĩ số")||text.Contains("sức chứa")?"SiSoToiDa":text.Contains("học phí")?"HocPhiApDung":text.Contains("khóa")&&!text.Contains("lớp")?"KhoaHocId":text.Contains("đề cương")||text.Contains("số buổi")?"SoBuoiKeHoach":text.Contains("lịch")||text.Contains("giáo viên")||text.Contains("công bố")||text.Contains("khai giảng")||text.Contains("duyệt")?"TrangThai":"";
             return key==""?new Dictionary<string,string>():new Dictionary<string,string>{{key,ex.Message}};
         };
-        void CourseChanged(){form.Set("SoBuoiKeHoach",CourseNumber("soBuoi"));form.Set("HocPhiApDung",decimal.TryParse(T(Course(),"hocPhi"),NumberStyles.Number,CultureInfo.InvariantCulture,out var fee)?fee:0m);slot.Refresh();}
+        void CourseChanged(){var count=CourseNumber("soBuoi");if(count>0)form.Set("SoBuoiKeHoach",count);form.Set("HocPhiApDung",decimal.TryParse(T(Course(),"hocPhi"),NumberStyles.Number,CultureInfo.InvariantCulture,out var fee)?fee:0m);slot.Refresh();form.Set("NgayKetThucDuKien",slot.LastFor(count));}
         form.Changed("KhoaHocId",CourseChanged);
         foreach(var key in new[]{"MaLop","TenLop","SoBuoiKeHoach","SiSoToiThieu","SiSoToiDa","HocPhiApDung","MoDangKyLuc","DongDangKyLuc","TrangThai"})form.Changed(key,()=>form.ValidateFields());
         form.SaveAsync=async()=>{
-            var body=new{KhoaHocId=long.Parse(form.TextValue("KhoaHocId")),MaLop=form.TextValue("MaLop"),TenLop=form.TextValue("TenLop"),
+            var body=new{KhoaHocId=long.Parse(form.TextValue("KhoaHocId")),TenLop=form.TextValue("TenLop"),
                 NgayKhaiGiangDuKien=form.Date("NgayKhaiGiangDuKien").ToString("yyyy-MM-dd"),SoBuoiKeHoach=(int)form.Number("SoBuoiKeHoach"),LichHocDuKien=existing?T(row!.Value,"lichHocDuKien"):slot.Description,
                 SiSoToiThieu=(int)form.Number("SiSoToiThieu"),SiSoToiDa=(int)form.Number("SiSoToiDa"),HocPhiApDung=form.Number("HocPhiApDung"),
                 MoDangKyLuc=form.Date("MoDangKyLuc").ToString("yyyy-MM-ddTHH:mm:ss"),DongDangKyLuc=form.Date("DongDangKyLuc").ToString("yyyy-MM-ddTHH:mm:ss"),TrangThai=form.TextValue("TrangThai")};
             savedRecord=savedRecord.HasValue?await api.Put("api/quan-ly/lop-hoc/"+ApiDataService.Id(savedRecord.Value),body,T(savedRecord.Value,"rowVersion"))
                 :await api.Post("api/quan-ly/lop-hoc",body);
+            form.Set("MaLop",T(savedRecord.Value,"maLop"));
             form.Enable("MaLop",false);form.Enable("KhoaHocId",false);
         };
         form.ValidateFields();return form;

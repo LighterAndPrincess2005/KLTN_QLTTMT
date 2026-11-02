@@ -46,13 +46,22 @@ public sealed class ScheduleService(MyThuatDbContext db,AuditService audit,Acces
         ApiError.Require(!cls.KhoaHoc!.CapDo.Equals("Junior",StringComparison.OrdinalIgnoreCase)||request.TroGiangId.HasValue,"Lớp Junior cần trợ giảng.");
         var teachers=new List<long>{request.GiaoVienId};if(request.TroGiangId is long assistant)teachers.Add(assistant);
         ApiError.Require(teachers.Distinct().Count()==teachers.Count,"Giáo viên chính và trợ giảng phải khác nhau.");
+        int[] days=request.NgayHocTrongTuan is {Length:>0} selectedDays?selectedDays:new[]{(int)request.BuoiDau.DayOfWeek};
+        ApiError.Require(days.Length is >=1 and <=3&&days.All(x=>x is >=0 and <=6)
+            &&days.Distinct().Count()==days.Length&&days.Contains((int)request.BuoiDau.DayOfWeek),"Chọn 1–3 thứ học khác nhau, có thứ của buổi đầu.");
+        days=days.OrderBy(x=>(x-(int)request.BuoiDau.DayOfWeek+7)%7).ToArray();
         var rule=PolicySettings.Parse((await policies.Current(ct)).NoiDungJson);
-        var time=request.BuoiDau;var sessions=new List<BuoiHoc>();
+        var time=request.BuoiDau;var sessions=new List<BuoiHoc>();var slotIndex=0;
         foreach(var content in contents)
         {
             var attempts=0;
-            while(rule.NgayNghi.Contains(DateOnly.FromDateTime(time)))
-            {time=time.AddDays(7*request.CachTuan);ApiError.Require(++attempts<104,"Không tìm được ngày học hợp lệ.");}
+            do
+            {
+                var offset=(days[slotIndex%days.Length]-(int)request.BuoiDau.DayOfWeek+7)%7;
+                time=request.BuoiDau.AddDays((slotIndex/days.Length)*7*request.CachTuan+offset);
+                slotIndex++;
+                ApiError.Require(++attempts<104,"Không tìm được ngày học hợp lệ.");
+            } while(rule.NgayNghi.Contains(DateOnly.FromDateTime(time)));
             var finish=time.AddMinutes(content.SoTiet*cls.KhoaHoc!.PhutMoiTiet+request.PhutNghi);
             await CheckSlot(classId,request.PhongHocId,time,finish,teachers,null,ct);
             var b=new BuoiHoc {LopHocId=classId,NoiDungBuoiId=content.Id,PhongHocId=request.PhongHocId,
@@ -61,7 +70,7 @@ public sealed class ScheduleService(MyThuatDbContext db,AuditService audit,Acces
             db.BuoiHoc.Add(b);await db.SaveChangesAsync(ct);
             db.GiangDayBuoi.Add(new GiangDayBuoi {BuoiHocId=b.Id,GiaoVienId=request.GiaoVienId,VaiTro="CHINH",SoTietThucDay=b.SoTiet,NguoiDuyet=access.User.AccountId()});
             if(request.TroGiangId is long a)db.GiangDayBuoi.Add(new GiangDayBuoi {BuoiHocId=b.Id,GiaoVienId=a,VaiTro="TRO_GIANG",SoTietThucDay=b.SoTiet,NguoiDuyet=access.User.AccountId()});
-            await db.SaveChangesAsync(ct);sessions.Add(b);time=time.AddDays(7*request.CachTuan);
+            await db.SaveChangesAsync(ct);sessions.Add(b);
         }
         foreach(var teacher in teachers)
         {
@@ -75,7 +84,7 @@ public sealed class ScheduleService(MyThuatDbContext db,AuditService audit,Acces
         // The published class timetable must describe the actual recurring slot.
         var first=sessions[0];
         var weekdays=new[]{"Chủ nhật","Thứ Hai","Thứ Ba","Thứ Tư","Thứ Năm","Thứ Sáu","Thứ Bảy"};
-        cls.LichHocDuKien=$"{weekdays[(int)first.BatDau.DayOfWeek]} · {first.BatDau:HH:mm}–{first.KetThuc:HH:mm} · "+(request.CachTuan==1?"Hàng tuần":$"Mỗi {request.CachTuan} tuần");
+        cls.LichHocDuKien=$"{string.Join(", ",days.Select(x=>weekdays[x]))} · {first.BatDau:HH:mm}–{first.KetThuc:HH:mm} · "+(request.CachTuan==1?"Hàng tuần":$"Mỗi {request.CachTuan} tuần")+(days.Length>1?$" · {days.Length} buổi/{(request.CachTuan==1?"tuần":$"{request.CachTuan} tuần")}":"");
         audit.Add("LopHoc",classId,"SINH_LICH",new {SoBuoi=sessions.Count});await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);
         return sessions.Select(ManagementService.Scalars);
     }

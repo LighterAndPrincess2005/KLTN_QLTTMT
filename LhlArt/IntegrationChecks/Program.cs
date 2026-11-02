@@ -228,12 +228,14 @@ try
     await staff.Put("api/quan-ly/thanh-vien/"+memberId,new{HoTen="Nguyễn Thị Ánh – đã cập nhật",DienThoai="0900000022"},T(member,"rowVersion"));
     var memberOnWeb=await Web("GET","api/tai-khoan/toi");Check(T(memberOnWeb,"hoTen").Contains("đã cập nhật")&&T(memberOnWeb,"dienThoai")=="0900000022","Sửa người liên hệ từ WinForms đồng bộ thông tin tài khoản web");
     var tempCourse=await staff.Post("api/quan-ly/khoa-hoc",new{LoaiKhoaHocId=Id((await data.All("api/quan-ly/loai-khoa-hoc")).First()),MaKhoa="CRUD",TenKhoa="Khóa thử",MucTieu="Quan sát và sáng tạo",PhienBan=1,CapDo="BASIC",TuoiToiThieu=6,SoBuoi=1,SoTietMoiBuoi=3,PhutMoiTiet=30,HocPhi=500000,HieuLucTu=BusinessClock.Today.ToString("yyyy-MM-dd"),TrangThai="NHAP"});
+    Check(T(tempCourse,"maKhoa").StartsWith("KHOA-")&&T(tempCourse,"maKhoa")!="CRUD","API sinh mã khóa và bỏ qua mã nhập thủ công");
     var tempContent=await staff.Post("api/quan-ly/noi-dung-buoi",new{KhoaHocId=Id(tempCourse),ThuTu=1,ChuDe="Vẽ thử",NoiDung="Quan sát và vẽ",SoTiet=3});
     tempContent=await staff.Put("api/quan-ly/noi-dung-buoi/"+Id(tempContent),new{ChuDe="Buổi học đã sửa"},T(tempContent,"rowVersion"));
     tempCourse=await staff.Put("api/quan-ly/khoa-hoc/"+Id(tempCourse),new{TenKhoa="Khóa đã sửa",TrangThai="HOAT_DONG"},T(tempCourse,"rowVersion"));
     Check(T(await Web("GET","api/khoa-hoc/"+Id(tempCourse)),"tenKhoa")=="Khóa đã sửa","Thêm / sửa / công bố khóa từ WinForms hiển thị trên web");
     Check(T((await Web("GET","api/khoa-hoc/"+Id(tempCourse)+"/noi-dung"))[0],"chuDe")=="Buổi học đã sửa","Sửa nội dung buổi từ WinForms được web đọc lại");
     var draftClass=await staff.Post("api/quan-ly/lop-hoc",new{KhoaHocId=Id(tempCourse),MaLop="CRUDCLASS",TenLop="Lớp nháp thử",NgayKhaiGiangDuKien=BusinessClock.Today.AddDays(40).ToString("yyyy-MM-dd"),SoBuoiKeHoach=1,LichHocDuKien="Thứ Bảy 09:00",SiSoToiThieu=1,SiSoToiDa=10,HocPhiApDung=500000,MoDangKyLuc=Stamp(BusinessClock.Now),DongDangKyLuc=Stamp(BusinessClock.Now.AddDays(30)),TrangThai="NHAP"});
+    Check(T(draftClass,"maLop").StartsWith("LOP-")&&T(draftClass,"maLop")!="CRUDCLASS","API sinh mã lớp và bỏ qua mã nhập thủ công");
     draftClass=await staff.Put("api/quan-ly/lop-hoc/"+Id(draftClass),new{TenLop="Lớp nháp đã sửa"},T(draftClass,"rowVersion"));
     Check(T(await staff.Read("api/quan-ly/lop-hoc/"+Id(draftClass)),"tenLop")=="Lớp nháp đã sửa","Thêm / sửa lớp từ WinForms được lưu");
     await Web("GET","api/lop-hoc/"+Id(draftClass),expected:HttpStatusCode.NotFound);Check(true,"Lớp nháp từ WinForms không bị công khai nhầm trên web");

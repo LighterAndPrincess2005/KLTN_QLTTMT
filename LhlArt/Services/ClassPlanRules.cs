@@ -9,12 +9,13 @@ public static class ClassPlanRules
     public static (int? Day,TimeSpan? Start,int Weeks) Parse(string text)
     {
         var normalized=ApiDataService.Normalize(text);int? day=null;
-        for(var i=0;i<Weekdays.Length;i++)if(normalized.Contains(ApiDataService.Normalize(Weekdays[i]))||(i>0&&Regex.IsMatch(normalized,@"\bthu\s+"+(i+1)+@"\b"))){day=i;break;}
+        for(var i=0;i<Weekdays.Length;i++)if(ContainsDay(normalized,i)||(i>0&&Regex.IsMatch(normalized,@"\bthu\s+"+(i+1)+@"\b"))){day=i;break;}
         var time=Regex.Match(normalized,@"(?<!\d)([01]?\d|2[0-3])[:h]([0-5]\d)");
         var weeks=Regex.Match(normalized,@"moi\s+(\d+)\s+tuan");
         return(day,time.Success?new TimeSpan(int.Parse(time.Groups[1].Value),int.Parse(time.Groups[2].Value),0):null,
             weeks.Success&&int.TryParse(weeks.Groups[1].Value,out var interval)&&interval is >=1 and <=52?interval:1);
     }
+    public static bool ContainsDay(string normalized,int day)=>Regex.IsMatch(normalized,@"\b"+Regex.Escape(ApiDataService.Normalize(Weekdays[day]))+@"\b");
     public static string Describe(int day,TimeSpan start,int minutes,int weeks)=>
         $"{Weekdays[day]} · {start:hh\\:mm}–{start.Add(TimeSpan.FromMinutes(minutes)):hh\\:mm} · "+(weeks==1?"Hàng tuần":$"Mỗi {weeks} tuần");
     public static Dictionary<string,string> ValidateSlot(int? day,string period,TimeSpan start,int weeks,DateTime date,int minutes)

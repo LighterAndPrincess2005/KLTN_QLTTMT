@@ -65,6 +65,8 @@ internal static class ApiColumnLabels
     GiaTriGiamChot=Giá trị giảm đã chốt
     HocPhi=Học phí
     HocPhiApDung=Học phí áp dụng
+    PhutMoiBuoi=Số phút một buổi
+    PhutBuoi=Số phút buổi học
     HocPhiGocChot=Học phí gốc đã chốt
     MucDatHang=Mức đặt hàng
     SoLuong=Số lượng

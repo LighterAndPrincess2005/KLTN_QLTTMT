@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 namespace MyThuat.Api.Contracts;
 public sealed record GenerateScheduleRequest([Range(1,long.MaxValue)]long PhongHocId,
     [Range(1,long.MaxValue)]long GiaoVienId,DateTime BuoiDau,[Range(1,52)]int CachTuan=1,
-    [Range(0,120)]short PhutNghi=0,long? TroGiangId=null,bool XacNhanDuChuyenMon=false);
+    [Range(0,120)]short PhutNghi=0,long? TroGiangId=null,bool XacNhanDuChuyenMon=false,int[]? NgayHocTrongTuan=null);
 public sealed record AssignTeacherRequest([Range(1,long.MaxValue)]long GiaoVienId,[Required]string VaiTro,
     bool XacNhanDuChuyenMon,DateOnly TuNgay,DateOnly DenNgay);
 public sealed record SubstituteRequest([Range(1,long.MaxValue)]long GiaoVienId,[Required]string VaiTro,

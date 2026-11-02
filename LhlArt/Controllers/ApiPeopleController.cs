@@ -16,7 +16,6 @@ internal sealed class ApiPeopleController(ArtApiClient api)
     static DateTime Birthday(JsonElement row) => DateTime.TryParse(T(row, "ngaySinh"), out var date) ? date : BusinessTime.Now.Date.AddYears(-18);
     static Choice[] Relations => [new("TU_BAN_THAN", "Bản thân"), new("CHA", "Cha"), new("ME", "Mẹ"), new("GIAM_HO", "Người giám hộ")];
     static List<Choice> People(IEnumerable<JsonElement> rows, string code) => rows.Select(x => new Choice(Id(x).ToString(), $"{T(x, "hoTen")} · {T(x, code)}")).ToList();
-    static string NewCode(string prefix) => prefix + Guid.NewGuid().ToString("N")[..16].ToUpperInvariant();
 
     public Task Signup(IWin32Window owner)
     {
@@ -41,7 +40,7 @@ internal sealed class ApiPeopleController(ArtApiClient api)
                 DienThoai = ProfileRules.Required(form.TextValue("DienThoai"), "Điện thoại", 25),
                 Email = RequiredEmail(form.TextValue("Email")), NgaySinh = Date(form.Date("NgaySinh"))
             });
-            MessageBox.Show(owner, $"Đã tạo tài khoản {username}. Có thể đăng nhập website ngay.\nMã hồ sơ thành viên: {T(result, "thanhVienId")}.\nThêm hoặc liên kết học viên tại mục Hồ sơ học viên khi cần; chưa đăng ký lớp.", "Tạo tài khoản thành công");
+            MessageBox.Show(owner, $"Đã tạo tài khoản {username}. Có thể đăng nhập website ngay.\nMã hồ sơ thành viên: {T(result, "maThanhVien")}.\nThêm hoặc liên kết học viên tại mục Hồ sơ học viên khi cần; chưa đăng ký lớp.", "Tạo tài khoản thành công");
         };
         form.ShowDialog(owner);
         return Task.CompletedTask;
@@ -58,7 +57,7 @@ internal sealed class ApiPeopleController(ArtApiClient api)
     {
         using var form = new InputForm(row.HasValue ? "Sửa thông tin người liên hệ" : "Thêm người liên hệ");
         string Get(string key) => row.HasValue ? T(row.Value, key) : "";
-        form.Add("MaThanhVien", "Mã thành viên", row.HasValue ? Get("maThanhVien") : NewCode("TV"), readOnly: row.HasValue);
+        form.Add("MaThanhVien", "Mã thành viên", row.HasValue ? Get("maThanhVien") : "Tự sinh khi lưu", readOnly: true);
         form.Add("HoTen", "Họ tên người liên hệ", Get("hoTen"));
         form.Add("CoNgaySinh", "Đã có ngày sinh", row.HasValue && Get("ngaySinh") != "");
         form.Add("NgaySinh", "Ngày sinh", row.HasValue ? Birthday(row.Value) : BusinessTime.Now.Date.AddYears(-18));
@@ -92,7 +91,7 @@ internal sealed class ApiPeopleController(ArtApiClient api)
             form.Add("ThanhVienId", "Người học / người đại diện", "", People(members, "maThanhVien"));
             form.Add("QuanHe", "Quan hệ với học viên", "CHA", Relations);
         }
-        form.Add("MaHocVien", "Mã học viên", row.HasValue ? Get("maHocVien") : NewCode("HV"), readOnly: true);
+        form.Add("MaHocVien", "Mã học viên", row.HasValue ? Get("maHocVien") : "Tự sinh khi lưu", readOnly: true);
         form.Add("HoTen", "Họ tên học viên", Get("hoTen"));
         form.Add("NgaySinh", "Ngày sinh học viên", row.HasValue ? Birthday(row.Value) : BusinessTime.Now.Date.AddYears(-18));
         form.Add("GioiTinh", "Giới tính", Get("gioiTinh"), [new("", "Chưa cung cấp"), new("NAM", "Nam"), new("NU", "Nữ"), new("KHAC", "Khác")]);
@@ -131,7 +130,8 @@ internal sealed class ApiPeopleController(ArtApiClient api)
             if (row.HasValue) { await Save("hoc-vien", row, body); return; }
             if (createdId is null)
             {
-                createdId = Id(await api.Post("api/quan-ly/hoc-vien", body));
+                var created = await api.Post("api/quan-ly/hoc-vien", body);
+                createdId = Id(created);form.Set("MaHocVien", T(created,"maHocVien"));
                 foreach (var key in new[] {"MaHocVien", "HoTen", "NgaySinh", "GioiTinh", "DiaChi", "LienHeKhanCapTen", "LienHeKhanCapSDT", "MucTieuHoc", "LuuYHoTroHocTap"}) form.Enable(key, false);
             }
             try

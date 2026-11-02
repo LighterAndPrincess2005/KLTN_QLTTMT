@@ -58,11 +58,11 @@ public sealed class HocVienController(MyThuatDbContext db,AuditService audit):Co
         var now=BusinessClock.Now;
         if(owner.TrangThai=="CHO_XAC_NHAN"){owner.TrangThai="HOAT_DONG";owner.XacNhanThanhVienLuc=now;audit.Add("ThanhVien",owner.Id,"KICH_HOAT_TU_PHUC_VU");}
         if(r.QuanHe=="TU_BAN_THAN"&&owner.NgaySinh is null){owner.NgaySinh=r.NgaySinh;audit.Add("ThanhVien",owner.Id,"BO_SUNG_NGAY_SINH_BAN_THAN");}
-        var student=new HocVien {MaHocVien="HV"+Guid.NewGuid().ToString("N")[..16],HoTen=r.HoTen,NgaySinh=r.NgaySinh,
+        var student=new HocVien {MaHocVien=await CodeGenerator.NextAsync(db.HocVien,x=>x.MaHocVien,"HV-",ct),HoTen=r.HoTen,NgaySinh=r.NgaySinh,
             LienHeKhanCapTen=r.LienHeKhanCapTen,LienHeKhanCapSDT=r.LienHeKhanCapSDT,MucTieuHoc=r.MucTieuHoc,TrangThai="HOAT_DONG"};
         db.HocVien.Add(student);await db.SaveChangesAsync(ct);
         db.DaiDienHocVien.Add(new(){ThanhVienId=member!.Value,HocVienId=student.Id,QuanHe=r.QuanHe,QuyenDaiDien="DAY_DU",LaLienHeChinh=true,HieuLucTu=now,XacNhanLuc=now,NguoiXacNhan=User.AccountId()});
-        audit.Add("HocVien",student.Id,"TAO_HO_SO_TU_PHUC_VU");await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return new {student.Id,student.HoTen,student.TrangThai};
+        audit.Add("HocVien",student.Id,"TAO_HO_SO_TU_PHUC_VU");await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return new {student.Id,student.MaHocVien,student.HoTen,student.TrangThai};
     }
     [HttpPost("{id:long:min(1)}/danh-gia")]
     public async Task<IActionResult> Assess(long id,AssessRequest r,CancellationToken ct)

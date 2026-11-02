@@ -21,6 +21,13 @@ public sealed class ManagementValidation(MyThuatDbContext db,AccessService acces
                 break;
             case KhoaHoc k:
                 ApiError.Require(k.SoBuoi>0&&k.SoTietMoiBuoi>0&&k.PhutMoiTiet>0&&k.HocPhi>=0&&k.PhienBan>0&&k.TuoiToiThieu is null or >=0,"Thông số khóa học không hợp lệ.");
+                if(update)
+                {
+                    ApiError.Require(Equals(before["HieuLucTu"],k.HieuLucTu),"Ngày hiệu lực đã ghi không được sửa.");
+                    if(await db.NoiDungBuoi.AnyAsync(x=>x.KhoaHocId==k.Id,ct))
+                        ApiError.Require(Equals(before["SoBuoi"],k.SoBuoi)&&Equals(before["SoTietMoiBuoi"],k.SoTietMoiBuoi)
+                            &&Equals(before["PhutMoiTiet"],k.PhutMoiTiet),"Khóa đã có nội dung buổi: số buổi và thời lượng đã khóa.");
+                }
                 if(update&&await db.LopHoc.AnyAsync(x=>x.KhoaHocId==k.Id,ct))
                     ApiError.Require(ManagementService.Scalars(k).All(p=>p.Key is "TrangThai" or "RowVersion" or "UpdatedAt"||Equals(p.Value,before[p.Key])),"Phiên bản khóa đã dùng: tạo phiên bản mới thay vì sửa.");
                 if(k.TrangThai=="HOAT_DONG")
@@ -35,6 +42,7 @@ public sealed class ManagementValidation(MyThuatDbContext db,AccessService acces
                 ApiError.Require(!await db.LopHoc.AnyAsync(x=>x.KhoaHocId==n.KhoaHocId,ct),"Đề cương phiên bản đã mở lớp không được sửa.");
                 var course=await db.KhoaHoc.SingleOrDefaultAsync(x=>x.Id==n.KhoaHocId,ct)??throw new ApiError(400,"Khóa không tồn tại.");
                 ApiError.Require(n.ThuTu<=course.SoBuoi,"Thứ tự vượt số buổi khóa.");
+                ApiError.Require(n.SoTiet==course.SoTietMoiBuoi,"Mỗi buổi phải có cùng thời lượng đã định cho khóa học.");
                 break;
             case LopHoc l:
                 var c=await db.KhoaHoc.SingleOrDefaultAsync(x=>x.Id==l.KhoaHocId,ct)??throw new ApiError(400,"Khóa không tồn tại.");

@@ -50,7 +50,7 @@ public sealed class LoginForm : Form
         fields.Controls.Add(remember);
         submit=Theme.Button("Đăng nhập   →",true);submit.AutoSize=false;submit.Height=52;submit.Dock=DockStyle.Fill;submit.Font=Theme.Font(12,FontStyle.Bold);submit.Margin=new Padding(0,0,0,8);
         fields.Controls.Add(submit);AcceptButton=submit;
-        var forgot=Theme.Button("Quên mật khẩu?");forgot.Name="forgot-password";forgot.Dock=DockStyle.Fill;forgot.Height=36;
+        var forgot=Theme.Button("Quên mật khẩu?");forgot.Name="forgot-password";forgot.AutoSize=false;forgot.Width=160;forgot.Height=36;forgot.Anchor=AnchorStyles.Right;forgot.Margin=new Padding(0,0,0,8);
         forgot.Click+=(_,_)=>ForgotPasswordRequested?.Invoke();fields.Controls.Add(forgot);
         error.Height=60;error.Dock=DockStyle.Fill;error.ForeColor=Color.FromArgb(173,59,59);error.Font=Theme.Font(9);error.Margin=new Padding(0,5,0,0);fields.Controls.Add(error);
         fields.Controls.Add(Copy("Dành cho đội ngũ Mỹ Thuật Bụi.\nCần hỗ trợ? Liên hệ quản trị viên trung tâm.",9,Theme.Muted,50));

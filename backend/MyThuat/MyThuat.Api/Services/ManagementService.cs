@@ -49,6 +49,39 @@ public sealed class ManagementService(MyThuatDbContext db, AuditService audit, A
             catch(JsonException){throw new ApiError(400,"Kiểu dữ liệu không đúng: "+field.Name);}
             prop.PropertyInfo!.SetValue(item,value);
         }
+        if(id.HasValue)
+        {
+            // Public codes stay stable so records and history keep their identity.
+            var code = item switch
+            {
+                LoaiKhoaHoc x => ("MaLoai", x.MaLoai), KhoaHoc x => ("MaKhoa", x.MaKhoa),
+                LopHoc x => ("MaLop", x.MaLop), GiaoVien x => ("MaGiaoVien", x.MaGiaoVien),
+                PhongHoc x => ("MaPhong", x.MaPhong), ThanhVien x => ("MaThanhVien", x.MaThanhVien),
+                HocVien x => ("MaHocVien", x.MaHocVien), HoaCu x => ("MaHoaCu", x.MaHoaCu),
+                NhaCungCap x => ("MaNCC", x.MaNCC), _ => ("", "")
+            };
+            if(code.Item1.Length>0)ApiError.Require(Equals(before[code.Item1],code.Item2),"Mã đã cấp không được sửa.");
+        }
+        else
+        {
+            // The serializable transaction protects the sequence during concurrent creates.
+            switch(item)
+            {
+                case LoaiKhoaHoc x: x.MaLoai=await CodeGenerator.NextAsync(db.LoaiKhoaHoc,c=>c.MaLoai,"LK-",ct);break;
+                case KhoaHoc x:
+                    x.MaKhoa=x.KhoaGocId is long root
+                        ? (await db.KhoaHoc.AsNoTracking().SingleAsync(c=>c.Id==root,ct)).MaKhoa
+                        : await CodeGenerator.NextAsync(db.KhoaHoc,c=>c.MaKhoa,"KHOA-",ct);
+                    x.HieuLucTu=BusinessClock.Today;break;
+                case LopHoc x: x.MaLop=await CodeGenerator.NextAsync(db.LopHoc,c=>c.MaLop,"LOP-",ct);break;
+                case GiaoVien x: x.MaGiaoVien=await CodeGenerator.NextAsync(db.GiaoVien,c=>c.MaGiaoVien,"GV-",ct);break;
+                case PhongHoc x: x.MaPhong=await CodeGenerator.NextAsync(db.PhongHoc,c=>c.MaPhong,"PH-",ct);break;
+                case ThanhVien x: x.MaThanhVien=await CodeGenerator.NextAsync(db.ThanhVien,c=>c.MaThanhVien,"TV-",ct);break;
+                case HocVien x: x.MaHocVien=await CodeGenerator.NextAsync(db.HocVien,c=>c.MaHocVien,"HV-",ct);break;
+                case HoaCu x: x.MaHoaCu=await CodeGenerator.NextAsync(db.HoaCu,c=>c.MaHoaCu,"HC-",ct);break;
+                case NhaCungCap x: x.MaNCC=await CodeGenerator.NextAsync(db.NhaCungCap,c=>c.MaNCC,"NCC-",ct);break;
+            }
+        }
         foreach(var prop in model.GetProperties())
         {
             var val=prop.PropertyInfo!.GetValue(item);
@@ -77,6 +110,7 @@ public sealed class ManagementService(MyThuatDbContext db, AuditService audit, A
         await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);
         return Scalars(item);
     }
+
 }
 internal static class PrincipalHelpers
 {

@@ -52,7 +52,7 @@ Quản trị cấp thêm quyền nghiệp vụ cho nhân viên khi cần. Quyề
 
 31 bảng nghiệp vụ có khóa ngoại, chỉ mục, RowVersion và thời điểm tạo/cập nhật. Không có tuổi tối đa, lớp phổ thông hoặc trường đang học của học viên. Chuyên môn/năng lực giảng dạy nằm trong thuộc tính giáo viên.
 
-`MyThuat.Api/Database/002_SchemaHoanThien.sql` là script schema hiện tại để xem xét. `001_SchemaBanDau.sql` chỉ là bản lưu cũ, không dùng để tạo database cho phiên bản này. Khi database mới chưa tồn tại, nút Desktop gọi `--initialize` để tạo bằng model hiện tại. Database cũ không bị xóa; nếu schema không tương thích, API báo lỗi cần xử lý nâng cấp trước. Không chạy script tạo bảng lên database đang có dữ liệu.
+`MyThuat.Api/Database/002_SchemaHoanThien.sql` là script schema hiện tại để xem xét. `001_SchemaBanDau.sql` chỉ là bản lưu cũ, không dùng để tạo database cho phiên bản này. Khi database mới chưa tồn tại, nút Desktop gọi `--initialize` để tạo bằng model hiện tại. Database cũ không bị xóa. API tự bổ sung cột ngày sinh còn thiếu của `ThanhVien` (cho phép NULL, giữ nguyên dữ liệu). Các khác biệt schema khác vẫn cần xem log để xử lý riêng. Không chạy script tạo bảng lên database đang có dữ liệu.
 
 Mã nguồn ở Controllers, Contracts, Services, Models, Data và Security. Mở `MyThuat.sln` trong Visual Studio 2022 để sửa. Target .NET 8; global.json chọn SDK 9.0.304 đang có trên máy.
 
@@ -80,3 +80,9 @@ Nhật ký: `MyThuat.Api/.local/khoi-dong.log`, `api.log`, `api-error.log`. Nế
 ## Nạp dữ liệu mẫu từ Word
 
 Bộ mẫu LHL Art có 6 khóa, 6 lớp, 88 buổi cùng phòng/giáo viên/học viên mẫu. Tạo quản trị trước, rồi chạy `Nap_DuLieuMau.cmd`. Xem [DU_LIEU_MAU.md](DU_LIEU_MAU.md) để biết học phí, lịch và cách nạp trên máy khác. Mật khẩu sinh riêng trên máy nạp, không đưa lên Git.
+
+## Đối chiếu dữ liệu và mã hồ sơ
+
+Chạy `dotnet run --project MyThuat.Api/MyThuat.Api.csproj -- --db-info` trong thư mục `backend/MyThuat` trên cả hai máy để so tên máy SQL, tên database và số bản ghi. Trong WinForms, quản trị có nút **Nguồn dữ liệu đang dùng** để xem đúng API và số liệu máy mình. Bản mới hiện chữ `bản 02.11.2026` trên thanh tiêu đề để phân biệt cửa sổ đang chạy từ thư mục cũ. LocalDB mặc định là database theo tài khoản Windows trên từng máy; ZIP mã nguồn không chứa dữ liệu của máy nhóm trưởng. Nếu hai máy cho kết quả khác nhau, cần nhóm trưởng sao lưu/chuyển database và cấu hình cùng nguồn dữ liệu; không nạp dữ liệu mẫu thay dữ liệu thật.
+
+Mã mới được cấp tại API cho cả WinForms và web: loại khóa `LK-`, khóa `KHOA-`, lớp `LOP-`, giáo viên `GV-`, phòng `PH-`, thành viên `TV-`, học viên `HV-`, họa cụ `HC-`, nhà cung cấp `NCC-`, đăng ký `DK-` và số tăng dần tối thiểu bốn chữ số. Phiên bản khóa mới dùng lại mã khóa gốc và tăng số phiên bản. Mã cũ `MAIN_`, `DEMO_` hoặc mã đã có khác giữ nguyên để bảo toàn dữ liệu liên kết. Mã ưu đãi do người quản trị đặt để người học nhập; mã tra cứu, phiếu nghiệp vụ và mã tài khoản tuân theo luồng nghiệp vụ riêng.
