@@ -1,8 +1,9 @@
+import {statusLabel,publicReference} from '../displayLabels';
 import {useEffect,useState} from 'react';
 import {websiteApi,type AdviceDetail} from '../services/websiteService';
 import {signedIn,dateTime} from '../services/artCenterService';
 export const adviceStatus:Record<string,string>={MOI_GUI:'Mới gửi',DA_DOC:'Đã đọc',DANG_XU_LY:'Đang xử lý',DA_TRA_LOI:'Đã trả lời',DA_DONG:'Đã đóng'};
-export function AdviceMessages({detail}:{detail:AdviceDetail}){return <div className="advice-thread"><p><b>{detail.maTraCuu}</b> · {adviceStatus[detail.trangThai]||detail.trangThai}</p>{detail.tinNhan.map(m=><article key={m.id} className={m.tuNhanVien?'staff-message':''}><b>{m.tuNhanVien?'Trung tâm':'Người gửi'}</b><small>{dateTime(m.guiLuc)}</small><p>{m.noiDung}</p></article>)}</div>}
+export function AdviceMessages({detail}:{detail:AdviceDetail}){return <div className="advice-thread"><p><b>{publicReference(detail.maTraCuu)||'Cuộc trao đổi tư vấn'}</b> · {adviceStatus[detail.trangThai]||statusLabel(detail.trangThai)}</p>{detail.tinNhan.map(m=><article key={m.id} className={m.tuNhanVien?'staff-message':''}><b>{m.tuNhanVien?'Trung tâm':'Người gửi'}</b><small>{dateTime(m.guiLuc)}</small><p>{m.noiDung}</p></article>)}</div>}
 export function ConsultationHistory(){
  const [code]=useState(''),[secret,setSecret]=useState(''),[detail,setDetail]=useState<AdviceDetail|null>(null),[ownId,setOwnId]=useState<number|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[mine,setMine]=useState<{id:number;maTraCuu:string;chuDe:string;trangThai:string}[]>([]);
  useEffect(()=>{if(signedIn())void websiteApi.mine().then(setMine).catch(()=>{})},[]);

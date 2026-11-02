@@ -82,9 +82,13 @@ public sealed class AuthController(MyThuatDbContext db, IPasswordHasher<TaiKhoan
     {
         var memberId=User.MemberId();
         var member=memberId.HasValue?await db.ThanhVien.AsNoTracking().SingleOrDefaultAsync(x=>x.Id==memberId.Value,ct):null;
+        var teacherId=User.TeacherId();
+        var teacherName=teacherId.HasValue?await db.GiaoVien.AsNoTracking().Where(x=>x.Id==teacherId.Value).Select(x=>x.HoTen).SingleOrDefaultAsync(ct):null;
+        var accountId=User.AccountId();
+        var staffName=member==null&&teacherName==null?await db.TaiKhoan.AsNoTracking().Where(x=>x.Id==accountId).Select(x=>x.HoTenNhanVien).SingleOrDefaultAsync(ct):null;
         return new {Id=User.AccountId(),TenDangNhap=User.Identity!.Name,VaiTro=User.FindFirstValue(ClaimTypes.Role),
             ThanhVienId=memberId,GiaoVienId=User.TeacherId(),Quyen=User.FindFirstValue("permissions"),
-            HoTen=member?.HoTen,DienThoai=member?.DienThoai,Email=member?.Email,NgaySinh=member?.NgaySinh,RowVersion=member?.RowVersion};
+            HoTen=teacherName??member?.HoTen??staffName,DienThoai=member?.DienThoai,Email=member?.Email,NgaySinh=member?.NgaySinh,RowVersion=member?.RowVersion};
     }
 
     [Authorize,HttpPut("toi")]

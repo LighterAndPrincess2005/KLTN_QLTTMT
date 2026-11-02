@@ -1,7 +1,11 @@
+import {statusLabel} from '../displayLabels';
+import {TeacherClassActions} from './TeacherClassActions';
+import {TeacherCalendar} from './TeacherCalendar';
+import './workspacePages.css';
 import {safeMediaUrl} from '../mediaUrls';
 import {pageHref} from '../navigation';
-import {useEffect,useState} from 'react';
-import {ArrowRight,CalendarDays,Check,RefreshCw,Users} from 'lucide-react';
+import {useEffect,useRef,useState} from 'react';
+import {ArrowRight,BookOpen,CalendarDays,Check,RefreshCw,Users} from 'lucide-react';
 import {artCenterService as api,dateTime,vnTime} from '../services/artCenterService';
 import type {Member,RosterRow,TeacherSession} from '../services/artCenterService';
 import {demoMode} from '../services/demo';
@@ -9,7 +13,7 @@ import {demoMode} from '../services/demo';
 const errorText=(error:unknown)=>error instanceof Error?error.message:'Chưa xử lý được. Vui lòng thử lại.';
 const day=(value:Date)=>value.toLocaleDateString('en-CA',{timeZone:'Asia/Ho_Chi_Minh'});
 const today=()=>day(new Date());
-const status=(value:string)=>({DA_XEP_LICH:'Đã xếp lịch',DA_TO_CHUC:'Đã hoàn thành',CHO_THAM_GIA:'Chưa điểm danh',CO_MAT:'Có mặt',VANG:'Vắng'}[value]||value);
+const status=(value:string)=>({DA_XEP_LICH:'Đã xếp lịch',DA_TO_CHUC:'Đã hoàn thành',CHO_THAM_GIA:'Chưa điểm danh',CO_MAT:'Có mặt',VANG:'Vắng'}[value]||statusLabel(value));
 
 function RosterEditor({row,session,onSaved}:{row:RosterRow;session:TeacherSession;onSaved:()=>void}){
  const [attendance,setAttendance]=useState(row.trangThai==='VANG'?'VANG':'CO_MAT');
@@ -56,26 +60,25 @@ function TeachingSession({session,onChanged}:{session:TeacherSession;onChanged:(
  </section>;
 }
 
-function TeacherDashboard(){
- const [rows,setRows]=useState<TeacherSession[]>([]),[selectedId,setSelectedId]=useState<number|null>(null),[scope,setScope]=useState('all'),[query,setQuery]=useState(''),[classId,setClassId]=useState('');
- const [loading,setLoading]=useState(true),[error,setError]=useState(''),[reload,setReload]=useState(0);
- useEffect(()=>{let alive=true;setLoading(true);setError('');api.teacherSchedule().then(data=>{if(alive){setRows(data);setSelectedId(old=>data.some(row=>row.id===old)?old:(data.find(row=>day(vnTime(row.batDau))===today())||data.find(row=>vnTime(row.batDau).getTime()>Date.now())||data.at(-1))?.id??null)}}).catch(error=>{if(alive)setError(errorText(error))}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[reload]);
- const visible=rows.filter(row=>scope==='all'||scope==='today'&&day(vnTime(row.batDau))===today()||scope==='future'&&vnTime(row.batDau).getTime()>Date.now()||scope==='past'&&vnTime(row.ketThuc).getTime()<=Date.now()).filter(row=>(row.tenLop+' '+row.tenKhoa+' '+row.chuDe).toLocaleLowerCase('vi-VN').includes(query.toLocaleLowerCase('vi-VN')));
- const classSessions=visible.filter(row=>!classId||String(row.lopHocId)===classId);
- const selected=classSessions.find(row=>row.id===selectedId)||classSessions[0];
- return <><section className="teacher-hero"><div className="shell"><span className="kicker light">MỸ THUẬT BỤI · GÓC GIÁO VIÊN</span><h1>Mỗi buổi học,<br/>một bước tiến mới.</h1><p>Lịch giảng dạy, điểm danh và nhận xét học viên trong các buổi bạn được phân công.</p><a className="btn btn-white" href={pageHref('/')}>Xem trang giới thiệu <ArrowRight size={17}/></a></div></section>
-  <section className="section teacher-area"><div className="shell"><div className="section-head"><div><span className="kicker">LỊCH GIẢNG DẠY CỦA BẠN</span><h2>Chọn buổi để vào lớp.</h2></div><p>Chỉ các buổi được phân công xuất hiện trong danh sách này.</p></div>
-   {demoMode&&<p className="info-note">Bản xem thử giáo viên · Điểm danh và nhận xét chỉ lưu trong phiên trình duyệt, không ghi vào database trung tâm.</p>}
-   <div className="teacher-class-filter"><label className="field"><span>Lớp phụ trách</span><select value={classId} onChange={e=>setClassId(e.target.value)}><option value="">Tất cả lớp được phân công</option>{[...new Map(rows.map(row=>[row.lopHocId,row])).values()].map(row=><option key={row.lopHocId} value={row.lopHocId}>{row.maLop} · {row.tenLop}</option>)}</select></label></div>
-   <div className="teacher-filters"><label className="field"><span>Khoảng thời gian</span><select name="teacherScope" value={scope} onChange={event=>setScope(event.target.value)}><option value="all">Tất cả buổi</option><option value="today">Hôm nay</option><option value="future">Sắp tới</option><option value="past">Đã diễn ra</option></select></label><label className="field"><span>Tìm lớp / nội dung</span><input name="teacherSearch" value={query} onChange={event=>setQuery(event.target.value)} placeholder="Nhập tên lớp, khóa hoặc bài học"/></label></div>
-   {error&&<div className="error-note" role="alert"><p>{error}</p><button className="btn btn-soft" onClick={()=>setReload(n=>n+1)}>Thử lại</button></div>}
-   {loading&&!rows.length?<p className="learning-empty" role="status">Đang tải lịch giảng dạy…</p>:!error&&<><div className="teacher-session-list">{classSessions.map(row=><button type="button" key={row.id} className={'teacher-session-button'+(selected?.id===row.id?' selected':'')} aria-pressed={selected?.id===row.id} onClick={()=>setSelectedId(row.id)}><span className="category">{row.maLop} · {row.tenKhoa}</span><b>{row.tenLop} · Buổi {row.thuTu}</b><span>{row.chuDe}</span><span><CalendarDays size={15}/>{dateTime(row.batDau)}</span><span><Users size={15}/>{row.soHocVien} học viên · {row.tenPhong}</span><small>{row.vaiTro==='CHINH'?'Giáo viên chính':'Trợ giảng'} · {status(row.trangThai)}</small></button>)}</div>{!classSessions.length&&<p className="learning-empty">{rows.length?'Chưa có buổi phù hợp với bộ lọc.':'Bạn chưa được phân công buổi học nào.'}</p>}
-    {selected&&<TeachingSession key={selected.id} session={selected} onChanged={()=>setReload(n=>n+1)}/>}</>}
-  </div></section></>;
+function TeacherDashboard({member}:{member:Member}){
+ const [rows,setRows]=useState<TeacherSession[]>([]),[selectedId,setSelectedId]=useState<number|null>(null),[classId,setClassId]=useState(''),[query,setQuery]=useState(''),[view,setView]=useState<'calendar'|'session'>('calendar');
+ const [date,setDate]=useState(today),[loading,setLoading]=useState(true),[error,setError]=useState(''),[reload,setReload]=useState(0);
+ const initialized=useRef(false);
+ useEffect(()=>{if(view==='session'){const heading=document.getElementById('teacher-session-title');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});heading.scrollIntoView({block:'start',behavior:'instant'})}}},[view,selectedId]);
+ useEffect(()=>{let alive=true;setLoading(true);setError('');api.teacherSchedule().then(data=>{if(alive){const sorted=[...data].sort((a,b)=>vnTime(a.batDau).getTime()-vnTime(b.batDau).getTime());setRows(sorted);setSelectedId(old=>sorted.some(row=>row.id===old)?old:null);if(!initialized.current&&sorted.length){initialized.current=true;const next=sorted.find(row=>vnTime(row.ketThuc).getTime()>=Date.now());if(next)setDate(day(vnTime(next.batDau)));}}}).catch(error=>{if(alive)setError(errorText(error))}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[reload]);
+ const classes=[...new Map(rows.map(row=>[row.lopHocId,row])).values()];
+ const visible=rows.filter(row=>(!classId||String(row.lopHocId)===classId)&&(row.tenLop+' '+row.tenKhoa+' '+row.chuDe).toLocaleLowerCase('vi-VN').includes(query.toLocaleLowerCase('vi-VN')));
+ const selected=rows.find(row=>row.id===selectedId),todays=rows.filter(row=>day(vnTime(row.batDau))===today());
+ const openSession=(row:TeacherSession)=>{setSelectedId(row.id);setView('session');};
+ return <section className="study-page teacher-dashboard-page"><div className="shell"><a className="study-home-link" href={pageHref('/')}>← Về trang chủ</a><div className="study-page-heading"><div><span className="kicker">KHÔNG GIAN GIẢNG DẠY</span><h1>Chào {member.hoTen||member.tenDangNhap}.</h1><p>Lịch dạy, danh sách học viên và điểm danh trong một không gian.</p></div><button className="btn btn-soft" disabled={loading} onClick={()=>setReload(n=>n+1)}><RefreshCw size={17}/>Cập nhật lịch dạy</button></div>
+ {demoMode&&<p className="info-note">Bản xem thử giáo viên · Điểm danh chỉ lưu trong phiên trình duyệt.</p>}
+ <div className="study-account-stats"><div><CalendarDays size={21}/><b>{todays.length}</b><span>Buổi dạy hôm nay</span></div><div><BookOpen size={21}/><b>{classes.length}</b><span>Lớp được phân công</span></div><div><Check size={21}/><b>{rows.filter(row=>row.trangThai==='DA_TO_CHUC').length}</b><span>Buổi đã hoàn thành</span></div></div>
+ <div className="study-dashboard teacher-dashboard"><aside className="study-sidebar teacher-sidebar" aria-label="Chọn lớp giảng dạy"><div className="study-profile-card"><span className="kicker">GIÁO VIÊN</span><h2>{member.hoTen||member.tenDangNhap}</h2><p>Lịch hiển thị đúng các buổi bạn được phân công.</p><a className="text-link" href={pageHref('/tai-khoan')}>Thông tin tài khoản <ArrowRight size={15}/></a></div><button className={'study-all-calendar'+(view==='calendar'&&!classId?' selected':'')} onClick={()=>{setClassId('');setQuery('');setView('calendar')}}><CalendarDays size={20}/><span>Lịch tuần tổng hợp<small>Tất cả lớp được phân công</small></span><ArrowRight size={16}/></button><div className="study-class-list"><h2>Lớp của bạn</h2>{classes.length?classes.map(row=><button type="button" className={'study-class-button'+(classId===String(row.lopHocId)?' selected':'')} key={row.lopHocId} aria-pressed={classId===String(row.lopHocId)} onClick={()=>{setClassId(String(row.lopHocId));setView('calendar');setQuery('');const upcoming=rows.find(s=>s.lopHocId===row.lopHocId&&vnTime(s.ketThuc).getTime()>=Date.now())||rows.find(s=>s.lopHocId===row.lopHocId);if(upcoming)setDate(day(vnTime(upcoming.batDau)))}}><small>Lớp được phân công</small><b>{row.tenLop}</b><span>{row.tenKhoa}</span><span>{rows.filter(s=>s.lopHocId===row.lopHocId).length} buổi được phân công</span></button>):<p className="learning-empty">Bạn chưa được phân công lớp.</p>}</div><a className="study-support teacher-policy-link" href={pageHref('/chinh-sach')}><BookOpen size={19}/><span>Quy định học tập<b>Chính sách & điều khoản <ArrowRight size={14}/></b></span></a><a className="study-support" href={pageHref('/#consultation')}><Users size={19}/><span>Cần hỗ trợ?<b>Liên hệ học vụ <ArrowRight size={14}/></b></span></a></aside>
+ <div className="study-main teacher-main"><TeacherClassActions sessions={rows} selectedClass={classId} onChanged={newDate=>{if(newDate)setDate(newDate);setReload(n=>n+1)}}/>{error&&<div className="error-note" role="alert"><p>{error}</p><button className="btn btn-soft" onClick={()=>setReload(n=>n+1)}>Tải lại lịch dạy</button></div>}{loading&&!rows.length?<p className="learning-empty" role="status">Đang tải lịch giảng dạy…</p>:!error&&<>{view==='calendar'?<><label className="field teacher-calendar-search"><span>Tìm trong lịch đang xem</span><input type="search" placeholder="Tên lớp, khóa hoặc chủ đề buổi học" value={query} onChange={e=>setQuery(e.target.value)}/></label><TeacherCalendar sessions={visible} date={date} onDate={setDate} onOpen={openSession}/></>:selected?<><button type="button" className="btn btn-soft teacher-back-calendar" onClick={()=>setView('calendar')}>← Quay lại lịch tuần</button><TeachingSession key={selected.id} session={selected} onChanged={()=>setReload(n=>n+1)}/></>:<p className="learning-empty">Chọn một buổi trên lịch để xem danh sách học viên.</p>}</>}</div></div></div></section>;
 }
 
 export function TeacherCorner({member,onLogin}:{member:Member|null;onLogin:()=>void}){
  if(!member)return <section className="section"><div className="shell member-welcome"><h2>Góc giáo viên</h2><p>Đăng nhập bằng tài khoản giáo viên để xem buổi được phân công.</p>{demoMode&&<p className="info-note">Xem thử: tên đăng nhập <b>gv_demo</b>, mật khẩu <b>Demo123456789</b>. Dữ liệu chỉ được mô phỏng trong phiên trình duyệt.</p>}<button className="btn btn-primary" onClick={onLogin}>Đăng nhập</button></div></section>;
  if(member.vaiTro!=='GIAO_VIEN')return <section className="section"><div className="shell learning-welcome"><h2>Góc giáo viên dành cho tài khoản giáo viên.</h2><p>Dùng Học tập để xem thông tin học viên của bạn.</p><a className="text-link" href={pageHref('/hoc-tap')}>Về góc học tập <ArrowRight size={16}/></a></div></section>;
- return <TeacherDashboard key={member.id}/>;
+ return <TeacherDashboard key={member.id} member={member}/>;
 }

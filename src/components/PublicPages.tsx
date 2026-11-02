@@ -1,3 +1,4 @@
+import {PolicyPage} from './PolicyPage';
 import {websiteApi,type PublicTeacher} from '../services/websiteService';
 import {useEffect,useState} from 'react';
 import {ArrowRight,ChevronRight,CalendarDays,Clock3,Users} from 'lucide-react';
@@ -38,7 +39,8 @@ function CoursePage({course,classes,onSelect}:{course:Course;classes:ArtClass[];
 }
 
 export function PublicPages({path,courses,classes,loading,error,onRetry,onSelect}:{path:string;courses:Course[];classes:ArtClass[];loading:boolean;error:string;onRetry:()=>void;onSelect:(cl:ArtClass)=>void}){
- useEffect(()=>{const titles:Record<string,string>={'/gioi-thieu':'Giới thiệu','/khoa-hoc':'Khóa học','/lop-hoc':'Lớp học','/phuong-phap':'Phương pháp','/goc-sang-tao':'Góc sáng tạo'};document.title=(titles[path]||artArticles.find(a=>path==='/bai-viet/'+a.slug)?.title||(path==='/bai-viet'?'Góc đọc':undefined)||courses.find(c=>courseHref(c.id).split('?')[0]===path)?.title||'Mỹ Thuật Bụi')+' · Mỹ Thuật Bụi';},[path,courses]);
+ useEffect(()=>{const titles:Record<string,string>={'/chinh-sach':'Chính sách & điều khoản','/gioi-thieu':'Giới thiệu','/khoa-hoc':'Khóa học','/lop-hoc':'Lớp học','/phuong-phap':'Phương pháp','/goc-sang-tao':'Góc sáng tạo'};document.title=(titles[path]||artArticles.find(a=>path==='/bai-viet/'+a.slug)?.title||(path==='/bai-viet'?'Góc đọc':undefined)||courses.find(c=>courseHref(c.id).split('?')[0]===path)?.title||'Mỹ Thuật Bụi')+' · Mỹ Thuật Bụi';},[path,courses]);
+ if(path==='/chinh-sach')return <PolicyPage/>;
  if(path==='/gioi-thieu')return <AboutPage/>;
  if(path==='/bai-viet'||path.startsWith('/bai-viet/'))return <ArtReadingPages slug={path==='/bai-viet'?undefined:path.slice('/bai-viet/'.length)}/>;
  if(path==='/phuong-phap')return <><PageHero title="Cách Bụi đồng hành" description="Quan sát, thử nghiệm và tự tin thể hiện nét riêng." image="/bui/teacher.webp"/><Method/><MethodDiscovery/><ConsultationCorner/></>;

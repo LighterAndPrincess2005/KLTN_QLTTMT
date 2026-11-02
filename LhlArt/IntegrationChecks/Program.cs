@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -37,6 +38,9 @@ builder.Services.AddScoped<IPasswordHasher<TaiKhoan>,PasswordHasher<TaiKhoan>>()
 builder.Services.AddScoped<AuditService>();builder.Services.AddScoped<AccessService>();builder.Services.AddScoped<PolicyService>();
 builder.Services.AddScoped<DanhMucService>();builder.Services.AddScoped<ManagementValidation>();builder.Services.AddScoped<ManagementService>();
 builder.Services.AddScoped<ScheduleService>();builder.Services.AddScoped<EnrollmentService>();builder.Services.AddScoped<FinanceService>();
+builder.Services.AddScoped<NotificationService>();var notificationMail=new CaptureNotificationMail();builder.Services.AddSingleton<INotificationMail>(notificationMail);
+builder.Services.AddScoped<OnlinePaymentService>();
+builder.Configuration.AddInMemoryCollection(new Dictionary<string,string?>{{"SePay:Enabled","true"},{"SePay:BankCode","ACB"},{"SePay:AccountNumber","0000000000"},{"SePay:AccountName","TAI KHOAN GIA LAP"},{"SePay:WebhookKey","local-only-payment-secret"}});
 var recoveryMail=new CaptureRecoveryMail();builder.Services.AddSingleton<IRecoveryMail>(recoveryMail);builder.Services.AddScoped<AccountRecoveryService>();
 builder.Services.AddScoped<LearningService>();builder.Services.AddScoped<ChangeService>();builder.Services.AddScoped<InventoryService>();builder.Services.AddScoped<ClassLifecycleService>();
 builder.Services.AddAuthentication("Bearer").AddScheme<AuthenticationSchemeOptions,BearerAuthenticationHandler>("Bearer",_=>{});
@@ -119,6 +123,54 @@ try
     var fromWeb=ArtApiClient.Get(await staff.Read("api/dang-ky/"+Id(webRegistration)),"dangKy");Check(Id(fromWeb)==Id(webRegistration),"Web ghi danh, WinForms đọc được bằng ID");
     Check(ApiDataService.Channel(fromWeb)=="Chưa được API ghi nhận","Xác nhận API hiện chưa lưu kênh online/offline");
     try{await staff.Read("api/dang-ky/quan-ly");throw new Exception("Endpoint unexpectedly available; update compatibility checks");}catch(ApiNotFoundException){Check(true,"Xác nhận thiếu endpoint tổng danh sách; WinForms dùng tra cứu ID");}
+    // Local mock webhooks only: no request to SePay or a real bank is made.
+    var paymentId=Id(webRegistration);var paymentConfig=app.Services.GetRequiredService<IConfiguration>();
+    paymentConfig["SePay:Enabled"]="false";
+    var offlineCheckout=await Web("POST",$"api/thanh-toan/{paymentId}/phien",new{});
+    Check(!ArtApiClient.Get(offlineCheckout,"sanSang").GetBoolean(),"PAY01 Chưa cấu hình SePay: không tạo QR hoặc tự xác nhận tiền");
+    paymentConfig["SePay:Enabled"]="true";
+    var checkout=await Web("POST",$"api/thanh-toan/{paymentId}/phien",new{});var paymentCode=T(checkout,"maThanhToan");var expectedDue=ArtApiClient.Get(checkout,"conPhaiTra").GetDecimal();
+    Check(paymentCode.StartsWith("BUI")&&ArtApiClient.Get(checkout,"sanSang").GetBoolean()&&expectedDue>0,"PAY02 Tạo QR với mã riêng và công nợ đã trừ ưu đãi từ server");
+    Check(T(await Web("POST",$"api/thanh-toan/{paymentId}/phien",new{}),"maThanhToan")==paymentCode,"PAY03 Mở lại thanh toán dùng cùng phiên, không tạo thêm mã");
+    async Task<JsonElement> Hook(object body,string secret="local-only-payment-secret",HttpStatusCode expected=HttpStatusCode.OK){using var client=new HttpClient{BaseAddress=new Uri(address)};client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization","Apikey "+secret);using var response=await client.PostAsJsonAsync("api/thanh-toan/sepay/webhook",body);var json=await response.Content.ReadAsStringAsync();if(response.StatusCode!=expected)throw new Exception("Webhook: "+response.StatusCode+" "+json);return string.IsNullOrWhiteSpace(json)?JsonSerializer.SerializeToElement(new{}):JsonDocument.Parse(json).RootElement.Clone();}
+    var half=decimal.Floor(expectedDue/2);var event1=new{Id=910001,AccountNumber="0000000000",TransferType="in",TransferAmount=half,Content=paymentCode,ReferenceCode="MOCK01"};
+    await Hook(event1,"wrong-key",HttpStatusCode.Unauthorized);
+    Check(true,"PAY04 Webhook sai khóa bị từ chối trước khi ghi giao dịch");
+    await Hook(new{Id=910002,AccountNumber="1111111111",TransferType="in",TransferAmount=half,Content=paymentCode},expected:HttpStatusCode.BadRequest);
+    Check(true,"PAY05 Webhook sai tài khoản nhận không ghi nhận tiền");
+    await Hook(new{Id=910003,AccountNumber="0000000000",TransferType="in",TransferAmount=1.5m,Content=paymentCode},expected:HttpStatusCode.BadRequest);
+    Check(true,"PAY06 Số tiền VND có phần lẻ bị từ chối");
+    await Hook(event1);await Hook(event1);
+    var partial=await Web("GET",$"api/thanh-toan/{paymentId}/trang-thai");
+    Check(!ArtApiClient.Get(partial,"daXacNhan").GetBoolean()&&ArtApiClient.Get(partial,"conPhaiTra").GetDecimal()==expectedDue-half,"PAY07 Trả thiếu chỉ giảm công nợ, không xác nhận vào lớp");
+    await using(var db=new CheckDbContext(options))Check(await db.Set<SuKienSePay>().CountAsync(x=>x.MaGiaoDichSePay==910001)==1&&await db.GiaoDichTien.CountAsync(x=>x.MaChungTu=="SP910001")==1,"PAY08 Webhook lặp không ghi nhận tiền hai lần");
+    await Hook(new{Id=910001,AccountNumber="0000000000",TransferType="in",TransferAmount=half+1,Content=paymentCode,ReferenceCode="MOCK01"},expected:HttpStatusCode.Conflict);
+    Check(true,"PAY09 Cùng ID ngân hàng nhưng đổi số tiền bị chặn");
+    await Hook(new{Id=910004,AccountNumber="0000000000",TransferType="in",TransferAmount=expectedDue-half,Content=paymentCode,ReferenceCode="MOCK02"});
+    Check(ArtApiClient.Get(await Web("GET",$"api/thanh-toan/{paymentId}/trang-thai"),"daXacNhan").GetBoolean(),"PAY10 Đủ tiền xác nhận đăng ký qua cơ chế công nợ dùng chung web và WinForms");
+    await Hook(new{Id=910005,AccountNumber="0000000000",TransferType="in",TransferAmount=100,Content=paymentCode,ReferenceCode="EXCESS"});
+    await using(var db=new CheckDbContext(options))Check(await db.GiaoDichTien.AnyAsync(x=>x.MaChungTu=="SP910005"&&x.TrangThai=="CHO_DOI_CHIEU"&&x.KhoanThuId==null),"PAY11 Tiền thừa được lưu chờ đối chiếu, không tự phân bổ thêm");
+    await Hook(new{Id=910006,AccountNumber="0000000000",TransferType="in",TransferAmount=100,Content="SAI NOI DUNG",ReferenceCode="UNKNOWN"});
+    await using(var db=new CheckDbContext(options))Check(await db.Set<SuKienSePay>().AnyAsync(x=>x.MaGiaoDichSePay==910006&&x.DangKyId==null&&x.TrangThai=="CHO_DOI_CHIEU"),"PAY12 Sai mã thanh toán vẫn lưu sự kiện đối soát, không tự gán học viên");
+    await Hook(new{Id=910007,AccountNumber="0000000000",TransferType="out",TransferAmount=100,Content=paymentCode});
+    await using(var db=new CheckDbContext(options))Check(!await db.GiaoDichTien.AnyAsync(x=>x.MaChungTu=="SP910007"),"PAY13 Tiền ra không được tính thành tiền học phí vào");
+    var lateStudent=await Web("POST","api/hoc-vien/toi",new{HoTen="Học viên thử hết hạn",NgaySinh="2011-01-01",QuanHe="ME",LienHeKhanCapTen="Nguyễn Thị Ánh",LienHeKhanCapSDT="0900000000"});
+    var lateRegistration=await Web("POST","api/dang-ky",new{HocVienId=Id(lateStudent),LopHocId=classId,NguoiDangKyId=memberId,IdempotencyKey="PAY-LATE-0000001"});var lateId=Id(lateRegistration);
+    var lateCheckout=await Web("POST",$"api/thanh-toan/{lateId}/phien",new{});var lateCode=T(lateCheckout,"maThanhToan");
+    await using(var db=new CheckDbContext(options)){var row=await db.DangKy.SingleAsync(x=>x.Id==lateId);row.HanGiuCho=BusinessClock.Now.AddMinutes(-1);await db.SaveChangesAsync();}
+    await Hook(new{Id=910008,AccountNumber="0000000000",TransferType="in",TransferAmount=100,Content=lateCode});
+    Check(!ArtApiClient.Get(await Web("GET",$"api/thanh-toan/{lateId}/trang-thai"),"daXacNhan").GetBoolean(),"PAY14 Tiền đến sau hạn giữ chỗ không tự khôi phục đăng ký");
+    using(var outsider=new HttpClient{BaseAddress=new Uri(address)}){using var denied=await outsider.GetAsync($"api/thanh-toan/{paymentId}/trang-thai");Check(denied.StatusCode==HttpStatusCode.Unauthorized,"PAY15 Chưa đăng nhập không đọc được phiếu thanh toán");}
+    long freeClassId;
+    await using(var db=new CheckDbContext(options)){
+        var sourceCourse=await db.KhoaHoc.SingleAsync(x=>x.Id==courseId);var freeCourse=new KhoaHoc{LoaiKhoaHocId=sourceCourse.LoaiKhoaHocId,MaKhoa="FREE_TEST",TenKhoa="Trải nghiệm 0đ kiểm thử",PhienBan=1,CapDo="JUNIOR",SoBuoi=1,SoTietMoiBuoi=2,PhutMoiTiet=30,HocPhi=0,HieuLucTu=BusinessClock.Today,TrangThai="HOAT_DONG"};db.Add(freeCourse);await db.SaveChangesAsync();
+        var first=BusinessClock.Today.AddDays(60).ToDateTime(new TimeOnly(9,0));var c=new LopHoc{KhoaHocId=freeCourse.Id,MaLop="FREE_TEST",TenLop="Trải nghiệm 0đ",NgayKhaiGiangDuKien=DateOnly.FromDateTime(first),SoBuoiKeHoach=1,LichHocDuKien="09:00–10:00",SiSoToiThieu=1,SiSoToiDa=10,HocPhiApDung=0,MoDangKyLuc=BusinessClock.Now.AddDays(-1),DongDangKyLuc=first.AddDays(-2),TrangThai="DANG_TUYEN_SINH"};db.Add(c);var l=new NoiDungBuoi{KhoaHocId=freeCourse.Id,ThuTu=1,ChuDe="Thử màu",NoiDung="Thử màu",SoTiet=2};db.Add(l);await db.SaveChangesAsync();freeClassId=c.Id;db.BuoiHoc.Add(new(){LopHocId=c.Id,NoiDungBuoiId=l.Id,PhongHocId=await db.PhongHoc.Select(x=>x.Id).FirstAsync(),ThuTuTrongLop=1,LanXepLich=1,BatDau=first,KetThuc=first.AddHours(1),SoTiet=2,PhutMoiTiet=30,TrangThai="DA_XEP_LICH"});await db.SaveChangesAsync();
+    }
+    var freeRegistration=await Web("POST","api/dang-ky",new{HocVienId=Id(lateStudent),LopHocId=freeClassId,NguoiDangKyId=memberId,IdempotencyKey="PAY-FREE-0000001"});var freeId=Id(freeRegistration);
+    var freeView=await Web("POST",$"api/thanh-toan/{freeId}/phien",new{});
+    Check(ArtApiClient.Get(freeView,"mienPhi").GetBoolean()&&ArtApiClient.Get(freeView,"daXacNhan").GetBoolean()&&ArtApiClient.Get(freeView,"conPhaiTra").GetDecimal()==0,"PAY16 Lớp 0đ xác nhận miễn phí và không yêu cầu quét QR");
+    await using(var db=new CheckDbContext(options))Check(!await db.GiaoDichTien.AnyAsync(x=>x.DangKyId==freeId)&&!await db.Set<PhienThanhToan>().AnyAsync(x=>x.DangKyId==freeId),"PAY17 Lớp miễn phí không tạo giao dịch ngân hàng giả");
+
     var consultation=await Web("POST","api/tu-van",new{HoTen="Nguyễn Thị Ánh",Email="test@example.invalid",DienThoai="0900000000",ChuDe="Hỏi lịch học",NoiDung="Có lớp màu nước cuối tuần không?"});
     var tickets=await data.All("api/tu-van");var ticket=tickets.Single(x=>T(x,"maTraCuu")==T(consultation,"maTraCuu"));
     var thread=await staff.Read("api/tu-van/"+Id(ticket));
@@ -130,6 +182,30 @@ try
     Check(T(mineTicket,"trangThai")=="DA_TRA_LOI"&&ArtApiClient.Get(webThread,"tinNhan").GetArrayLength()==2,"Phản hồi WinForms hiện đúng cuộc trao đổi trong tài khoản web");
     bool stale=false;try{await staff.Post("api/tu-van/"+Id(ticket)+"/tra-loi",answer);}catch(InvalidOperationException){stale=true;}
     Check(stale,"Chặn gửi phản hồi bằng RowVersion cũ");
+    var notices=await Web("GET","api/thong-bao/toi");var notice=notices.EnumerateArray().Single(x=>T(x,"loai")=="TU_VAN");
+    var noticeId=Id(notice);Check(T(notice,"noiDung").Contains(answer.NoiDung),"Trả lời tư vấn tạo thông báo web đúng thành viên");
+    await Web("GET","api/thong-bao",expected:HttpStatusCode.Forbidden);
+    await Web("POST","api/thong-bao/"+noticeId+"/da-doc",new{},HttpStatusCode.NoContent);
+    await using(var notificationDb=new CheckDbContext(options)){
+        Check(await notificationDb.ThongBao.CountAsync(x=>x.Loai=="TU_VAN")==1,"Trả lời bằng phiên bản cũ không tạo email trùng");
+        Check((await notificationDb.ThongBao.SingleAsync(x=>x.Id==noticeId)).DaDocLuc!=null,"Đọc thông báo được lưu, học viên không xem được hàng đợi quản trị");
+        notificationDb.ThongBao.Add(new(){ThanhVienId=null,Loai="TEST",TieuDe="Riêng tư",NoiDung="Không thuộc tài khoản",Email="private@example.invalid",TrangThaiEmail="KHONG_CO_EMAIL"});await notificationDb.SaveChangesAsync();
+        var privateId=await notificationDb.ThongBao.Where(x=>x.Loai=="TEST").Select(x=>x.Id).SingleAsync();
+        await Web("POST","api/thong-bao/"+privateId+"/da-doc",new{},HttpStatusCode.NotFound);
+        var queued=await notificationDb.ThongBao.SingleAsync(x=>x.Id==noticeId);queued.Email="captured@example.test";queued.TrangThaiEmail="CHO_GUI";await notificationDb.SaveChangesAsync();
+    }
+    using(var worker=new NotificationWorker(app.Services.GetRequiredService<IServiceScopeFactory>(),Microsoft.Extensions.Logging.Abstractions.NullLogger<NotificationWorker>.Instance)){
+        notificationMail.Fail=true;await worker.Deliver(default);
+        await using(var notificationDb=new CheckDbContext(options)){var queued=await notificationDb.ThongBao.SingleAsync(x=>x.Id==noticeId);Check(queued.TrangThaiEmail=="CHO_GUI"&&queued.SoLanGui==1,"SMTP lỗi vẫn giữ thông báo web và lên lịch gửi lại");queued.ThuLaiLuc=BusinessClock.Now.AddSeconds(-1);await notificationDb.SaveChangesAsync();}
+        notificationMail.Fail=false;await worker.Deliver(default);await worker.Deliver(default);
+        await using(var notificationDb=new CheckDbContext(options))Check((await notificationDb.ThongBao.SingleAsync(x=>x.Id==noticeId)).TrangThaiEmail=="DA_GUI"&&notificationMail.Count==2,"Email gửi lại thành công và không tự gửi trùng sau khi hoàn tất");
+    }
+    await staff.Post("api/thong-bao/"+noticeId+"/da-goi",new{});
+    await using(var notificationDb=new CheckDbContext(options))Check((await notificationDb.ThongBao.SingleAsync(x=>x.Id==noticeId)).DaGoiLuc!=null,"Nhân viên ghi nhận gọi điện riêng với trạng thái gửi email");
+    var sessionToMove=(await staff.Read("api/lich-hoc")).EnumerateArray().First(x=>Id(x,"lopHocId")==classId);
+    var movedStart=DateTime.Parse(T(sessionToMove,"batDau")).AddHours(1);
+    await staff.Post("api/lich-hoc/buoi/"+Id(sessionToMove)+"/doi-lich",new{BatDau=Stamp(movedStart),PhongHocId=Id(sessionToMove,"phongHocId"),LyDo="Đổi giờ kiểm thử",RowVersion=T(sessionToMove,"rowVersion")});
+    Check((await Web("GET","api/thong-bao/toi")).EnumerateArray().Any(x=>T(x,"loai")=="DOI_LICH"&&T(x,"noiDung").Contains("Đổi giờ kiểm thử")),"Đổi lịch từ WinForms/API tạo thông báo giờ cũ, giờ mới cho người đại diện học viên đã thanh toán");
     var latest=await staff.Read("api/tu-van/"+Id(ticket));await staff.Put("api/tu-van/"+Id(ticket)+"/trang-thai",new{TrangThai="DA_DONG",RowVersion=T(latest,"rowVersion")});
     Check(T(await Web("GET","api/tu-van/toi/"+Id(ticket)),"trangThai")=="DA_DONG","WinForms đóng tư vấn, web nhận trạng thái đã đóng");
     // Exercise the same POST/PUT/If-Match payloads used by WinForms catalog forms.
@@ -162,6 +238,45 @@ try
     Check(T(await staff.Read("api/quan-ly/lop-hoc/"+Id(draftClass)),"tenLop")=="Lớp nháp đã sửa","Thêm / sửa lớp từ WinForms được lưu");
     await Web("GET","api/lop-hoc/"+Id(draftClass),expected:HttpStatusCode.NotFound);Check(true,"Lớp nháp từ WinForms không bị công khai nhầm trên web");
     var scheduleTeacher=await staff.Post("api/quan-ly/giao-vien",new{MaGiaoVien="GVSCHEDULE",HoTen="Giáo viên xếp lịch",DienThoai="0900000033",TrinhDo="Đại học",ChuyenMon="Hội họa",CapDoCoTheDay="BASIC",TrangThai="HOAT_DONG"});
+    await staff.Post("api/tai-khoan",new{TenDangNhap="teacher_name_test",MatKhau=password,HoTen="Tên nhân sự dự phòng",VaiTro="GIAO_VIEN",GiaoVienId=Id(scheduleTeacher),QuyenBoSung=0,Email="teacher-name@example.invalid"});
+    using(var teacherClient=new ArtApiClient(baseUrl:address)){
+        await teacherClient.Login("teacher_name_test",password);
+        Check(T(await teacherClient.Read("api/tai-khoan/toi"),"hoTen")=="Giáo viên xếp lịch","Lời chào giáo viên dùng họ tên hồ sơ liên kết thay vì tên đăng nhập hoặc tên nhân sự dự phòng");
+        var teacherUpdated=await staff.Put("api/quan-ly/giao-vien/"+Id(scheduleTeacher),new{HoTen="Nguyễn Thị Giáo Viên"},T(scheduleTeacher,"rowVersion"));
+        Check(T(await teacherClient.Read("api/tai-khoan/toi"),"hoTen")=="Nguyễn Thị Giáo Viên","Sửa tên giáo viên được tài khoản web đọc lại ngay");
+        var noticeTeacherId=Id(scheduleTeacher);
+        await using(var db=new CheckDbContext(options)){
+            var teachingSessions=await db.BuoiHoc.Where(x=>x.LopHocId==classId&&x.TrangThai=="DA_XEP_LICH").ToListAsync();
+            foreach(var b in teachingSessions)db.GiangDayBuoi.Add(new(){BuoiHocId=b.Id,GiaoVienId=noticeTeacherId,VaiTro="CHINH",SoTietThucDay=b.SoTiet,NguoiDuyet=1});
+            await db.SaveChangesAsync();
+        }
+        var recipients=await teacherClient.Read($"api/giao-vien/lop/{classId}/nguoi-nhan");
+        Check(Id(recipients,"soHocVien")==2&&Id(recipients,"soNguoiNhan")==1,"Thông báo cả lớp chỉ lấy học viên đã xác nhận và gộp người đại diện trùng");
+        await Web("GET",$"api/giao-vien/lop/{classId}/nguoi-nhan",expected:HttpStatusCode.Forbidden);
+        var deniedClass=false;try{await teacherClient.Read($"api/giao-vien/lop/{Id(draftClass)}/nguoi-nhan");}catch(InvalidOperationException){deniedClass=true;}
+        Check(deniedClass,"Giáo viên không đọc người nhận của lớp chưa được phân công; học viên không có quyền gửi cả lớp");
+        var broadcastKey=Guid.NewGuid().ToString("N");var broadcastBody=new{TieuDe="Lưu ý lịch tuần tới",NoiDung="Mang theo bài thực hành để trao đổi tại lớp.",MaYeuCau=broadcastKey};
+        await teacherClient.Post($"api/giao-vien/lop/{classId}/thong-bao",broadcastBody);await teacherClient.Post($"api/giao-vien/lop/{classId}/thong-bao",broadcastBody);
+        await using(var db=new CheckDbContext(options))Check(await db.ThongBao.CountAsync(x=>x.Loai=="THONG_BAO_LOP")==1&&await db.Set<ThongBaoLop>().CountAsync()==1,"Gửi thông báo lớp có khóa chống trùng; bấm lại không tạo thêm email");
+        Check((await Web("GET","api/thong-bao/toi")).EnumerateArray().Any(x=>T(x,"loai")=="THONG_BAO_LOP"),"Thông báo từ giáo viên hiện trong hộp thông báo người đại diện");
+        var mismatched=false;try{await teacherClient.Post($"api/giao-vien/lop/{classId}/thong-bao",new{TieuDe="Nội dung khác",NoiDung="Không được dùng lại khóa gửi khác nội dung.",MaYeuCau=broadcastKey});}catch(InvalidOperationException){mismatched=true;}
+        Check(mismatched,"Không tái sử dụng khóa gửi để thay nội dung thông báo đã ghi");
+        var throttled=false;try{await teacherClient.Post($"api/giao-vien/lop/{classId}/thong-bao",new{TieuDe="Tin thứ hai",NoiDung="Không gửi dồn nhiều tin cho cùng lớp.",MaYeuCau=Guid.NewGuid().ToString("N")});}catch(InvalidOperationException){throttled=true;}
+        Check(throttled,"Giới hạn gửi dồn thông báo mới; khóa retry cũ vẫn được nhận");
+        var teaching=(await teacherClient.Read("api/hoc-tap/giao-vien/buoi-cua-toi")).EnumerateArray().OrderBy(x=>T(x,"batDau")).First();
+        var newTime=DateTime.Parse(T(teaching,"batDau")).AddMinutes(30);var teachingId=Id(teaching);var teachingRoom=Id(teaching,"phongHocId");
+        await Web("POST",$"api/giao-vien/buoi/{teachingId}/xep-bu",new{BatDau=Stamp(newTime),PhongHocId=teachingRoom,LyDo="Thử quyền học viên",RowVersion=T(teaching,"rowVersion")},HttpStatusCode.Forbidden);
+        var rejectedRoom=false;try{await teacherClient.Post($"api/giao-vien/buoi/{teachingId}/xep-bu",new{BatDau=Stamp(newTime),PhongHocId=teachingRoom+10000,LyDo="Thử đổi phòng ngoài quyền giáo viên",RowVersion=T(teaching,"rowVersion")});}catch(InvalidOperationException){rejectedRoom=true;}
+        await using(var db=new CheckDbContext(options))Check(rejectedRoom&&(await db.BuoiHoc.SingleAsync(x=>x.Id==teachingId)).TrangThai=="DA_XEP_LICH","Lịch không bị hủy nếu giáo viên yêu cầu đổi phòng ngoài quyền");
+        var makeup=await teacherClient.Post($"api/giao-vien/buoi/{teachingId}/xep-bu",new{BatDau=Stamp(newTime),PhongHocId=teachingRoom,LyDo="Lớp nghỉ và học vào giờ thay thế",RowVersion=T(teaching,"rowVersion")});
+        var makeupId=Id(makeup);
+        await using(var db=new CheckDbContext(options)){
+            Check((await db.BuoiHoc.SingleAsync(x=>x.Id==teachingId)).TrangThai=="DA_HUY"&&await db.BuoiHoc.CountAsync(x=>x.LopHocId==classId&&x.TrangThai=="DA_XEP_LICH")==2,"Xếp bù cả lớp thay buổi cũ, không tăng số buổi khóa");
+            Check(await db.DiemDanh.AnyAsync(x=>x.BuoiHocId==makeupId&&x.DangKyId==enrollmentId&&x.TrangThai=="CHO_THAM_GIA"),"Điểm danh học viên đã thanh toán chuyển sang buổi thay thế");
+            Check(await db.ThongBao.AnyAsync(x=>x.Loai=="DOI_LICH"&&x.NoiDung.Contains("Lớp nghỉ và học vào giờ thay thế")),"Xếp bù qua quyền giáo viên tự tạo thông báo lịch mới");
+        }
+        Check((await teacherClient.Read("api/hoc-tap/giao-vien/buoi-cua-toi")).EnumerateArray().Any(x=>Id(x)==makeupId&&Id(x,"buoiThayTheChoId")==teachingId),"Lịch giáo viên đánh dấu đúng buổi thay thế và ẩn buổi đã hủy");
+    }
     var selectedSaturday=ClassPlanRules.NextDay(BusinessClock.Today.AddDays(40).ToDateTime(TimeOnly.MinValue),6).AddHours(9);
     var scheduleWorkflow=new ClassScheduleWorkflow(staff,Id(draftClass));
     await scheduleWorkflow.Save(new{PhongHocId=Id((await data.All("api/quan-ly/phong-hoc")).First()),GiaoVienId=Id(scheduleTeacher),BuoiDau=Stamp(selectedSaturday),CachTuan=1,PhutNghi=0,XacNhanDuChuyenMon=true},_=>{});
@@ -244,6 +359,11 @@ finally
     if(storeCreated){await using var db=new CheckDbContext(options);await db.Database.EnsureDeletedAsync();}
     Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
     if(Directory.Exists(folder))Directory.Delete(folder,true);
+}
+sealed class CaptureNotificationMail:INotificationMail
+{
+    public int Count{get;private set;}public bool Fail{get;set;}
+    public Task Send(ThongBao message,CancellationToken ct){Count++;if(Fail)throw new InvalidOperationException("SMTP giả lập tạm lỗi");return Task.CompletedTask;}
 }
 sealed class CaptureRecoveryMail:IRecoveryMail
 {

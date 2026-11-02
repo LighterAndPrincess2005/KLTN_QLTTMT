@@ -1,0 +1,16 @@
+.course-material-note{margin-bottom:30px}
+.exploration-columns{margin-top:30px;row-gap:30px}
+.exploration-columns>section>h4{margin:0 0 12px;line-height:1.5}
+.exploration-hint{margin:0 0 22px;line-height:1.8}
+.course-exploration .exploration-class{margin-bottom:16px}
+.course-exploration .exploration-facts{margin-bottom:26px}
+.course-exploration .lesson-outline{margin-bottom:14px}
+.modal-body form>.btn,.modal-body form>.full{margin-top:22px}
+.learning-form>.btn,.helpdesk form .profile-editor-actions{margin-top:20px}
+.contact-grid article{display:flex;flex-direction:column;align-items:flex-start;gap:12px;min-width:0}
+.contact-grid article>span,.contact-grid article h3,.contact-grid article p{margin:0}
+.contact-grid article a{max-width:100%;margin:0;line-height:1.5}
+.profile-editor-actions{flex-wrap:wrap;row-gap:12px}
+.program-selection-head,.gallery-head,.learning-heading{gap:20px}
+main [id]{scroll-margin-top:140px}
+@media(max-width:680px){.exploration-columns{margin-top:26px;row-gap:32px}.course-material-note{margin-bottom:26px}.modal-body form>.btn{width:100%;justify-content:center}.contact-grid article{gap:14px}main [id]{scroll-margin-top:90px}}

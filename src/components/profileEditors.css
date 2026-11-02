@@ -5,7 +5,7 @@
 .student-edit{border:1px solid #b9d1c7;border-radius:10px;background:#edf5f0;color:#185e4c;font-weight:700;padding:10px 14px;cursor:pointer}
 .profile-logout{margin-top:20px}.study-profile-card .student-edit{margin-top:14px}
 #consultation{scroll-margin-top:0}
-.account-profile{display:grid;gap:20px}
+.account-profile{display:grid;gap:18px}
 .account-profile>h2,.account-profile>p,.account-profile>.kicker{margin:0}
 .account-profile-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 24px;margin:0;padding:4px 0}
 .account-profile-info>div{min-width:0;padding-bottom:14px;border-bottom:1px solid var(--line)}
@@ -17,11 +17,23 @@
 .account-profile-actions{display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap}
 .account-profile-actions .btn{min-height:46px}
 .account-profile>.password-editor{margin:0}
-.account-profile>.profile-logout{margin:0;justify-self:start;min-height:42px}
+.account-profile>.btn.full{margin:0;width:100%;min-height:50px;border-radius:12px;justify-content:center}
+.account-profile>.profile-logout{margin:0;width:100%;justify-self:stretch;justify-content:center;gap:10px;min-height:50px;border-radius:12px;border:1px solid #dfc8bb;background:#fff8f2;color:#98432f;box-shadow:none}
+.account-profile>.profile-logout:hover{background:#fbece3;border-color:#c98b73}
 @media(max-width:600px){.account-profile-info{grid-template-columns:1fr;gap:14px}.account-profile-actions{flex-direction:column-reverse}.account-profile-actions .btn{width:100%}}
-.password-editor{margin-top:24px;padding:16px;border:1px solid #c2d5c6;border-radius:14px;background:#f0f6ed}
-.password-editor summary{cursor:pointer;font-weight:700;color:#215c47;min-height:40px;align-content:center}
-.password-editor form>p{font-size:13px;line-height:1.8}.password-editor fieldset{border:0;margin:0;padding:0;min-width:0}
-.password-visibility{display:inline-flex;gap:8px;align-items:center;min-height:44px;margin-bottom:12px}
+.password-editor{margin-top:24px;padding:0;border:1px solid #c2d5c6;border-radius:12px;background:#f0f6ed;min-width:0}
+.password-editor summary{display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer;font-weight:700;color:#215c47;min-height:50px;padding:13px 18px;list-style:none;box-sizing:border-box}
+.password-editor summary::-webkit-details-marker{display:none}
+.password-editor summary::marker{content:''}
+.password-editor-label{display:flex;align-items:center;gap:10px;min-width:0;line-height:1.6}
+.password-editor-chevron{flex-shrink:0;transition:transform .15s}
+.password-editor[open] .password-editor-chevron{transform:rotate(180deg)}
+.password-editor[open]>summary{border-bottom:1px solid #d2dfcc}
+.password-editor>form{padding:18px;display:grid;gap:18px}
+.password-editor form>p{font-size:13px;line-height:1.8;margin:0}
+.password-editor form fieldset{border:0;margin:0;padding:0;min-width:0;display:grid;gap:18px}
+.password-editor .field{margin:0}
+.password-editor .password-visibility{display:inline-flex;gap:8px;align-items:center;min-height:44px;margin:0;justify-self:start}
+.modal-body .password-editor form>.btn.full{margin:0;min-height:50px;width:100%;justify-content:center;border-radius:12px}
 .password-editor summary:focus-visible{outline:3px solid #b9552b;outline-offset:3px}
 @media(max-width:600px){.profile-editor{padding:16px}.student-choices .student-choice{gap:10px}.student-choice-actions{flex-direction:column}.profile-editor-actions .btn{flex:1}.profile-editor .form-grid{grid-template-columns:1fr}}

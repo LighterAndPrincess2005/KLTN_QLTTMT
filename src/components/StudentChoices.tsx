@@ -1,3 +1,4 @@
+import {levelLabel} from '../displayLabels';
 import {StudentEditor} from './ProfileEditors';
 import {useState} from 'react';
 import {Check, Trash2, UserRound} from 'lucide-react';
@@ -19,7 +20,7 @@ export function StudentChoices({students,selectedId,busy,onSelect,onBusy,onError
  };
  return <><div className="student-choices">{students.map(student=><div key={student.id} className={'student-choice'+(selectedId===student.id?' selected':'')}>
   <button type="button" className="student-select" disabled={busy} aria-pressed={selectedId===student.id} aria-label={`Chọn ${student.name}, sinh ngày ${birthDate(student.birthDate)}`} onClick={()=>onSelect(student.id)}>
-   <UserRound aria-hidden="true"/><span className="student-summary"><b>{student.name}</b><small>{student.verified?(student.level==='Chưa đánh giá'?'Hồ sơ học viên':student.level):'Hồ sơ không hoạt động'}</small><span className="student-age">{years(student.birthDate)} tuổi · {birthDate(student.birthDate)}</span></span><Check className="student-selected-icon" aria-hidden="true"/>
+   <UserRound aria-hidden="true"/><span className="student-summary"><b>{student.name}</b><small>{student.verified?(student.level==='Chưa đánh giá'?'Hồ sơ học viên':levelLabel(student.level)):'Hồ sơ không hoạt động'}</small><span className="student-age">{years(student.birthDate)} tuổi · {birthDate(student.birthDate)}</span></span><Check className="student-selected-icon" aria-hidden="true"/>
   </button>
   <div className="student-choice-actions">{student.canEdit&&<button type="button" className="student-edit" disabled={busy} onClick={()=>setEditing(student)} aria-label={`Sửa hồ sơ ${student.name}`}>Sửa</button>}<button type="button" className="student-delete" disabled={busy||!student.canDelete} aria-label={`Xóa hồ sơ ${student.name}, sinh ngày ${birthDate(student.birthDate)}`} title={student.canDelete?'Xóa hồ sơ chưa sử dụng':'Hồ sơ đã được trung tâm xử lý hoặc có lịch sử; liên hệ trung tâm để điều chỉnh.'} onClick={()=>setConfirmId(student.id)}><Trash2 size={16} aria-hidden="true"/> Xóa</button></div>
   {confirmId===student.id&&<div className="student-delete-confirm"><p>Xóa hồ sơ <b>{student.name}</b>, sinh ngày {birthDate(student.birthDate)} khỏi danh sách?</p><div><button type="button" className="cancel-delete" disabled={busy} onClick={()=>setConfirmId(null)}>Hủy</button><button type="button" className="confirm-delete" disabled={busy} onClick={()=>void remove(student)}>{busy?'Đang xóa…':'Xóa hồ sơ'}</button></div></div>}

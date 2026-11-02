@@ -4,6 +4,7 @@ namespace MyThuat.Api.Data;
 
 public class MyThuatDbContext(DbContextOptions<MyThuatDbContext> options) : DbContext(options)
 {
+    public DbSet<ThongBao> ThongBao=>Set<ThongBao>();
     public DbSet<LoaiKhoaHoc> LoaiKhoaHoc => Set<LoaiKhoaHoc>();
     public DbSet<BaiViet> BaiViet=>Set<BaiViet>();
     public DbSet<GioiThieuGiaoVien> GioiThieuGiaoVien=>Set<GioiThieuGiaoVien>();
@@ -56,6 +57,15 @@ public class MyThuatDbContext(DbContextOptions<MyThuatDbContext> options) : DbCo
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
     WebsiteMapping.Configure(modelBuilder);
+    modelBuilder.Entity<PhienThanhToan>(e=>{e.ToTable("PhienThanhToan");e.HasKey(x=>x.Id);e.Property(x=>x.MaThanhToan).HasMaxLength(20).IsUnicode(false);e.HasIndex(x=>x.DangKyId).IsUnique();e.HasIndex(x=>x.MaThanhToan).IsUnique();});
+    modelBuilder.Entity<SuKienSePay>(e=>{e.ToTable("SuKienSePay");e.HasKey(x=>x.Id);e.HasIndex(x=>x.MaGiaoDichSePay).IsUnique();e.Property(x=>x.SoTien).HasPrecision(18,0);e.Property(x=>x.NoiDung).HasMaxLength(2000);e.Property(x=>x.MaThamChieu).HasMaxLength(150);e.Property(x=>x.DauVanTay).HasMaxLength(64).IsUnicode(false);e.Property(x=>x.TrangThai).HasMaxLength(30);});
+    modelBuilder.Entity<ThongBaoLop>(e=>{e.ToTable("ThongBaoLop");e.HasKey(x=>x.Id);e.Property(x=>x.MaYeuCau).HasMaxLength(64);e.Property(x=>x.TieuDe).HasMaxLength(150);e.Property(x=>x.NoiDung).HasMaxLength(3000);e.HasIndex(x=>new{x.TaiKhoanId,x.MaYeuCau}).IsUnique();});
+    modelBuilder.Entity<ThongBao>(e=>{
+        e.ToTable("ThongBao");e.HasKey(x=>x.Id);
+        e.Property(x=>x.Loai).HasMaxLength(30);e.Property(x=>x.TieuDe).HasMaxLength(250);
+        e.Property(x=>x.Email).HasMaxLength(254);e.Property(x=>x.DienThoai).HasMaxLength(25);e.Property(x=>x.TrangThaiEmail).HasMaxLength(20);
+        e.HasIndex(x=>new{x.ThanhVienId,x.CreatedAt});e.HasIndex(x=>new{x.TrangThaiEmail,x.ThuLaiLuc});
+    });
     modelBuilder.Entity<KhoiPhucTaiKhoan>(e=>{
         e.ToTable("KhoiPhucTaiKhoan");e.HasKey(x=>x.Id);
         e.Property(x=>x.MaYeuCau).HasMaxLength(32).IsUnicode(false);e.HasIndex(x=>x.MaYeuCau).IsUnique();

@@ -38,7 +38,7 @@ builder.Services.AddSingleton<AccessTokens>();builder.Services.AddScoped<IPasswo
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuditService>();builder.Services.AddScoped<AccessService>();builder.Services.AddScoped<PolicyService>();
 builder.Services.AddScoped<DanhMucService>();builder.Services.AddScoped<ManagementValidation>();builder.Services.AddScoped<ManagementService>();builder.Services.AddScoped<ScheduleService>();
-builder.Services.AddScoped<EnrollmentService>();builder.Services.AddScoped<FinanceService>();builder.Services.AddScoped<LearningService>();
+builder.Services.AddScoped<NotificationService>();builder.Services.AddScoped<EnrollmentService>();builder.Services.AddScoped<FinanceService>();builder.Services.AddScoped<LearningService>();
 builder.Services.AddScoped<ChangeService>();builder.Services.AddScoped<InventoryService>();builder.Services.AddScoped<ClassLifecycleService>();
 builder.Services.AddAuthentication("Bearer").AddScheme<AuthenticationSchemeOptions,BearerAuthenticationHandler>("Bearer",_=>{});
 builder.Services.AddAuthorization(o=>{
@@ -223,8 +223,8 @@ try
     var retainedHistory=await Call("GET","/api/dang-ky/toi",token:memberToken);
     if(retainedHistory.AsArray().Count!=3)throw new Exception("Public filtering removed member enrollment history");
     await Call("GET","/api/dang-ky/toi",expected:403,token:teacherToken);
-    await Call("POST","/api/tai-khoan/dang-ky",new SignupRequest("invalidbirth","MyThuatTest2026!","Ngày sinh không hợp lệ","0900000006",null,BusinessClock.Today.AddDays(1)),400);
-    await Call("POST","/api/tai-khoan/dang-ky",new SignupRequest("outsider","MyThuatTest2026!","Thành viên mới","0900000006",null,new DateOnly(1990,5,12)));
+    await Call("POST","/api/tai-khoan/dang-ky",new SignupRequest("invalidbirth","MyThuatTest2026!","Ngày sinh không hợp lệ","0900000006","invalidbirth@mythuat.local",BusinessClock.Today.AddDays(1)),400);
+    await Call("POST","/api/tai-khoan/dang-ky",new SignupRequest("outsider","MyThuatTest2026!","Thành viên mới","0900000006","outsider@mythuat.local",new DateOnly(1990,5,12)));
     var outsider=await Login("outsider");
     var outsiderProfile=await Call("GET","/api/tai-khoan/toi",token:outsider);
     if(outsiderProfile["hoTen"]?.GetValue<string>()!="Thành viên mới"||outsiderProfile["dienThoai"]?.GetValue<string>()!="0900000006")throw new Exception("Missing account contact autofill fields");

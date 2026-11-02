@@ -1,3 +1,4 @@
+import {apiErrorLabel} from '../displayLabels';
 import type { ArtClass, Course, StudentProfile } from '../types';
 import { courseImage } from '../data/courseImages';
 import {demoMode,demoRequest,demoCourses,demoClasses} from './demo';
@@ -18,7 +19,7 @@ export async function request<T>(path:string,body?:unknown,method=body===undefin
  catch{throw new ApiError('Chưa kết nối được trung tâm. Vui lòng thử lại sau.',0)}
  const data=await res.json().catch(()=>null);
  if(!res.ok){if(res.status===401){clearSession();window.dispatchEvent(new Event('artora:session-expired'))}
- throw new ApiError(data?.title||data?.thongBao||data?.error||Object.values(data?.errors||{}).flat().join(' ')||'Không xử lý được yêu cầu.',res.status)}
+ throw new ApiError(apiErrorLabel(data?.title||data?.thongBao||data?.error||Object.values(data?.errors||{}).flat().join(' '))||'Không xử lý được yêu cầu.',res.status)}
  return data as T;
 }
 type Page<T>={duLieu:T[];tongSo:number};
@@ -33,7 +34,7 @@ export type CourseResult={ketLuan:string;nhanXetTongKet:string|null;diemCuoiKhoa
 export type Progress={soNoiDungDaThamGia:number;diemDanh:Attendance[];hocBu?:Makeup[];ketQua:CourseResult|null};
 export type Feedback={id:number;dangKyId:number;noiDung:string;traLoi:string|null;guiLuc:string;trangThai:string;kind:'PHAN_HOI'|'HOC_BU'|'DOI_LICH';diemDanhId:number|null};
 export type Change={id:number;dangKyNguonId:number;loaiYeuCau:string;lyDo:string;trangThai:string;guiLuc:string};
-export type TeacherSession={id:number;lopHocId:number;maLop:string;tenLop:string;tenKhoa:string;batDau:string;ketThuc:string;trangThai:string;thuTu:number;chuDe:string;tenPhong:string;vaiTro:string;soHocVien:number};
+export type TeacherSession={phongHocId?:number;rowVersion?:string;buoiThayTheChoId?:number|null;lyDoDoiLich?:string|null;id:number;lopHocId:number;maLop:string;tenLop:string;tenKhoa:string;batDau:string;ketThuc:string;trangThai:string;thuTu:number;chuDe:string;tenPhong:string;vaiTro:string;soHocVien:number};
 export type RosterRow={id:number;dangKyId:number;hocVienId:number;hoTen:string;ngaySinh:string;luuY:string|null;loaiThamGia:string;trangThai:string;baoNghiLuc:string|null;phutThamDu:number|null;nhanXet:string|null;diemSanPham:number|null;sanPhamUrl:string|null;rowVersion:string};
 const field=(o:Record<string,unknown>,name:string)=>o[name]??o[name[0].toLowerCase()+name.slice(1)];
 export const vnTime=(v:string)=>new Date(/(?:Z|[+-]\d\d:\d\d)$/.test(v)?v:v+'+07:00');
@@ -65,6 +66,9 @@ export const artCenterService={
  learningRequest:(id:number,kind:'HOC_BU'|'DOI_LICH',reason:string,preferred:string)=>request('/api/hoc-tap/de-nghi',{DiemDanhId:id,LoaiYeuCau:kind,LyDo:reason,KhungGioMongMuon:preferred.trim()||null}),
  change:(id:number,text:string,key:string)=>request('/api/thay-doi',{DangKyId:id,LoaiYeuCau:'HUY',NguyenNhan:'NGUOI_HOC',LyDo:text,IdempotencyKey:key}),
  transfer:(id:number,target:number,text:string,key:string)=>request('/api/thay-doi',{DangKyId:id,LopDichId:target,LoaiYeuCau:'CHUYEN',NguyenNhan:'NGUOI_HOC',LyDo:text,IdempotencyKey:key}),
+ classNoticeRecipients:(id:number)=>request<{soHocVien:number;soNguoiNhan:number;soEmail:number}>(`/api/giao-vien/lop/${id}/nguoi-nhan`),
+ sendClassNotice:(id:number,title:string,text:string,key:string)=>request<{soNguoiNhan:number;soEmail:number;daTiepNhan:boolean}>(`/api/giao-vien/lop/${id}/thong-bao`,{TieuDe:title,NoiDung:text,MaYeuCau:key}),
+ teacherReschedule:(id:number,body:unknown)=>request(`/api/giao-vien/buoi/${id}/xep-bu`,body),
  teacherSchedule:()=>request<TeacherSession[]>('/api/hoc-tap/giao-vien/buoi-cua-toi'),
  teacherRoster:(id:number)=>request<RosterRow[]>(`/api/hoc-tap/buoi/${id}/danh-sach`),
  recordAttendance:(id:number,body:unknown)=>request(`/api/hoc-tap/diem-danh/${id}`,body,'PUT'),

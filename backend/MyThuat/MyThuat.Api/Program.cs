@@ -15,7 +15,7 @@ using MyThuat.Api.Services;
 
 var builder=WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json",optional:true,reloadOnChange:true);
-builder.Configuration.AddJsonFile(Path.Combine(".local","mail.json"),optional:true,reloadOnChange:true).AddEnvironmentVariables();
+builder.Configuration.AddJsonFile(Path.Combine(".local","mail.json"),optional:true,reloadOnChange:true).AddJsonFile(Path.Combine(".local","payment.json"),optional:true,reloadOnChange:true).AddEnvironmentVariables();
 builder.Services.AddControllers().AddJsonOptions(o=>o.JsonSerializerOptions.MaxDepth=32);
 builder.Services.AddProblemDetails();
 builder.Services.AddHttpContextAccessor();
@@ -76,7 +76,12 @@ builder.Services.AddScoped<IRecoveryMail,RecoveryMail>();builder.Services.AddSco
 builder.Services.AddHostedService<ExpiryWorker>();
 
 
+builder.Services.AddScoped<NotificationService>();builder.Services.AddScoped<INotificationMail,NotificationMail>();builder.Services.AddHostedService<NotificationWorker>();
+builder.Services.AddScoped<OnlinePaymentService>();
 var app=builder.Build();
+if(args.Contains("--prepare-payments")){using var scope=app.Services.CreateScope();await PaymentDemoSetup.Run(scope.ServiceProvider.GetRequiredService<MyThuatDbContext>(),app.Environment.ContentRootPath);return;}
+if(args.Contains("--upgrade-class-notices")){using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();await MainDatabaseSetup.Backup(db,app.Environment.ContentRootPath);await db.Database.ExecuteSqlRawAsync(await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","011_ThongBaoLop.sql")));Console.WriteLine("Đã bổ sung nhật ký thông báo lớp.");return;}
+if(args.Contains("--upgrade-notifications")){using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();await MainDatabaseSetup.Backup(db,app.Environment.ContentRootPath);await db.Database.ExecuteSqlRawAsync(await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","010_ThongBao.sql")));Console.WriteLine("Đã bổ sung thông báo; không sửa dữ liệu lớp và tài khoản.");return;}
 if(args.Contains("--preview-recovery-email")){await RecoveryEmailTemplate.WritePreview(app.Environment.ContentRootPath);return;}
 if(args.Contains("--upgrade-recovery")){
     using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();

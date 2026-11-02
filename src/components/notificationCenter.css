@@ -1,0 +1,16 @@
+.notification-band{background:#f8f8f0;border-bottom:1px solid #e3e7db;padding:8px 0;position:relative;z-index:20}
+.notification-toggle{border:0;background:transparent;color:#285e49;font:inherit;font-size:13px;font-weight:700;display:flex;align-items:center;gap:9px;padding:7px 0;cursor:pointer}
+.notifications-panel{margin:10px 0 18px;padding:24px;border-radius:16px;background:white;border:1px solid #d8e1d2;box-shadow:0 10px 25px #2a503a0d}
+.notification-heading{display:flex;gap:12px;align-items:center;margin-bottom:20px}.notification-heading h2{flex:1;font-size:21px;margin:0}
+.notification-heading button{display:grid;place-items:center;background:#f1f5ec;border:0;border-radius:9px;min-height:38px;min-width:38px;cursor:pointer;color:#315f47}
+.notification-items{display:grid;gap:16px;max-height:65vh;overflow:auto;padding:3px}
+.notification-items article{border:1px solid #dce3d5;border-radius:12px;padding:20px;min-width:0}
+.notification-items article.unread{border-left:4px solid #c26c38;background:#fffdf6}
+.notice-heading{display:flex;gap:16px;align-items:flex-start;justify-content:space-between}.notice-heading h3{font-size:16px;margin:0;line-height:1.6}.notice-heading time{font-size:12px;color:#6c7d6c;white-space:nowrap;line-height:1.6}
+.notice-content{white-space:pre-wrap;font-size:14px;line-height:1.9;overflow-wrap:anywhere;margin:16px 0}
+.notification-help,.notice-email{font-size:13px;line-height:1.8;color:#60715f;overflow-wrap:anywhere}
+.notice-delivery{display:inline-block;padding:6px 10px;background:#eaf2e6;border-radius:8px;font-size:12px;font-weight:700;margin:0}
+.delivery-GUI_LOI,.delivery-KHONG_CO_EMAIL{background:#fff0e8;color:#a04227}
+.notice-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:14px}.notice-actions a,.notice-actions button,.notice-read{display:inline-flex;align-items:center;gap:7px;padding:10px 13px;min-height:40px;border-radius:9px;border:1px solid #cadaca;background:#f0f6e9;color:#285e49;font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none}
+.notice-actions button:disabled,.notice-read:disabled{opacity:.5;cursor:wait}
+@media(max-width:680px){.notifications-panel{padding:16px}.notice-heading{flex-direction:column;gap:7px}.notification-items article{padding:16px}.notice-actions a,.notice-actions button{justify-content:center}.notification-heading h2{font-size:18px}}

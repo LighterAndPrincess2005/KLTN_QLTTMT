@@ -1,0 +1,37 @@
+.teacher-dashboard-page .study-page-heading h1{font-size:clamp(28px,3vw,42px)}
+.nav>a.account-link{display:inline-flex}
+.teacher-sidebar .study-profile-card h2,.account-sidebar .study-profile-card h2{font-size:20px;line-height:1.6;margin:12px 0;overflow-wrap:anywhere}
+.teacher-sidebar .study-profile-card p,.account-sidebar .study-profile-card p{font-size:13px;line-height:1.8;color:#60715c;overflow-wrap:anywhere}
+.teacher-sidebar .study-profile-card .text-link{width:100%;margin-top:12px;font-size:12px}
+.teacher-calendar-search{margin:0 0 18px;padding:18px;background:white;border:1px solid #d8e1d0;border-radius:14px}
+.teacher-calendar-search input{width:100%;min-width:0}
+.teacher-calendar .week-heading h2{font-size:25px;line-height:1.5;margin:10px 0}
+.teacher-date-label{display:grid;gap:6px;font-size:11px;color:#63735b}
+.teacher-date-label input{font:inherit;font-size:13px;min-height:38px;border:1px solid #d0ddc6;padding:7px 10px;border-radius:9px;min-width:0;background:white;color:#315c44}
+.teacher-calendar .week-controls>button{display:inline-flex;align-items:center;justify-content:center;min-height:40px;min-width:40px;padding:9px 12px;border:1px solid #cbdac4;border-radius:9px;background:white;color:#285f45;font:inherit;font-size:13px;cursor:pointer}
+.teacher-calendar .week-controls>button:hover{background:#edf4e6;border-color:#59916e}
+.teacher-calendar .week-controls>button:focus-visible,.account-side-nav button:focus-visible{outline:3px solid #d28c40;outline-offset:3px}
+.teacher-calendar .teacher-event-action{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;margin-top:3px}
+.teacher-main .teacher-workspace{margin-top:18px;min-width:0}
+.teacher-back-calendar{margin-bottom:0}
+.teacher-workspace .learning-heading{flex-wrap:wrap}
+.teacher-workspace .teacher-student{min-width:0}
+.teacher-workspace .teacher-student form>.btn{margin-top:20px;min-height:46px}
+.account-main{background:white;border:1px solid #dce4d4;border-radius:20px;min-width:0}
+.account-main .account-profile,.account-security{padding:30px}
+.account-main .account-profile-info{gap:24px;margin:8px 0 4px}
+.account-main .account-profile>.btn.full{width:max-content;max-width:100%;justify-self:start;padding:12px 24px}
+.account-main .account-profile-actions{justify-content:flex-end}
+.account-security h2{font-size:27px;margin:16px 0;line-height:1.5}
+.account-security>p{font-size:14px;line-height:1.8;color:#61725e;margin:0 0 22px}
+.account-security .password-editor{margin:0}
+.account-avatar{width:64px;height:64px;border-radius:18px;background:#edf4e7;color:#2a7154;display:grid;place-items:center}
+.account-side-nav{display:grid;gap:12px}
+.account-side-nav button{display:flex;align-items:center;gap:12px;padding:18px 16px;min-height:76px;border:1px solid #d3e0cc;border-radius:14px;background:#fff;color:#345d45;text-align:left;font:inherit;cursor:pointer}
+.account-side-nav button>span{display:grid;gap:7px;flex:1;font-weight:700;font-size:14px;line-height:1.5}
+.account-side-nav small{font-size:11px;font-weight:400;line-height:1.6}
+.account-side-nav button[aria-pressed=true]{background:#236b54;color:#fff;border-color:#236b54;box-shadow:0 8px 18px #245d3b18}
+.account-side-nav svg{flex-shrink:0}
+.account-sidebar .account-sidebar-logout{justify-content:center;gap:10px;min-height:48px;border:1px solid #dfc8bb;border-radius:12px;background:#fff8f2;color:#98432f;box-shadow:none;width:100%}
+@media(max-width:900px){.teacher-sidebar .study-class-list{grid-column:2;grid-row:1/4}.account-sidebar{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.account-sidebar .account-side-nav{grid-column:2;grid-row:1/3}.account-sidebar .account-sidebar-logout{grid-column:1}.account-main .account-profile,.account-security{padding:24px}}
+@media(max-width:600px){.teacher-sidebar .study-class-list{grid-column:auto;grid-row:auto;max-height:300px}.teacher-sidebar .study-profile-card{padding:18px}.teacher-dashboard-page .study-page-heading>.btn{width:100%}.teacher-calendar .week-heading h2{font-size:22px}.teacher-date-label{width:100%}.teacher-calendar .week-controls>button{min-height:40px}.teacher-workspace{padding:20px 14px}.account-sidebar{grid-template-columns:minmax(0,1fr)}.account-sidebar .account-side-nav,.account-sidebar .account-sidebar-logout{grid-column:auto;grid-row:auto}.account-side-nav{grid-template-columns:1fr 1fr;gap:10px}.account-side-nav button{padding:14px 10px;gap:8px;align-items:flex-start}.account-side-nav button>svg:last-child{display:none}.account-side-nav button>span{font-size:13px}.account-main .account-profile,.account-security{padding:22px 16px}.account-main .account-profile>.btn.full{width:100%;justify-self:stretch}.account-main .account-profile-actions{flex-direction:column-reverse}.account-main .account-profile-actions button{width:100%}.teacher-main .teacher-student form>.btn{width:100%;justify-content:center}}

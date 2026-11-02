@@ -1,3 +1,4 @@
+import {levelLabel} from '../displayLabels';
 import { useState } from 'react';
 import { ArrowRight, BookOpen, ChevronDown, GraduationCap, Paintbrush } from 'lucide-react';
 import type { ArtClass, Course } from '../types';
@@ -18,7 +19,7 @@ export function IntroPrograms({courses,classes}:{courses:Course[];classes:ArtCla
     <div className="filter-row" aria-label="Nhóm chương trình">{['Tất cả', ...new Set(courses.map(c=>c.category))].map(x => <button type="button" aria-pressed={category === x} className={category === x ? 'active' : ''} key={x} onClick={() => {setCategory(x);setPage(1)}}>{x}</button>)}</div>
     <div className="course-grid">{filtered.slice((current-1)*6,current*6).map(c => <article className="course-card intro-course" key={c.id}>
       <div className="course-image"><img src={c.image} alt={`Khám phá chất liệu trong chương trình ${c.title}`} loading="lazy"/><span className="age-pill">{c.category}</span>{classes.find(cl=>cl.courseId===c.id&&isPublicClass(cl)&&cl.promotion)?.promotion&&<PromotionHighlight variant="sticker" promotion={classes.find(cl=>cl.courseId===c.id&&isPublicClass(cl)&&cl.promotion)!.promotion!}/>}</div>
-      <div className="course-content"><span className="category">{c.level}</span><h3>{c.title}</h3><div className="program-facts"><span>Từ {c.ageMin} tuổi</span><span>{c.sessions} buổi học</span><span>{c.minutesPerSession} phút / buổi</span></div><div className="program-tuition"><span>Học phí khóa</span><strong>{c.tuitionFee.toLocaleString('vi-VN')}đ</strong></div><p>{c.skills.join(' · ')}</p><a className="course-link" href={courseHref(c.id)}>Khám phá chương trình <ArrowRight size={16}/></a><a className="btn btn-primary course-register-link" href={courseClassesHref(c.id)}>Đăng ký khóa học <ArrowRight size={16}/></a></div>
+      <div className="course-content"><span className="category">{levelLabel(c.level)}</span><h3>{c.title}</h3><div className="program-facts"><span>Từ {c.ageMin} tuổi</span><span>{c.sessions} buổi học</span><span>{c.minutesPerSession} phút / buổi</span></div><div className="program-tuition"><span>Học phí khóa</span><strong>{c.tuitionFee.toLocaleString('vi-VN')}đ</strong></div><p>{c.skills.join(' · ')}</p><a className="course-link" href={courseHref(c.id)}>Khám phá chương trình <ArrowRight size={16}/></a><a className="btn btn-primary course-register-link" href={courseClassesHref(c.id)}>Đăng ký khóa học <ArrowRight size={16}/></a></div>
     </article>)}</div>
     <Pagination page={current} count={count} onChange={setPage}/>
   </div></section>;
@@ -64,8 +65,10 @@ export function Questions() {
     ['Chưa từng học vẽ có thể bắt đầu không?', 'Trung tâm tư vấn và đánh giá đầu vào để tìm hướng học phù hợp. Các điều kiện cụ thể được công bố cùng khóa học; không cần tự chọn trình độ thay cho đánh giá của giáo viên.'],
     ['Làm sao biết học phí và lớp còn chỗ?', 'Xem mục khóa được công bố và lịch khai giảng. Mỗi lớp có học phí áp dụng và số chỗ còn lại. Trung tâm kiểm tra chỗ trống một lần nữa khi lập phiếu đăng ký.'],
     ['Một tài khoản có thể đăng ký cho nhiều học viên không?', 'Có. Người đại diện có thể tạo nhiều hồ sơ học viên trong tài khoản. Bạn điền hồ sơ và chọn quan hệ đại diện để tiếp tục ghi danh.'],
+    ['Điều khoản đăng ký và giữ chỗ gồm những gì?', 'Bạn cần kiểm tra hồ sơ, lịch học, học phí, ưu đãi và hạn giữ chỗ trước khi xác nhận. Lập phiếu chưa đồng nghĩa đã vào lớp; lịch cá nhân xuất hiện sau khi thanh toán đủ và được trung tâm xác nhận.'],
+    ['Chính sách học bù, chuyển lớp và hoàn tiền xem ở đâu?', 'Xem trang Chính sách & điều khoản để biết quy định hiện hành. Hồ sơ đã đăng ký áp dụng phiên bản được chốt lúc lập hồ sơ. Trung tâm đối chiếu và xác nhận từng yêu cầu; gửi đề nghị chưa tự đổi lịch hoặc hoàn tiền.'],
     ['Nếu nghỉ học hoặc muốn đổi lớp thì sao?', 'Bạn gửi thông báo hoặc đề nghị qua khu vực thành viên. Trung tâm xem xét theo quy định của khóa; việc học bù, chuyển lớp và hoàn tiền cần được xác nhận.']
-  ].map(([title, text]) => <details key={title}><summary>{title}<ChevronDown size={17}/></summary><p>{text}</p></details>)}</div></div></section>;
+  ].map(([title, text]) => <details key={title}><summary>{title}<ChevronDown size={17}/></summary><p>{text}</p></details>)}<a className="text-link faq-policy-link" href={pageHref('/chinh-sach')}>Xem chính sách & điều khoản đăng ký <ArrowRight size={16}/></a></div></div></section>;
 }
 
 export function Contact() {

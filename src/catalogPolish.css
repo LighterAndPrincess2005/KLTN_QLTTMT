@@ -1,0 +1,21 @@
+/* Keep program actions aligned even when titles and descriptions wrap. */
+#programs .intro-course{display:flex;flex-direction:column;min-width:0}
+#programs .intro-course .course-content{display:flex;flex:1;flex-direction:column;min-width:0}
+#programs .intro-course .course-content>p{flex:1}
+#programs .intro-course .course-link,#programs .intro-course .course-register-link{display:flex;width:100%;min-height:48px;justify-content:center;align-items:center;gap:10px;text-align:center;box-sizing:border-box;margin-top:12px;border-radius:12px;padding:12px 16px;line-height:1.5}
+#programs .intro-course .course-link{background:#fff4e6;color:#93411f;border:1px solid #e7bf95;box-shadow:none}
+#programs .intro-course .course-link:hover{background:#f9e3c9;color:#713016}
+.exploration-columns .course-class-cta{display:flex;width:100%;justify-content:center;min-height:48px;margin-top:24px;box-sizing:border-box;text-align:center}
+.class-row.detailed>button{width:100%;min-height:46px;justify-content:center;white-space:nowrap}
+.class-row.detailed .class-availability{display:flex;flex-direction:column;gap:8px;align-items:flex-start;min-width:0}
+.class-capacity{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:9px;font-size:12px;font-weight:700;line-height:1.5;background:#e8f3eb;color:#225d45}
+.class-capacity::before{content:'';width:7px;height:7px;background:currentColor;border-radius:50%;flex-shrink:0}
+.class-capacity.limited{background:#fff0d7;color:#95500c;border:1px solid #e9c48b}
+.class-capacity.full{background:#eceeea;color:#657067}
+.class-availability .seats{margin:0}
+.course-feedback-invite{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:22px 0;padding:22px;border:1px solid #cadcc9;background:#f0f6e9;border-radius:16px}
+.course-feedback-invite h4{margin:0 0 8px}
+.course-feedback-invite p{margin:0;color:#536956;line-height:1.7;font-size:14px}
+.course-feedback-invite button{flex-shrink:0;min-height:46px}
+@media(min-width:981px){.class-row.detailed{grid-template-columns:5px minmax(0,1.75fr) minmax(0,1fr) minmax(120px,.8fr) 120px}}
+@media(max-width:680px){.class-row.detailed{grid-template-columns:5px minmax(0,1fr);padding:18px 14px;gap:14px}.class-row.detailed .class-color{grid-column:1;grid-row:1/5}.class-row.detailed .class-main{grid-column:2;grid-row:1}.class-row.detailed .class-detail{display:flex;grid-column:2;grid-row:2}.class-row.detailed>div.class-availability{grid-column:2;grid-row:3}.class-row.detailed>button{grid-column:2;grid-row:4;font-size:14px;width:100%}.course-feedback-invite{align-items:stretch;flex-direction:column}.course-feedback-invite button{width:100%;justify-content:center}}

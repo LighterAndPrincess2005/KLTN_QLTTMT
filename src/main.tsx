@@ -20,6 +20,8 @@ import './artReading.css';
 import './actionLinks.css';
 import './websiteContent.css';
 import './tuitionOffers.css';
+import './catalogPolish.css';
+import './layoutSpacing.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,

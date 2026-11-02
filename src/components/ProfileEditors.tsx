@@ -1,5 +1,6 @@
 import {PasswordEditor} from './PasswordEditor';
 import {useEffect,useRef,useState} from 'react';
+import {LogOut} from 'lucide-react';
 import type {StudentProfile} from '../types';
 import {artCenterService as api,type Member} from '../services/artCenterService';
 import './profileEditors.css';
@@ -23,7 +24,7 @@ export function StudentEditor({student,onSaved,onCancel}:{student:StudentProfile
  </div></fieldset>{error&&<p className="error-note" role="alert">{error}</p>}<div className="profile-editor-actions"><button type="button" className="btn btn-soft" disabled={busy} onClick={onCancel}>Hủy chỉnh sửa</button><button className="btn btn-primary" disabled={busy}>{busy?'Đang lưu…':'Lưu thay đổi'}</button></div></form>;
 }
 
-export function AccountEditor({member,onSaved,onLogout,onPasswordChanged}:{member:Member;onSaved:(m:Member)=>void;onLogout:()=>Promise<void>;onPasswordChanged:()=>void}){
+export function AccountEditor({member,onSaved,onLogout,onPasswordChanged,presentation='modal'}:{member:Member;onSaved:(m:Member)=>void;onLogout:()=>Promise<void>;onPasswordChanged:()=>void;presentation?:'modal'|'page'}){
  const [account,setAccount]=useState<Member|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[editing,setEditing]=useState(false);
  const [draft,setDraft]=useState({name:'',phone:'',birth:'',email:''});
  const dirty=!!account&&(draft.name.trim()!==(account.hoTen||'')||draft.phone.trim()!==(account.dienThoai||'')||draft.birth!==(account.ngaySinh?.slice(0,10)||'')||draft.email.trim()!==(account.email||''));
@@ -43,6 +44,6 @@ export function AccountEditor({member,onSaved,onLogout,onPasswordChanged}:{membe
  <label className="field"><span>Ngày sinh</span><input name="birth" type="date" value={draft.birth} onChange={e=>setDraft({...draft,birth:e.target.value})} min="1900-01-01" max={today()} required/></label>
  <label className="field"><span>Email</span><input name="email" type="email" value={draft.email} onChange={e=>setDraft({...draft,email:e.target.value})} required maxLength={254}/></label>
  </div></fieldset><div className="account-profile-actions"><button type="button" className="btn btn-soft" disabled={busy} onClick={()=>{setEditing(false);setError('');setNotice('')}}>Hủy chỉnh sửa</button><button className="btn btn-primary" disabled={busy||!dirty}>{busy?'Đang lưu…':'Lưu thay đổi'}</button></div></form>}
- <PasswordEditor onChanged={onPasswordChanged}/>
- <button type="button" className="link-button profile-logout" disabled={busy} onClick={async()=>{setBusy(true);try{await onLogout()}catch(e){setError(errorMessage(e));setBusy(false)}}}>Đăng xuất</button></div>;
+ {presentation==='modal'&&<><PasswordEditor onChanged={onPasswordChanged}/>
+ <button type="button" className="btn btn-soft profile-logout" disabled={busy} onClick={async()=>{setBusy(true);try{await onLogout()}catch(e){setError(errorMessage(e));setBusy(false)}}}><LogOut size={18} aria-hidden="true"/>Đăng xuất</button></>}</div>;
 }

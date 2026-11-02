@@ -11,7 +11,7 @@ using MyThuat.Api.Security;
 using MyThuat.Api.Services;
 namespace MyThuat.Api.Controllers;
 [ApiController,Route("api/tu-van")]
-public sealed class TuVanController(MyThuatDbContext db,AuditService audit):ControllerBase
+public sealed class TuVanController(MyThuatDbContext db,AuditService audit,NotificationService notifications):ControllerBase
 {
     public static string Hash(string value)=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
     [AllowAnonymous,EnableRateLimiting("consultation"),HttpPost]
@@ -49,7 +49,7 @@ public sealed class TuVanController(MyThuatDbContext db,AuditService audit):Cont
     [Authorize(Policy="HoSo"),HttpGet("{id:long}")]
     public async Task<object> Read(long id,CancellationToken ct){var row=await db.TuVan.SingleOrDefaultAsync(x=>x.Id==id,ct)??throw new ApiError(404,"Không có yêu cầu.");if(row.DocLuc==null){row.DocLuc=BusinessClock.Now;if(row.TrangThai=="MOI_GUI")row.TrangThai="DA_DOC";row.NguoiXuLyId=User.AccountId();audit.Add("TuVan",id,"DOC_TU_VAN");await db.SaveChangesAsync(ct);}return await Detail(row,ct);}
     [Authorize(Policy="HoSo"),HttpPost("{id:long}/tra-loi")]
-    public async Task<IActionResult> Reply(long id,ConsultationMessage r,CancellationToken ct){var row=await db.TuVan.SingleOrDefaultAsync(x=>x.Id==id,ct)??throw new ApiError(404,"Không có yêu cầu.");ApiError.Require(row.TrangThai!="DA_DONG"&&Convert.ToBase64String(row.RowVersion)==r.RowVersion,"Yêu cầu đã thay đổi hoặc đã đóng.",409);row.TrangThai="DA_TRA_LOI";row.DocLuc??=BusinessClock.Now;row.NguoiXuLyId=User.AccountId();db.TinNhanTuVan.Add(new(){TuVanId=id,NoiDung=r.NoiDung.Trim(),TuNhanVien=true,TaiKhoanId=User.AccountId(),GuiLuc=BusinessClock.Now});audit.Add("TuVan",id,"TRA_LOI_TU_VAN");await db.SaveChangesAsync(ct);return NoContent();}
+    public async Task<IActionResult> Reply(long id,ConsultationMessage r,CancellationToken ct){var row=await db.TuVan.SingleOrDefaultAsync(x=>x.Id==id,ct)??throw new ApiError(404,"Không có yêu cầu.");ApiError.Require(row.TrangThai!="DA_DONG"&&Convert.ToBase64String(row.RowVersion)==r.RowVersion,"Yêu cầu đã thay đổi hoặc đã đóng.",409);row.TrangThai="DA_TRA_LOI";row.DocLuc??=BusinessClock.Now;row.NguoiXuLyId=User.AccountId();db.TinNhanTuVan.Add(new(){TuVanId=id,NoiDung=r.NoiDung.Trim(),TuNhanVien=true,TaiKhoanId=User.AccountId(),GuiLuc=BusinessClock.Now});notifications.Add(row.ThanhVienId,row.Email,row.DienThoai,"TU_VAN","Bụi đã trả lời · "+row.ChuDe,r.NoiDung.Trim()+"\n\nBạn có thể tiếp tục trao đổi tại Góc tư vấn trên website.");audit.Add("TuVan",id,"TRA_LOI_TU_VAN");await db.SaveChangesAsync(ct);return NoContent();}
     [Authorize(Policy="HoSo"),HttpPut("{id:long}/trang-thai")]
     public async Task<IActionResult> State(long id,ConsultationState r,CancellationToken ct){ApiError.Require(r.TrangThai is "DANG_XU_LY" or "DA_DONG","Trạng thái không hợp lệ.");var row=await db.TuVan.SingleOrDefaultAsync(x=>x.Id==id,ct)??throw new ApiError(404,"Không có yêu cầu.");ApiError.Require(Convert.ToBase64String(row.RowVersion)==r.RowVersion,"Yêu cầu đã thay đổi.",409);row.TrangThai=r.TrangThai;row.NguoiXuLyId=User.AccountId();audit.Add("TuVan",id,"DOI_TRANG_THAI_TU_VAN");await db.SaveChangesAsync(ct);return NoContent();}
 }

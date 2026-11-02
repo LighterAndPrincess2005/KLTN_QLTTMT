@@ -5,7 +5,7 @@ using MyThuat.Api.Data;
 using MyThuat.Api.Models;
 using MyThuat.Api.Security;
 namespace MyThuat.Api.Services;
-public sealed class ScheduleService(MyThuatDbContext db,AuditService audit,AccessService access,PolicyService policies)
+public sealed class ScheduleService(MyThuatDbContext db,AuditService audit,AccessService access,PolicyService policies,NotificationService notifications)
 {
     public async Task CheckSlot(long classId,long roomId,DateTime start,DateTime end,IEnumerable<long> teacherIds,long? ignore,CancellationToken ct)
     {
@@ -106,11 +106,14 @@ public sealed class ScheduleService(MyThuatDbContext db,AuditService audit,Acces
         audit.Add("BuoiHoc",id,"THAY_GIAO_VIEN",new {GiaoVienCu=old,GiaoVienMoi=r.GiaoVienId,r.VaiTro,r.LyDo});
         await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return ManagementService.Scalars(assignment);
     }
-    public async Task<object> Move(long id,RescheduleRequest r,CancellationToken ct)
+    public Task<object> Move(long id,RescheduleRequest r,CancellationToken ct)=>MoveCore(id,r,false,ct);
+    public Task<object> TeacherMove(long id,RescheduleRequest r,CancellationToken ct)=>MoveCore(id,r,true,ct);
+    async Task<object> MoveCore(long id,RescheduleRequest r,bool teacher,CancellationToken ct)
     {
-        access.Need(Permission.DaoTao);
+        if(!teacher)access.Need(Permission.DaoTao);
         await using var tx=await db.Database.BeginTransactionAsync(IsolationLevel.Serializable,ct);
         var b=await db.BuoiHoc.SingleOrDefaultAsync(x=>x.Id==id,ct)??throw new ApiError(404,"Không có buổi.");
+        if(teacher){await access.TeacherSession(id,ct);ApiError.Require(access.User.TeacherId()!=null&&await db.GiangDayBuoi.AnyAsync(x=>x.BuoiHocId==id&&x.GiaoVienId==access.User.TeacherId()&&x.VaiTro=="CHINH",ct),"Chỉ giáo viên chính được xếp buổi thay thế của mình.",403);ApiError.Require(await db.LopHoc.AnyAsync(x=>x.Id==b.LopHocId&&(x.TrangThai=="DANG_HOC"||x.TrangThai=="DANG_TUYEN_SINH"),ct),"Lớp không còn hoạt động để xếp buổi thay thế.",409);ApiError.Require(r.PhongHocId==b.PhongHocId,"Giáo viên xếp bù tại phòng hiện tại. Đổi phòng cần học vụ hỗ trợ.");}
         ApiError.Require(Convert.ToBase64String(b.RowVersion)==r.RowVersion,"Lịch đã thay đổi, tải lại.",409);
         ApiError.Require(b.TrangThai=="DA_XEP_LICH"&&b.BatDau>BusinessClock.Now&&r.BatDau>BusinessClock.Now,"Chỉ dời lịch chưa bắt đầu.");
         var staff=await db.GiangDayBuoi.Where(x=>x.BuoiHocId==id).ToListAsync(ct);
@@ -137,6 +140,7 @@ public sealed class ScheduleService(MyThuatDbContext db,AuditService audit,Acces
         }
         var cls=await db.LopHoc.SingleAsync(x=>x.Id==b.LopHocId,ct);
         cls.NgayKetThucDuKien=DateOnly.FromDateTime(await db.BuoiHoc.Where(x=>x.LopHocId==b.LopHocId&&x.TrangThai!="DA_HUY").MaxAsync(x=>x.KetThuc,ct));
+        await notifications.ScheduleChanged(id,b.BatDau,next,cls.TenLop,r.LyDo,ct);
         audit.Add("BuoiHoc",id,"DOI_LICH",new {BuoiMoiId=next.Id,r.LyDo});await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);
         return ManagementService.Scalars(next);
     }
