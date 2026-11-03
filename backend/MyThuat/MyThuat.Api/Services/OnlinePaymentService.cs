@@ -27,6 +27,27 @@ public sealed class OnlinePaymentService(MyThuatDbContext db,AccessService acces
         await tx.CommitAsync(ct);return await View(e,due,free,intent,ct);
     }
     public async Task<object> Status(long id,CancellationToken ct){var e=await Own(id,ct);return await View(e,await Due(id,ct),await db.KhoanThuDangKy.Where(x=>x.DangKyId==id).SumAsync(x=>x.ThanhTienChot,ct)==0,await db.Set<PhienThanhToan>().AsNoTracking().SingleOrDefaultAsync(x=>x.DangKyId==id,ct),ct);}
+    public const string TransferReportAction = "BAO_DA_CHUYEN_KHOAN";
+
+    public async Task<object> ReportTransfer(long id,CancellationToken ct)
+    {
+        var enrollment=await Own(id,ct);
+        await using var tx=await db.Database.BeginTransactionAsync(IsolationLevel.Serializable,ct);
+        await enrollments.LockClass(enrollment.LopHocId,ct);
+        await db.Entry(enrollment).ReloadAsync(ct);
+        if(enrollment.TrangThai=="DA_XAC_NHAN")return new {DaXacNhan=true};
+        ApiError.Require(enrollment.TrangThai=="CHO_THANH_TOAN"&&enrollment.HanGiuCho>BusinessClock.Now&&
+            await db.Set<PhienThanhToan>().AnyAsync(x=>x.DangKyId==id,ct),
+            "Phiếu không còn nhận báo chuyển khoản. Vui lòng liên hệ trung tâm để đối chiếu.",409);
+        if(!await db.NhatKyThayDoi.AnyAsync(x=>x.LoaiDoiTuong=="DangKy"&&x.IdDoiTuong==id&&x.HanhDong==TransferReportAction,ct))
+        {
+            audit.Add("DangKy",id,TransferReportAction);
+            await db.SaveChangesAsync(ct);
+        }
+        await tx.CommitAsync(ct);
+        return new {DaXacNhan=false};
+    }
+
     async Task<object> View(DangKy e,decimal due,bool free,PhienThanhToan? intent,CancellationToken ct){
         var expired=e.TrangThai=="HET_HAN"||e.TrangThai=="CHO_THANH_TOAN"&&e.HanGiuCho<=BusinessClock.Now;
         var payable=!expired&&e.TrangThai=="CHO_THANH_TOAN"&&due>0&&Enabled&&intent!=null;

@@ -23,6 +23,8 @@ internal sealed class ApiCatalogController(ArtApiClient api)
         "giao-vien" => [Text("MaGiaoVien","Mã giáo viên"),Text("HoTen","Họ tên"),Text("DienThoai","Điện thoại"),Text("TrinhDo","Trình độ"),Text("ChuyenMon","Chuyên môn"),Text("CapDoCoTheDay","Cấp độ có thể dạy"),State()],
         "phong-hoc" => [Text("MaPhong","Mã phòng"),Text("TenPhong","Tên phòng"),Number("SucChua","Sức chứa",12),State()],
         "hoa-cu" => [Text("MaHoaCu","Mã họa cụ"),Text("TenHoaCu","Tên họa cụ"),Text("QuyCach","Quy cách"),Text("DonViCoSo","Đơn vị"),new("NhomHoaCu","Nhóm họa cụ","TIEU_HAO",Options:["TIEU_HAO","DUNG_CHUNG","BAN_RIENG"]),Number("GiaBanThamKhao","Giá bán"),Number("MucDatHang","Mức đặt hàng",10),State()],
+        "dinh-muc" => [Link("NoiDungBuoiId","Khóa và buổi học","noi-dung-buoi","ChuDe"),Link("HoaCuId","Họa cụ","hoa-cu","TenHoaCu"),
+            new("CoSoTinh","Tính theo","HOC_VIEN",Options:["HOC_VIEN","LOP"]),new("SoLuong","Số lượng theo đơn vị kho",1m)],
         "nha-cung-cap" => [Text("MaNCC","Mã nhà cung cấp"),Text("TenNCC","Tên nhà cung cấp"),Text("DienThoai","Điện thoại"),State()],
         _ => []
     };
@@ -49,12 +51,14 @@ internal sealed class ApiCatalogController(ArtApiClient api)
     {
         if(route=="api/quan-ly/lop-hoc"){await new ApiClassController(api).Edit(owner,row);return;}
         var fields=Fields(route);
+        var materialPlan=route.EndsWith("/dinh-muc",StringComparison.Ordinal);
         var course=route.EndsWith("/khoa-hoc",StringComparison.Ordinal);
         var content=route.EndsWith("/noi-dung-buoi",StringComparison.Ordinal);
         using var form=new InputForm((row.HasValue?"Cập nhật ":"Thêm ")+title.ToLowerInvariant()){CompactColumns=true};
         var courseRows=content?await new ApiDataService(api).All("api/quan-ly/khoa-hoc"):new List<JsonElement>();
         var hasSyllabus=course&&row.HasValue&&(await new ApiDataService(api).All("api/quan-ly/noi-dung-buoi"))
             .Any(x=>ArtApiClient.Text(x,"khoaHocId")==ArtApiClient.Text(row.Value,"id"));
+        if(course&&!row.HasValue)form.Add("TienToMa","Tiền tố mã khóa (3–4 chữ)","",multiline:false);
         int MinutesPerPart()
         {
             var selected=courseRows.FirstOrDefault(x=>ArtApiClient.Text(x,"id")==form.TextValue("KhoaHocId"));
@@ -76,10 +80,26 @@ internal sealed class ApiCatalogController(ArtApiClient api)
             var generatedCode=f.Key is "MaLoai" or "MaKhoa" or "MaGiaoVien" or "MaPhong" or "MaHoaCu" or "MaNCC";
             if(generatedCode&&!row.HasValue)value="Tự sinh khi lưu";
             IEnumerable<Choice>? choices=f.Options?.Select(x=>new Choice(x,x switch {"HOAT_DONG"=>"Hoạt động","NGUNG"=>"Ngừng","NHAP"=>"Bản nháp","DANG_TUYEN_SINH"=>"Đang tuyển sinh","DANG_HOC"=>"Đang học","DA_KET_THUC"=>"Đã kết thúc","TIEU_HAO"=>"Vật tư tiêu hao","DUNG_CHUNG"=>"Dụng cụ dùng chung","BAN_RIENG"=>"Bán riêng",_=>x}));
-            if(f.Lookup is not null)choices=await Choices(f.Lookup,f.Name!);
+            if(materialPlan&&f.Key=="NoiDungBuoiId")
+                choices=(await api.Read("api/quan-ly/dinh-muc/noi-dung")).EnumerateArray().Select(x=>new Choice(
+                    ArtApiClient.Text(x,"id"),$"{ArtApiClient.Text(x,"tenKhoa")} (v{ArtApiClient.Text(x,"phienBan")}) · Buổi {ArtApiClient.Text(x,"thuTu")} · {ArtApiClient.Text(x,"chuDe")}")).ToList();
+            else if(materialPlan&&f.Key=="HoaCuId")
+                choices=(await new ApiDataService(api).All("api/quan-ly/hoa-cu"))
+                    .Where(x=>ArtApiClient.Text(x,"trangThai")=="HOAT_DONG"&&ArtApiClient.Text(x,"nhomHoaCu")!="BAN_RIENG")
+                    .Select(x=>new Choice(ArtApiClient.Text(x,"id"),$"{ArtApiClient.Text(x,"tenHoaCu")} ({ArtApiClient.Text(x,"donViCoSo")})")).ToList();
+            else if(f.Lookup is not null)choices=await Choices(f.Lookup,f.Name!);
+            if(materialPlan&&f.Key=="CoSoTinh")choices=[new("HOC_VIEN","Mỗi học viên"),new("LOP","Cả lớp trong một buổi")];
             if(course&&f.Key=="CapDo")choices=new[]{new Choice("","Chọn cấp độ")}.Concat(levels.Select(x=>new Choice(x,x)));
             form.Add(f.Key,f.Label,value,choices,readOnly:(generatedCode||(course&&(f.Key is ("MaKhoa" or "HieuLucTu")||hasSyllabus&&f.Key is ("SoBuoi" or "PhutMoiBuoi")))||(content&&f.Key=="PhutBuoi")),multiline:f.Key is "YeuCauDauVao" or "MucTieu" or "MoTa" or "NoiDung");
         }
+        if(materialPlan)form.FieldValidation=()=>
+        {
+            var errors=new Dictionary<string,string>();
+            if(form.TextValue("NoiDungBuoiId")=="")errors["NoiDungBuoiId"]="Chọn nội dung buổi.";
+            if(form.TextValue("HoaCuId")=="")errors["HoaCuId"]="Chọn họa cụ.";
+            if(form.Number("SoLuong")<=0)errors["SoLuong"]="Nhập số lượng lớn hơn 0.";
+            return errors;
+        };
         if(content)
         {
             form.Changed("KhoaHocId",()=>{var selected=courseRows.FirstOrDefault(x=>ArtApiClient.Text(x,"id")==form.TextValue("KhoaHocId"));if(selected.ValueKind==JsonValueKind.Object)form.Set("PhutBuoi",ArtApiClient.Get(selected,"soTietMoiBuoi").GetInt32()*MinutesPerPart());form.ValidateFields();});
@@ -93,6 +113,7 @@ internal sealed class ApiCatalogController(ArtApiClient api)
         if(course)form.FieldValidation=()=>
         {
             var errors=new Dictionary<string,string>();
+            if(!row.HasValue&&!System.Text.RegularExpressions.Regex.IsMatch(form.TextValue("TienToMa"),@"\A[A-Za-z]{3,4}\z"))errors["TienToMa"]="Nhập 3–4 chữ cái, ví dụ JUN hoặc FND. Mã đầy đủ được tự sinh khi lưu.";
             if(form.Number("SoBuoi") is <1 or >32767)errors["SoBuoi"]="Số buổi phải từ 1 đến 32.767; API hiện không quy định giới hạn riêng.";
             if(form.Number("PhutMoiBuoi") is <1 or >=1440)errors["PhutMoiBuoi"]="Thời lượng phải từ 1 đến 1.439 phút để buổi học kết thúc trong ngày.";
             if(row.HasValue)
@@ -113,6 +134,7 @@ internal sealed class ApiCatalogController(ArtApiClient api)
         form.ValidateAndSave=()=>
         {
             body=new();
+            if(course&&!row.HasValue)body["TienToMa"]=form.TextValue("TienToMa").ToUpperInvariant();
             foreach(var f in fields)
             {
                 if((f.Key is "MaLoai" or "MaKhoa" or "MaGiaoVien" or "MaPhong" or "MaHoaCu" or "MaNCC") ||

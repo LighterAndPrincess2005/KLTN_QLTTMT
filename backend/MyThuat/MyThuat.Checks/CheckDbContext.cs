@@ -18,8 +18,10 @@ public sealed class CheckDbContext(DbContextOptions<MyThuatDbContext> options):M
                 property.SetColumnType(clr==typeof(string)||clr==typeof(DateTime)||clr==typeof(DateOnly)?"TEXT":
                     clr==typeof(byte[])?"BLOB":clr==typeof(decimal)?"TEXT":"INTEGER");
             }
-            b.Entity(type.ClrType).Property("Id").HasColumnType("INTEGER");
-            b.Entity(type.ClrType).Property("RowVersion").ValueGeneratedNever();
+            if(typeof(EntityBase).IsAssignableFrom(type.ClrType)){
+                b.Entity(type.ClrType).Property("Id").HasColumnType("INTEGER");
+                b.Entity(type.ClrType).Property("RowVersion").ValueGeneratedNever();
+            }
         }
     }
     public override Task<int> SaveChangesAsync(CancellationToken ct=default)

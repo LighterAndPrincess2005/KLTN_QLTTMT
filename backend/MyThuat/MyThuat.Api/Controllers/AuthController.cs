@@ -53,7 +53,7 @@ public sealed class AuthController(MyThuatDbContext db, IPasswordHasher<TaiKhoan
         ApiError.Require(await db.TaiKhoan.AnyAsync(ct),"Cần thiết lập quản trị trước.",409);
         var name=Normalize(request.TenDangNhap);
         ApiError.Require(!await db.TaiKhoan.AnyAsync(x=>x.TenDangNhap==name,ct),"Tên đăng nhập đã tồn tại.",409);
-        var member=new ThanhVien {MaThanhVien=await CodeGenerator.NextAsync(db.ThanhVien,x=>x.MaThanhVien,"TV-",ct),HoTen=request.HoTen,
+        var member=new ThanhVien {MaThanhVien=await CodeGenerator.NextAsync(db,db.ThanhVien,x=>x.MaThanhVien,"TV-",ct),HoTen=request.HoTen,
             DienThoai=request.DienThoai,Email=email,NgaySinh=request.NgaySinh,TrangThai="HOAT_DONG",XacNhanThanhVienLuc=BusinessClock.Now};
         db.ThanhVien.Add(member); await db.SaveChangesAsync(ct);
         var account=new TaiKhoan {TenDangNhap=name,ThanhVienId=member.Id,Email=email,

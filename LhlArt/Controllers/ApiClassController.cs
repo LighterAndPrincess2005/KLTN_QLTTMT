@@ -32,7 +32,7 @@ internal sealed class ApiClassController(ArtApiClient api)
         var duration=(int)ApiDataService.Id(content,"soTiet")*(int)ApiDataService.Id(course,"phutMoiTiet");
         var slot=new WeeklyScheduleFields(form,"NgayKhaiGiangDuKien",T(row,"lichHocDuKien"),()=>duration+(int)form.Number("PhutNghi"));
         form.Add("qualified","Đã xác minh giáo viên đủ chuyên môn",false);
-        form.Add("ScheduleNote","Lưu ý","API sẽ kiểm tra trùng phòng, giáo viên, học viên và ngày nghỉ. Ngày nghỉ có thể khiến buổi thực tế được chuyển sang tuần kế tiếp. "+(api.Role=="QUAN_TRI"?"Xác nhận thành công sẽ tự chuyển lớp sang Đang tuyển sinh.":"Tài khoản học vụ tạo lịch; quản trị công bố lớp theo phân quyền API."),readOnly:true,multiline:true);
+        form.Add("ScheduleNote","Lưu ý","API kiểm tra trùng lịch và ngày nghỉ. "+(api.Role=="QUAN_TRI"?"Khi công bố tuyển sinh, kho giữ họa cụ theo sĩ số tối đa và định mức các buổi. Nếu thiếu, lịch đã lưu và lớp vẫn là bản nháp.":"Tài khoản học vụ tạo lịch. Quản trị công bố lớp."),readOnly:true,multiline:true);
         form.FieldValidation=()=>{
             var errors=slot.Validate();
             var room=rooms.FirstOrDefault(x=>T(x,"id")==form.TextValue("room"));
@@ -85,12 +85,19 @@ internal sealed class ApiClassController(ArtApiClient api)
         form.Add("ScheduleNote","Lưu ý về lịch",existing
             ?"Lớp đã có lịch thực tế: không sửa thứ/giờ chỉ bằng mô tả. Muốn đổi phải dời buổi để API kiểm tra phòng, giáo viên và học viên."
             :"Đây là khung giờ dự kiến. Sau khi lưu lớp nháp, dùng Xếp lịch để chọn phòng và giáo viên, tạo các buổi thực tế. Chỉ công bố sau khi đủ lịch.",readOnly:true,multiline:true);
-        form.Add("SiSoToiThieu","Sĩ số tối thiểu",(int)N(row,"siSoToiThieu",6));
-        form.Add("SiSoToiDa","Sĩ số tối đa",(int)N(row,"siSoToiDa",12));
+        var capacityLocked=row.HasValue&&T(row.Value,"trangThai")!="NHAP";
+        form.Add("SiSoToiThieu","Sĩ số tối thiểu",(int)N(row,"siSoToiThieu",6),readOnly:capacityLocked);
+        form.Add("SiSoToiDa","Sĩ số tối đa (dùng dự trù họa cụ)",(int)N(row,"siSoToiDa",12),readOnly:capacityLocked);
         form.Add("HocPhiApDung","Học phí áp dụng",N(row,"hocPhiApDung",0));
-        form.Add("MoDangKyLuc","Mở đăng ký lúc",D(row,"moDangKyLuc",BusinessTime.Now.Date));
-        form.Add("DongDangKyLuc","Đóng đăng ký lúc",D(row,"dongDangKyLuc",form.Date("NgayKhaiGiangDuKien").AddDays(-3)));
-        form.Add("TrangThai","Trạng thái",row.HasValue?T(row.Value,"trangThai"):"NHAP",[new("NHAP","Bản nháp"),new("DANG_TUYEN_SINH","Đang tuyển sinh"),new("DANG_HOC","Đang học"),new("DA_KET_THUC","Đã kết thúc")]);
+        var published=row.HasValue&&T(row.Value,"trangThai")!="NHAP";
+        form.Add("MoDangKyLuc","Mở đăng ký lúc",D(row,"moDangKyLuc",BusinessTime.Now.Date),readOnly:published);
+        form.Add("DongDangKyLuc","Đóng đăng ký lúc",D(row,"dongDangKyLuc",form.Date("NgayKhaiGiangDuKien").AddDays(-3)),readOnly:published);
+        var currentState=row.HasValue?T(row.Value,"trangThai"):"NHAP";
+        var nextStates=currentState switch {
+            "NHAP"=>existing?new[]{"NHAP","DANG_TUYEN_SINH"}:new[]{"NHAP"},
+            "DANG_TUYEN_SINH"=>new[]{"DANG_TUYEN_SINH","DANG_HOC"},
+            "DANG_HOC"=>new[]{"DANG_HOC","DA_KET_THUC"},_=>new[]{currentState}};
+        form.Add("TrangThai","Trạng thái",currentState,nextStates.Select(state=>new Choice(state,state switch {"NHAP"=>"Bản nháp","DANG_TUYEN_SINH"=>"Đang tuyển sinh","DANG_HOC"=>"Đang học","DA_KET_THUC"=>"Đã kết thúc",_=>state})));
         form.FieldValidation=()=>{
             var failures=ClassPlanRules.ValidateClass(T(Course(),"tenKhoa"),CourseNumber("soBuoi"),form.Number("SoBuoiKeHoach"),form.Number("SiSoToiThieu"),form.Number("SiSoToiDa"),form.Number("HocPhiApDung"),form.Date("MoDangKyLuc"),form.Date("DongDangKyLuc"),slot.First);
             foreach(var pair in slot.Validate())failures[pair.Key]=pair.Value;

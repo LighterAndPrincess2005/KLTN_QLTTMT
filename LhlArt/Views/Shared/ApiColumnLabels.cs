@@ -8,6 +8,9 @@ internal static class ApiColumnLabels
     public static bool TryGet(string key,out string value)=>labels.TryGetValue(key,out value!);
     const string Definitions="""
     Id=ID
+    TienTo=Tiền tố mã
+    TienToMa=Tiền tố mã khóa
+    GiaTriCuoi=Số đã cấp cuối
     LaLienHeChinh=Liên hệ chính
     HieuLucTu=Có hiệu lực từ
     HieuLucDen=Hết hiệu lực vào
@@ -253,10 +256,13 @@ internal static class ApiColumnLabels
     PhaiThuHieuLuc=Phải thu hiện tại
     ConThieu=Còn thiếu
     TonTaiKho=Tồn tại kho
+    TaiKho=Tồn tại kho
     DangMuon=Đang mượn
     DuTru=Dự trữ
     KhaDung=Khả dụng
     MaYeuCau=Mã yêu cầu
+    MaThanhToan=Mã thanh toán
+    BaoLuc=Báo chuyển khoản lúc
     MucDich=Mục đích
     EmailNhan=Email nhận
     MaBam=Mã băm

@@ -22,6 +22,9 @@ Sau khi xác nhận đúng database và sao lưu, dừng API, chạy từng lệ
 
 ```powershell
 dotnet run --project MyThuat.Api\MyThuat.Api.csproj -- --initialize
+
+dotnet run --project MyThuat.Api\MyThuat.Api.csproj -- --upgrade-codes
+dotnet run --project MyThuat.Api\MyThuat.Api.csproj -- --upgrade-class-inventory
 dotnet run --project MyThuat.Api\MyThuat.Api.csproj -- --upgrade-notifications
 dotnet run --project MyThuat.Api\MyThuat.Api.csproj -- --upgrade-class-notices
 dotnet run --project MyThuat.Api\MyThuat.Api.csproj -- --prepare-payments

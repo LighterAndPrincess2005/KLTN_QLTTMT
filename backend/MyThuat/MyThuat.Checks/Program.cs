@@ -39,7 +39,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuditService>();builder.Services.AddScoped<AccessService>();builder.Services.AddScoped<PolicyService>();
 builder.Services.AddScoped<DanhMucService>();builder.Services.AddScoped<ManagementValidation>();builder.Services.AddScoped<ManagementService>();builder.Services.AddScoped<ScheduleService>();
 builder.Services.AddScoped<NotificationService>();builder.Services.AddScoped<EnrollmentService>();builder.Services.AddScoped<FinanceService>();builder.Services.AddScoped<LearningService>();
-builder.Services.AddScoped<ChangeService>();builder.Services.AddScoped<InventoryService>();builder.Services.AddScoped<ClassLifecycleService>();
+builder.Services.AddScoped<ChangeService>();builder.Services.AddScoped<InventoryService>();builder.Services.AddScoped<ClassLifecycleService>();builder.Services.AddScoped<ClassInventoryService>();
 builder.Services.AddAuthentication("Bearer").AddScheme<AuthenticationSchemeOptions,BearerAuthenticationHandler>("Bearer",_=>{});
 builder.Services.AddAuthorization(o=>{
     o.FallbackPolicy=new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();

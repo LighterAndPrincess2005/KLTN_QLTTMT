@@ -42,7 +42,7 @@ builder.Services.AddScoped<NotificationService>();var notificationMail=new Captu
 builder.Services.AddScoped<OnlinePaymentService>();
 builder.Configuration.AddInMemoryCollection(new Dictionary<string,string?>{{"SePay:Enabled","true"},{"SePay:BankCode","ACB"},{"SePay:AccountNumber","0000000000"},{"SePay:AccountName","TAI KHOAN GIA LAP"},{"SePay:WebhookKey","local-only-payment-secret"}});
 var recoveryMail=new CaptureRecoveryMail();builder.Services.AddSingleton<IRecoveryMail>(recoveryMail);builder.Services.AddScoped<AccountRecoveryService>();
-builder.Services.AddScoped<LearningService>();builder.Services.AddScoped<ChangeService>();builder.Services.AddScoped<InventoryService>();builder.Services.AddScoped<ClassLifecycleService>();
+builder.Services.AddScoped<LearningService>();builder.Services.AddScoped<ChangeService>();builder.Services.AddScoped<InventoryService>();builder.Services.AddScoped<ClassLifecycleService>();builder.Services.AddScoped<ClassInventoryService>();
 builder.Services.AddAuthentication("Bearer").AddScheme<AuthenticationSchemeOptions,BearerAuthenticationHandler>("Bearer",_=>{});
 builder.Services.AddAuthorization(o=>{
     o.FallbackPolicy=new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
@@ -132,6 +132,15 @@ try
     var checkout=await Web("POST",$"api/thanh-toan/{paymentId}/phien",new{});var paymentCode=T(checkout,"maThanhToan");var expectedDue=ArtApiClient.Get(checkout,"conPhaiTra").GetDecimal();
     Check(paymentCode.StartsWith("BUI")&&ArtApiClient.Get(checkout,"sanSang").GetBoolean()&&expectedDue>0,"PAY02 Tạo QR với mã riêng và công nợ đã trừ ưu đãi từ server");
     Check(T(await Web("POST",$"api/thanh-toan/{paymentId}/phien",new{}),"maThanhToan")==paymentCode,"PAY03 Mở lại thanh toán dùng cùng phiên, không tạo thêm mã");
+    var reportPath=$"api/thanh-toan/{paymentId}/bao-chuyen-khoan";
+    await Web("POST",reportPath,new{});
+    await Web("POST",reportPath,new{});
+    var reported=await staff.Read("api/thanh-toan/bao-chuyen-khoan");
+    var afterReport=await Web("GET",$"api/thanh-toan/{paymentId}/trang-thai");
+    Check(reported.EnumerateArray().Count(x=>Id(x)==paymentId)==1&&
+        !ArtApiClient.Get(afterReport,"daXacNhan").GetBoolean()&&ArtApiClient.Get(afterReport,"conPhaiTra").GetDecimal()==expectedDue,
+        "Báo chuyển khoản hai lần chỉ có một phiếu cho thu ngân và không tự ghi nhận tiền");
+    await Web("GET","api/thanh-toan/bao-chuyen-khoan",expected:HttpStatusCode.Forbidden);
     async Task<JsonElement> Hook(object body,string secret="local-only-payment-secret",HttpStatusCode expected=HttpStatusCode.OK){using var client=new HttpClient{BaseAddress=new Uri(address)};client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization","Apikey "+secret);using var response=await client.PostAsJsonAsync("api/thanh-toan/sepay/webhook",body);var json=await response.Content.ReadAsStringAsync();if(response.StatusCode!=expected)throw new Exception("Webhook: "+response.StatusCode+" "+json);return string.IsNullOrWhiteSpace(json)?JsonSerializer.SerializeToElement(new{}):JsonDocument.Parse(json).RootElement.Clone();}
     var half=decimal.Floor(expectedDue/2);var event1=new{Id=910001,AccountNumber="0000000000",TransferType="in",TransferAmount=half,Content=paymentCode,ReferenceCode="MOCK01"};
     await Hook(event1,"wrong-key",HttpStatusCode.Unauthorized);
@@ -235,7 +244,7 @@ try
     Check(T(await Web("GET","api/khoa-hoc/"+Id(tempCourse)),"tenKhoa")=="Khóa đã sửa","Thêm / sửa / công bố khóa từ WinForms hiển thị trên web");
     Check(T((await Web("GET","api/khoa-hoc/"+Id(tempCourse)+"/noi-dung"))[0],"chuDe")=="Buổi học đã sửa","Sửa nội dung buổi từ WinForms được web đọc lại");
     var draftClass=await staff.Post("api/quan-ly/lop-hoc",new{KhoaHocId=Id(tempCourse),MaLop="CRUDCLASS",TenLop="Lớp nháp thử",NgayKhaiGiangDuKien=BusinessClock.Today.AddDays(40).ToString("yyyy-MM-dd"),SoBuoiKeHoach=1,LichHocDuKien="Thứ Bảy 09:00",SiSoToiThieu=1,SiSoToiDa=10,HocPhiApDung=500000,MoDangKyLuc=Stamp(BusinessClock.Now),DongDangKyLuc=Stamp(BusinessClock.Now.AddDays(30)),TrangThai="NHAP"});
-    Check(T(draftClass,"maLop").StartsWith("LOP-")&&T(draftClass,"maLop")!="CRUDCLASS","API sinh mã lớp và bỏ qua mã nhập thủ công");
+    Check(T(draftClass,"maLop").StartsWith("KHOA-L")&&T(draftClass,"maLop")!="CRUDCLASS","API sinh mã lớp theo tiền tố khóa và bỏ qua mã nhập thủ công");
     draftClass=await staff.Put("api/quan-ly/lop-hoc/"+Id(draftClass),new{TenLop="Lớp nháp đã sửa"},T(draftClass,"rowVersion"));
     Check(T(await staff.Read("api/quan-ly/lop-hoc/"+Id(draftClass)),"tenLop")=="Lớp nháp đã sửa","Thêm / sửa lớp từ WinForms được lưu");
     await Web("GET","api/lop-hoc/"+Id(draftClass),expected:HttpStatusCode.NotFound);Check(true,"Lớp nháp từ WinForms không bị công khai nhầm trên web");
@@ -353,6 +362,8 @@ try
     using(var emailLogo=RecoveryEmailTemplate.OpenLogo())Check(emailLogo.Length>0,"Recovery logo is bundled with API deployment");
     var invalidCodeRejected=false;try{RecoveryEmailTemplate.Create("<test>");}catch(ArgumentException){invalidCodeRejected=true;}
     Check(invalidCodeRejected,"Recovery template rejects non-digit code input");
+    await BusinessIntegrityChecks.Run(staff,options,Check);
+    await ClassInventoryChecks.Run(staff,app.Services,options,Check);
     Console.WriteLine($"ALL {checks} WINFORMS/API INTEGRATION CHECKS PASSED ({(sql?"SQL Server":"SQLite temporary store")}).");
 }
 finally

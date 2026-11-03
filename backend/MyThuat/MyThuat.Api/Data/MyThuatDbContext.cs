@@ -4,6 +4,7 @@ namespace MyThuat.Api.Data;
 
 public class MyThuatDbContext(DbContextOptions<MyThuatDbContext> options) : DbContext(options)
 {
+    public DbSet<BoDemMa> BoDemMa => Set<BoDemMa>();
     public DbSet<ThongBao> ThongBao=>Set<ThongBao>();
     public DbSet<LoaiKhoaHoc> LoaiKhoaHoc => Set<LoaiKhoaHoc>();
     public DbSet<BaiViet> BaiViet=>Set<BaiViet>();
@@ -56,6 +57,7 @@ public class MyThuatDbContext(DbContextOptions<MyThuatDbContext> options) : DbCo
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+    modelBuilder.Entity<BoDemMa>(e=>{e.ToTable("BoDemMa");e.HasKey(x=>x.TienTo);e.Property(x=>x.TienTo).HasColumnType("varchar(20)");e.Property(x=>x.GiaTriCuoi).HasColumnType("bigint");});
     WebsiteMapping.Configure(modelBuilder);
     modelBuilder.Entity<PhienThanhToan>(e=>{e.ToTable("PhienThanhToan");e.HasKey(x=>x.Id);e.Property(x=>x.MaThanhToan).HasMaxLength(20).IsUnicode(false);e.HasIndex(x=>x.DangKyId).IsUnique();e.HasIndex(x=>x.MaThanhToan).IsUnique();});
     modelBuilder.Entity<SuKienSePay>(e=>{e.ToTable("SuKienSePay");e.HasKey(x=>x.Id);e.HasIndex(x=>x.MaGiaoDichSePay).IsUnique();e.Property(x=>x.SoTien).HasPrecision(18,0);e.Property(x=>x.NoiDung).HasMaxLength(2000);e.Property(x=>x.MaThamChieu).HasMaxLength(150);e.Property(x=>x.DauVanTay).HasMaxLength(64).IsUnicode(false);e.Property(x=>x.TrangThai).HasMaxLength(30);});
@@ -564,6 +566,8 @@ public class MyThuatDbContext(DbContextOptions<MyThuatDbContext> options) : DbCo
     {
         var e = modelBuilder.Entity<PhieuKho>();
         e.ToTable("PhieuKho");
+        e.HasOne(x => x.LopHoc).WithMany().HasForeignKey(x => x.LopHocId).OnDelete(DeleteBehavior.NoAction);
+        e.HasIndex(x => new { x.LopHocId, x.LoaiPhieu, x.TrangThai });
         e.HasKey(x => x.Id);
         e.Property(x => x.Id).HasColumnType("bigint").IsRequired();
         e.Property(x => x.MaPhieu).HasColumnType("varchar(30)").IsRequired();
@@ -686,7 +690,7 @@ public class MyThuatDbContext(DbContextOptions<MyThuatDbContext> options) : DbCo
     modelBuilder.Entity<GiaoDichTien>().HasIndex(x => new { x.MaChungTu, x.KhoanThuId, x.LoaiGiaoDich }).IsUnique().HasFilter("[MaChungTu] IS NOT NULL AND [KhoanThuId] IS NOT NULL AND [LoaiGiaoDich] IS NOT NULL");
     modelBuilder.Entity<GiaoDichTien>().HasIndex(x => new { x.PhuongThuc, x.MaThamChieu, x.KhoanThuId, x.LoaiGiaoDich }).IsUnique().HasFilter("[PhuongThuc] IS NOT NULL AND [MaThamChieu] IS NOT NULL AND [KhoanThuId] IS NOT NULL AND [LoaiGiaoDich] IS NOT NULL");
 
-    foreach (var entity in modelBuilder.Model.GetEntityTypes())
+    foreach (var entity in modelBuilder.Model.GetEntityTypes().Where(x=>typeof(EntityBase).IsAssignableFrom(x.ClrType)))
     {
         modelBuilder.Entity(entity.ClrType).Property("CreatedAt").HasColumnType("datetime2");
         modelBuilder.Entity(entity.ClrType).Property("UpdatedAt").HasColumnType("datetime2");

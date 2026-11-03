@@ -65,7 +65,7 @@ public sealed class EnrollmentService(MyThuatDbContext db,AccessService access,P
         ApiError.Require(limit>now,"Không còn thời gian giữ chỗ.",409);
         var profile=new HoSoTheoHoc {HocVienId=student.Id,KhoaHocId=course.Id,QuyDinhId=rule.Id,NgayBatDau=cls.NgayKhaiGiangDuKien,TrangThai="DANG_THEO_HOC"};
         db.HoSoTheoHoc.Add(profile);await db.SaveChangesAsync(ct);
-        var enrollment=new DangKy {MaDangKy=await CodeGenerator.NextAsync(db.DangKy,x=>x.MaDangKy,"DK-",ct),HoSoTheoHocId=profile.Id,LopHocId=cls.Id,
+        var enrollment=new DangKy {MaDangKy=await CodeGenerator.NextAsync(db,db.DangKy,x=>x.MaDangKy,"DK-",ct),HoSoTheoHocId=profile.Id,LopHocId=cls.Id,
             NguoiDangKyId=member.Id,LapLuc=now,HanGiuCho=limit,HocPhiGocChot=cls.HocPhiApDung,TrangThai="CHO_THANH_TOAN",
             IdempotencyKey=key,RequestFingerprint=fingerprint};
         db.DangKy.Add(enrollment);await db.SaveChangesAsync(ct);

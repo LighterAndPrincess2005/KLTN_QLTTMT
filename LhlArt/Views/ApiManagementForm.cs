@@ -101,8 +101,9 @@ public sealed class ApiManagementForm : Form
         }
         if(api.Has(2)||api.Has(4)) Item("Đăng ký & học phí","api/dang-ky/quan-ly",true);
         if(api.Has(8)) Item("Lịch học & điểm danh","api/lich-hoc");
-        if(api.Has(16)) {Item("Họa cụ","api/quan-ly/hoa-cu",true);Item("Nhà cung cấp","api/quan-ly/nha-cung-cap",true);Item("Tồn kho","api/kho/ton");Item("Phiếu kho","api/kho/phieu");}
+        if(api.Has(16)) {Item("Họa cụ","api/quan-ly/hoa-cu",true);Item("Định mức theo buổi","api/quan-ly/dinh-muc",true);Item("Nhà cung cấp","api/quan-ly/nha-cung-cap",true);Item("Tồn kho","api/kho/ton");Item("Phiếu kho","api/kho/phieu");}
         if(api.Has(4)) Item("Thu tiền chờ đối chiếu","api/giao-dich/cho-doi-chieu");
+        if(api.Has(4)) Item("Học viên báo chuyển khoản","api/thanh-toan/bao-chuyen-khoan");
         if(api.Has(64)) Item("Tài khoản & vai trò","api/tai-khoan");
         if(api.Role=="QUAN_TRI")
         {
@@ -161,8 +162,8 @@ public sealed class ApiManagementForm : Form
         static string Group(ActionButton button)=>button.Tag?.ToString() switch{
             "api/quan-ly/thanh-vien" or "api/quan-ly/hoc-vien" or "api/quan-ly/dai-dien" or "api/phan-hoi" or "api/tu-van"=>"profiles",
             "api/quan-ly/loai-khoa-hoc" or "api/quan-ly/noi-dung-buoi" or "api/quan-ly/khoa-hoc" or "api/quan-ly/lop-hoc" or "api/quan-ly/giao-vien" or "api/quan-ly/phong-hoc" or "api/lich-hoc"=>"training",
-            "api/dang-ky/quan-ly" or "api/quan-ly/khuyen-mai" or "api/thay-doi" or "api/giao-dich/cho-doi-chieu"=>"enrollment",
-            "api/quan-ly/hoa-cu" or "api/quan-ly/nha-cung-cap" or "api/kho/ton" or "api/kho/phieu"=>"inventory",
+            "api/dang-ky/quan-ly" or "api/quan-ly/khuyen-mai" or "api/thay-doi" or "api/giao-dich/cho-doi-chieu" or "api/thanh-toan/bao-chuyen-khoan"=>"enrollment",
+            "api/quan-ly/hoa-cu" or "api/quan-ly/dinh-muc" or "api/quan-ly/nha-cung-cap" or "api/kho/ton" or "api/kho/phieu"=>"inventory",
             "api/bao-cao/tong-quan"=>"reports",
             _=>button.Text=="Đăng ký tài khoản"?"profiles":button.Text=="Báo cáo thu / hoàn"?"reports":"administration"
         };
@@ -272,12 +273,20 @@ public sealed class ApiManagementForm : Form
                 "DANG_TUYEN_SINH"=>"Đang tuyển sinh","DANG_HOC"=>"Đang học","DA_KET_THUC"=>"Đã kết thúc",
                 "DANG_THEO_HOC"=>"Đang theo học","DA_HOAN_THANH"=>"Đã hoàn thành","CHO_CHUYEN"=>"Chờ chuyển lớp",
                 "MOI_GUI"=>"Mới gửi","DA_DOC"=>"Đã đọc","DANG_XU_LY"=>"Đang xử lý","DA_TRA_LOI"=>"Đã trả lời","DA_DONG"=>"Đã đóng",
-                "DA_DUYET"=>"Đã duyệt","TU_CHOI"=>"Từ chối","DA_TU_CHOI"=>"Đã từ chối","DA_THUC_HIEN"=>"Đã thực hiện",
+                "DA_DUYET"=>"Đã duyệt","DA_GHI_SO"=>"Đã ghi sổ","TU_CHOI"=>"Từ chối","DA_TU_CHOI"=>"Đã từ chối","DA_THUC_HIEN"=>"Đã thực hiện",
                 "GIU_LUOT"=>"Đang giữ lượt","DA_DUNG"=>"Đã sử dụng","DA_SU_DUNG"=>"Đã sử dụng","DA_GIAI_PHONG"=>"Đã giải phóng",
                 _=>null};
             if(translated is not null)return translated;
         }
         if(name.Equals("loaiGiam",StringComparison.OrdinalIgnoreCase))return text=="PHAN_TRAM"?"Phần trăm (%)":text=="SO_TIEN"?"Số tiền (₫)":text;
+        if(name.Equals("coSoTinh",StringComparison.OrdinalIgnoreCase))
+            return text=="HOC_VIEN"?"Mỗi học viên":text=="LOP"?"Cả lớp trong một buổi":text;
+        if(name.Equals("loaiPhieu",StringComparison.OrdinalIgnoreCase))
+            return text switch {"NHAP"=>"Nhập kho","DU_TRU"=>"Dự trữ","XUAT_TIEU_HAO"=>"Xuất tiêu hao",
+                "CAP_DUNG_CHUNG"=>"Cấp dụng cụ dùng chung","TRA_DUNG_CHUNG"=>"Trả dụng cụ dùng chung",
+                "BAN_RIENG"=>"Xuất bán","TRA_HANG"=>"Trả hàng","NHAP_DIEU_CHINH"=>"Điều chỉnh tăng",
+                "XUAT_DIEU_CHINH"=>"Điều chỉnh giảm","DE_NGHI_MUA"=>"Đề nghị mua","KIEM_KE"=>"Kiểm kê",
+                "HONG_MAT"=>"Hỏng hoặc mất",_=>text};
         if(name.Equals("nhomKhoanThu",StringComparison.OrdinalIgnoreCase)||name.Equals("loaiKhoan",StringComparison.OrdinalIgnoreCase))return text=="HOC_PHI"?"Học phí":text=="HOA_CU"?"Họa cụ":text;
         if(name.Equals("quanHe",StringComparison.OrdinalIgnoreCase))return ApiDisplayService.Relation(text);
         if(name.Equals("vaiTroChinh",StringComparison.OrdinalIgnoreCase))return ApiDisplayService.Role(text);
@@ -319,6 +328,20 @@ public sealed class ApiManagementForm : Form
                 &&!(route=="api/quan-ly/noi-dung-buoi"&&x.Name=="soTiet")).Select(x=>new{Truong=Label(x.Name),GiaTri=Display(selected,x.Name)}).ToList();
             fields.Columns["Truong"].HeaderText="Thông tin";fields.Columns["GiaTri"].HeaderText="Giá trị";
             detail.ShowDialog(this);return Task.CompletedTask;});
+        if(route=="api/kho/phieu") Action("Xem họa cụ trong phiếu",async()=>
+        {
+            var row=Selected();
+            var result=await api.Read("api/kho/phieu/"+Id(row));
+            using var detail=new Form {Text="Họa cụ · "+ArtApiClient.Text(row,"maPhieu"),Size=new Size(820,450),StartPosition=FormStartPosition.CenterParent};
+            var lines=new DataGridView {Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill};
+            lines.DataSource=ArtApiClient.Get(result,"chiTiet").EnumerateArray().Select(x=>new
+            {
+                TenHoaCu=ArtApiClient.Text(x,"tenHoaCu"), MaLo=ArtApiClient.Text(x,"maLo"),
+                SoLuong=ArtApiClient.Text(x,"soLuong"), DonViCoSo=ArtApiClient.Text(x,"donViCoSo")
+            }).ToList();
+            foreach(DataGridViewColumn col in lines.Columns)col.HeaderText=Label(col.Name);
+            detail.Controls.Add(lines);detail.ShowDialog(this);
+        });
         var people=new ApiPeopleController(api);
         if(route is "api/quan-ly/thanh-vien" or "api/quan-ly/hoc-vien" or "api/quan-ly/dai-dien")
         {
@@ -368,6 +391,7 @@ public sealed class ApiManagementForm : Form
             var row=Selected();var fields=Prompt("Trả lời phản hồi / đề nghị",("Nội dung trả lời",ArtApiClient.Text(row,"traLoi")));if(fields is null)return;
             await api.Post("api/phan-hoi/"+Id(row)+"/tra-loi",new{TraLoi=fields[0]});await LoadData();});
         if(route=="api/tu-van") Action("Xem / trả lời tư vấn",async()=>{await new ApiConsultationController(api).Open(this,Selected());await LoadData();});
+        if(route=="api/thanh-toan/bao-chuyen-khoan") Action("Đối chiếu và ghi nhận tiền",Receive);
         if(route=="api/dang-ky/quan-ly")
         {
             var enrollments=new ApiEnrollmentController(api);
@@ -419,7 +443,7 @@ public sealed class ApiManagementForm : Form
         using var form=new InputForm("Ghi nhận học phí · đăng ký "+id);
         form.Add("charge","Khoản thu","",charges.Select(x=>new Choice(Id(x).ToString(),$"#{Id(x)} · {ArtApiClient.Text(x,"loaiKhoan")} · còn {Theme.Money(ArtApiClient.Get(x,"conThieu").GetDecimal())}")));
         form.Add("SoTien","Số tiền thu",ArtApiClient.Get(charges[0],"conThieu").GetDecimal());
-        form.Add("method","Phương thức","TIEN_MAT",new[]{new Choice("TIEN_MAT","Tiền mặt"),new Choice("CHUYEN_KHOAN","Chuyển khoản")});
+        form.Add("method","Phương thức",route=="api/thanh-toan/bao-chuyen-khoan"?"CHUYEN_KHOAN":"TIEN_MAT",new[]{new Choice("TIEN_MAT","Tiền mặt"),new Choice("CHUYEN_KHOAN","Chuyển khoản")});
         form.Add("document","Mã chứng từ duy nhất");form.Add("reference","Mã tham chiếu (nếu có)");form.Add("received","Đã thực nhận số tiền trên",false);
         form.Changed("charge",()=>form.Set("SoTien",ArtApiClient.Get(charges.Single(x=>Id(x).ToString()==form.TextValue("charge")),"conThieu").GetDecimal()));
         var key=Guid.NewGuid().ToString("N");string? previousBody=null;

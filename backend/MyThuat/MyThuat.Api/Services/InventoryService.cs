@@ -5,7 +5,7 @@ using MyThuat.Api.Data;
 using MyThuat.Api.Models;
 using MyThuat.Api.Security;
 namespace MyThuat.Api.Services;
-public sealed class InventoryService(MyThuatDbContext db,AccessService access,AuditService audit)
+public sealed class InventoryService(MyThuatDbContext db,AccessService access,AuditService audit,EnrollmentService enrollments)
 {
     public static readonly string[] Types=["NHAP","XUAT_TIEU_HAO","CAP_DUNG_CHUNG","TRA_DUNG_CHUNG","BAN_RIENG",
         "TRA_HANG","NHAP_DIEU_CHINH","XUAT_DIEU_CHINH","DE_NGHI_MUA","KIEM_KE","DU_TRU","HONG_MAT"];
@@ -61,11 +61,20 @@ public sealed class InventoryService(MyThuatDbContext db,AccessService access,Au
             &&!string.IsNullOrWhiteSpace(slip.TepBienBanUrl)&&slip.PhieuThamChieuId.HasValue,"Điều chỉnh cần biên bản, phiếu kiểm kê và quản trị khác người lập duyệt.",403);
         var lines=await db.ChiTietPhieuKho.Where(x=>x.PhieuKhoId==id).OrderBy(x=>x.HoaCuId).ThenBy(x=>x.MaLo).ToListAsync(ct);
         ApiError.Require(lines.Count>0,"Phiếu chưa có chi tiết.");
+        if (slip.BuoiHocId is long sessionId && slip.LoaiPhieu is "DU_TRU" or "XUAT_TIEU_HAO" or "CAP_DUNG_CHUNG")
+        {
+            var classId = await db.BuoiHoc.Where(x => x.Id == sessionId).Select(x => x.LopHocId).SingleAsync(ct);
+            await enrollments.LockClass(classId, ct);
+            await LockLedger(ct);
+            var materials = lines.Select(x => x.HoaCuId).ToList();
+            ApiError.Require(!await db.ChiTietPhieuKho.AnyAsync(x => materials.Contains(x.HoaCuId) &&
+                x.PhieuKho!.LopHocId == classId && (x.PhieuKho.TrangThai == "DA_DUYET" || x.PhieuKho.TrangThai == "DA_GHI_SO"), ct),
+                "Họa cụ này đã có phiếu tự động cho lớp. Xem phiếu lớp để tránh giữ hoặc xuất trùng.", 409);
+        }
+        else await LockLedger(ct);
         foreach(var line in lines)
         {
-            if(db.Database.IsSqlServer())
-                _=await db.HoaCu.FromSqlInterpolated($"SELECT * FROM dbo.HoaCu WITH (UPDLOCK,HOLDLOCK) WHERE Id={line.HoaCuId}").SingleAsync(ct);
-            var material=await db.HoaCu.SingleAsync(x=>x.Id==line.HoaCuId,ct);
+            var material=await LockMaterial(line.HoaCuId,ct);
             ApiError.Require(material.TrangThai=="HOAT_DONG","Họa cụ không hoạt động.");
             var qty=await Quantities(line.HoaCuId,line.MaLo,ct,id);
             var other=await db.ChiTietPhieuKho.Where(x=>x.HoaCuId==line.HoaCuId&&x.MaLo==line.MaLo&&x.PhieuKhoId!=id
@@ -113,6 +122,23 @@ public sealed class InventoryService(MyThuatDbContext db,AccessService access,Au
         slip.TrangThai=Sign(slip.LoaiPhieu)!=0||slip.LoaiPhieu=="HONG_MAT"?"DA_GHI_SO":"DA_DUYET";
         audit.Add("PhieuKho",id,"DUYET_PHIEU_KHO",new {slip.LoaiPhieu,slip.TrangThai});await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return ManagementService.Scalars(slip);
     }
+    internal Task<HoaCu> LockMaterial(long id,CancellationToken ct) => db.Database.IsSqlServer()
+        ? db.HoaCu.FromSqlInterpolated($"SELECT * FROM dbo.HoaCu WITH (UPDLOCK,HOLDLOCK) WHERE Id={id}").SingleAsync(ct)
+        : db.HoaCu.SingleAsync(x=>x.Id==id,ct);
+
+    // Acquire before scanning the ledger. Serializable range reads can otherwise deadlock
+    // when two classes both read the same stock before inserting their reservations.
+    internal async Task LockLedger(CancellationToken ct)
+    {
+        if (!db.Database.IsSqlServer()) return;
+        await db.Database.ExecuteSqlRawAsync("""
+            DECLARE @lockResult int;
+            EXEC @lockResult = sys.sp_getapplock @Resource = 'MyThuat.Kho',
+                @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 10000;
+            IF @lockResult < 0 THROW 51001, N'Sổ kho đang xử lý. Vui lòng thử lại.', 1;
+            """, ct);
+    }
+
     public async Task<object> Stock(CancellationToken ct)
     {
         var materials=await db.HoaCu.AsNoTracking().OrderBy(x=>x.Id).ToListAsync(ct);

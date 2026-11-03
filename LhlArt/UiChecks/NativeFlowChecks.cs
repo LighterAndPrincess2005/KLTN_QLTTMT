@@ -46,6 +46,13 @@ internal static class NativeFlowChecks
             });
         }
         var promotion=new ApiPromotionController(api);
+        Modal(()=>catalog.Edit(owner,"api/quan-ly/khoa-hoc","Khóa học",null),async f=>{
+            check(f.FieldValidation!().ContainsKey("TienToMa")&&!f.IsFieldEnabled("MaKhoa"),"Khóa mới yêu cầu tiền tố, mã đầy đủ chỉ đọc");
+            f.Set("TienToMa","JR");check(f.FieldValidation!().ContainsKey("TienToMa"),"Tiền tố khóa 2 chữ chưa hợp lệ");
+            f.Set("TienToMa","jun");f.Set("TenKhoa","Junior mới");f.Set("CapDo","JUNIOR");f.Set("MucTieu","Khám phá màu sắc");
+            check(f.ValidateFields(),"Tiền tố 3 chữ và thông số khóa hợp lệ");f.ValidateAndSave!();await f.SaveAsync!();
+            check(ArtApiClient.Text(handler.LastBody,"tienToMa")=="JUN"&&!ArtApiClient.TryGet(handler.LastBody,"MaKhoa",out _),"WinForms chỉ gửi tiền tố JUN, không tự tạo mã khóa đầy đủ");
+        });
         Modal(()=>promotion.Edit(owner,null),async f=>{
             f.Set("MaKhuyenMai","native10");f.Set("TenKhuyenMai","Ưu đãi thử");f.Set("TuDongApDung",true);
             try{await f.SaveAsync!();throw new Exception("Expected course requirement");}catch(InvalidOperationException ex){check(ex.Message.Contains("khóa học cụ thể"),"Form ưu đãi tự động bắt chọn khóa, không dùng tùy chọn mọi khóa");}
@@ -85,7 +92,7 @@ internal static class NativeFlowChecks
             var path=req.RequestUri.AbsolutePath;object body=new{};
             if(path.EndsWith("dang-nhap"))body=new{vaiTroChinh="QUAN_TRI",accessToken="fixture-token",tenDangNhap="fixture",quyen=255};
             else if(req.Method==HttpMethod.Get){
-                object[] rows=path.EndsWith("thanh-vien")?[Member]:path.EndsWith("hoc-vien")?[new{id=2,maHocVien="NATIVE_HV",hoTen="Học Viên Thử",ngaySinh="2000-01-02",trangThai="HOAT_DONG"}]:path.EndsWith("dai-dien")?[new{id=10,hocVienId=2,thanhVienId=1,hieuLucTu="2020-01-01T00:00:00",hieuLucDen=(string?)null,xacNhanLuc="2020-01-01T00:00:00",quyenDaiDien="DAY_DU"}]:path.EndsWith("khoa-hoc")?[new{id=3,tenKhoa="Foundation thử",trangThai="HOAT_DONG"}]:path.EndsWith("lop-hoc")?[new{id=4,tenLop="Lớp thử",lichHocDuKien="Thứ Bảy 09:00",soChoDaGiu=1,siSoToiDa=10,hocPhiApDung=3600000m}]:[];
+                object[] rows=path.EndsWith("thanh-vien")?[Member]:path.EndsWith("hoc-vien")?[new{id=2,maHocVien="NATIVE_HV",hoTen="Học Viên Thử",ngaySinh="2000-01-02",trangThai="HOAT_DONG"}]:path.EndsWith("dai-dien")?[new{id=10,hocVienId=2,thanhVienId=1,hieuLucTu="2020-01-01T00:00:00",hieuLucDen=(string?)null,xacNhanLuc="2020-01-01T00:00:00",quyenDaiDien="DAY_DU"}]:path.EndsWith("loai-khoa-hoc")?[new{id=11,tenLoai="Chính khóa"}]:path.EndsWith("khoa-hoc")?[new{id=3,tenKhoa="Foundation thử",trangThai="HOAT_DONG"}]:path.EndsWith("lop-hoc")?[new{id=4,tenLop="Lớp thử",lichHocDuKien="Thứ Bảy 09:00",soChoDaGiu=1,siSoToiDa=10,hocPhiApDung=3600000m}]:[];
                 body=new{tongSo=rows.Length,duLieu=rows};
             }
             else {

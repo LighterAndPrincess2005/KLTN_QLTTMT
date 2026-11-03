@@ -71,6 +71,7 @@ builder.Services.AddScoped<FinanceService>();
 builder.Services.AddScoped<LearningService>();
 builder.Services.AddScoped<ChangeService>();
 builder.Services.AddScoped<InventoryService>();
+builder.Services.AddScoped<ClassInventoryService>();
 builder.Services.AddScoped<ClassLifecycleService>();
 builder.Services.AddScoped<IRecoveryMail,RecoveryMail>();builder.Services.AddScoped<AccountRecoveryService>();
 builder.Services.AddHostedService<ExpiryWorker>();
@@ -79,6 +80,21 @@ builder.Services.AddHostedService<ExpiryWorker>();
 builder.Services.AddScoped<NotificationService>();builder.Services.AddScoped<INotificationMail,NotificationMail>();builder.Services.AddHostedService<NotificationWorker>();
 builder.Services.AddScoped<OnlinePaymentService>();
 var app=builder.Build();
+if(args.Contains("--upgrade-class-inventory"))
+{
+    using var scope=app.Services.CreateScope();
+    var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();
+    await MainDatabaseSetup.Backup(db,app.Environment.ContentRootPath);
+    await db.Database.ExecuteSqlRawAsync(await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","014_PhieuKhoLopHoc.sql")));
+    Console.WriteLine("Đã bổ sung liên kết phiếu kho với lớp học.");
+    return;
+}
+if(args.Contains("--upgrade-codes")){
+    using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();
+    await MainDatabaseSetup.Backup(db,app.Environment.ContentRootPath);
+    await db.Database.ExecuteSqlRawAsync(await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","013_BoDemMa.sql")));
+    Console.WriteLine("Đã thêm bộ đếm mã. Không đổi mã cũ hoặc ngày lịch sử.");return;
+}
 if(args.Contains("--prepare-payments")){using var scope=app.Services.CreateScope();await PaymentDemoSetup.Run(scope.ServiceProvider.GetRequiredService<MyThuatDbContext>(),app.Environment.ContentRootPath);return;}
 if(args.Contains("--upgrade-class-notices")){using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();await MainDatabaseSetup.Backup(db,app.Environment.ContentRootPath);await db.Database.ExecuteSqlRawAsync(await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","011_ThongBaoLop.sql")));Console.WriteLine("Đã bổ sung nhật ký thông báo lớp.");return;}
 if(args.Contains("--upgrade-notifications")){using var scope=app.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();await MainDatabaseSetup.Backup(db,app.Environment.ContentRootPath);await db.Database.ExecuteSqlRawAsync(await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","010_ThongBao.sql")));Console.WriteLine("Đã bổ sung thông báo; không sửa dữ liệu lớp và tài khoản.");return;}

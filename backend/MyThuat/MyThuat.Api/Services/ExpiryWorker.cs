@@ -9,14 +9,18 @@ public sealed class ExpiryWorker(IServiceScopeFactory scopes,ILogger<ExpiryWorke
         {
             try
             {
-                using var scope=scopes.CreateScope();
-                var db=scope.ServiceProvider.GetRequiredService<Data.MyThuatDbContext>();
-                await using var tx=await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable,stoppingToken);
-                await scope.ServiceProvider.GetRequiredService<EnrollmentService>().Expire(stoppingToken);
-                await tx.CommitAsync(stoppingToken);
+                using(var scope=scopes.CreateScope())
+                {
+                    var db=scope.ServiceProvider.GetRequiredService<Data.MyThuatDbContext>();
+                    await using var tx=await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable,stoppingToken);
+                    await scope.ServiceProvider.GetRequiredService<EnrollmentService>().Expire(stoppingToken);
+                    await tx.CommitAsync(stoppingToken);
+                }
+                using var inventoryScope=scopes.CreateScope();
+                await inventoryScope.ServiceProvider.GetRequiredService<ClassInventoryService>().ReleaseExpired(stoppingToken);
             }
             catch(OperationCanceledException)when(stoppingToken.IsCancellationRequested){break;}
-            catch(Exception ex){logger.LogError(ex,"Không giải phóng được chỗ/ưu đãi hết hạn; sẽ thử lại ở lượt sau.");}
+            catch(Exception ex){logger.LogError(ex,"Không giải phóng được chỗ, ưu đãi hoặc họa cụ hết hạn; sẽ thử lại ở lượt sau.");}
         }
     }
 }

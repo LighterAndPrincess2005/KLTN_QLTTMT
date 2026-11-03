@@ -162,7 +162,7 @@ public class InputForm : Form
             {
                 Minimum = -1000000000,
                 Maximum = 1000000000,
-                DecimalPlaces = value is decimal && !money ? 2 : 0,
+                DecimalPlaces = key=="SoLuong"&&value is decimal ? 3 : value is decimal && !money ? 2 : 0,
                 ThousandsSeparator = true,
                 Value = Convert.ToDecimal(value),
                 TextAlign = HorizontalAlignment.Right

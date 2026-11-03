@@ -6,7 +6,7 @@ using MyThuat.Api.Models;
 using MyThuat.Api.Security;
 namespace MyThuat.Api.Services;
 public sealed class ClassLifecycleService(MyThuatDbContext db,AccessService access,EnrollmentService enrollments,
-    ScheduleService schedule,ChangeService changes,AuditService audit)
+    ScheduleService schedule,ChangeService changes,AuditService audit,ClassInventoryService classInventory)
 {
     public async Task<object> Postpone(long id,PostponeClassRequest r,CancellationToken ct)
     {
@@ -42,6 +42,8 @@ public sealed class ClassLifecycleService(MyThuatDbContext db,AccessService acce
         }
         cls.NgayKhaiGiangDuKien=DateOnly.FromDateTime(r.BuoiDauMoi);cls.NgayKetThucDuKien=DateOnly.FromDateTime(slots[^1].KetThuc+delta);
         cls.DongDangKyLuc=r.BuoiDauMoi.AddHours(-48);
+        if(cls.TrangThai=="DANG_TUYEN_SINH")
+            await classInventory.Reserve(cls,access.User.AccountId(),ct);
         var assignments=await db.PhanCong.Where(x=>x.LopHocId==id).ToListAsync(ct);
         foreach(var a in assignments){a.TuNgay=cls.NgayKhaiGiangDuKien;a.DenNgay=cls.NgayKetThucDuKien.Value;}
         audit.Add("LopHoc",id,"HOAN_LOP",new {r.BuoiDauMoi,r.LyDo});await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return ManagementService.Scalars(cls);
@@ -72,7 +74,9 @@ public sealed class ClassLifecycleService(MyThuatDbContext db,AccessService acce
             var makeup=await db.HocBu.SingleOrDefaultAsync(x=>x.DiemDanhBuId==attendance.Id,ct);
             if(makeup is not null){makeup.TrangThai="DA_HUY";makeup.DiemDanhBuId=null;}
         }
-        cls.TrangThai="DA_HUY";audit.Add("LopHoc",id,"HUY_LOP",new {r.LyDo,SoDangKy=registrations.Count});
+        cls.TrangThai="DA_HUY";
+        await classInventory.Release(id,"Giải phóng họa cụ giữ cho lớp đã hủy.",ct);
+        audit.Add("LopHoc",id,"HUY_LOP",new {r.LyDo,SoDangKy=registrations.Count});
         await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return new {cls.Id,cls.TrangThai,SoPhuongAnHoan=registrations.Count};
     }
 }

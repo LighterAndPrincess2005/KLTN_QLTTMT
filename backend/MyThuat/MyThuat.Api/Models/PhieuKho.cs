@@ -7,6 +7,7 @@ public sealed class PhieuKho : EntityBase
     public string LoaiPhieu { get; set; } = string.Empty;
     public long? NhaCungCapId { get; set; }
     public long? BuoiHocId { get; set; }
+    public long? LopHocId { get; set; }
     public long? PhieuThamChieuId { get; set; }
     public DateTime LapLuc { get; set; }
     public DateTime? DuyetLuc { get; set; }
@@ -19,6 +20,7 @@ public sealed class PhieuKho : EntityBase
 
     public NhaCungCap? NhaCungCap { get; set; }
     public BuoiHoc? BuoiHoc { get; set; }
+    public LopHoc? LopHoc { get; set; }
     public PhieuKho? PhieuThamChieu { get; set; }
     public TaiKhoan? NguoiLapTaiKhoan { get; set; }
     public TaiKhoan? NguoiDuyetTaiKhoan { get; set; }

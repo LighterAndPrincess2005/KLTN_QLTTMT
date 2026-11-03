@@ -45,6 +45,26 @@ public sealed class ManagementValidation(MyThuatDbContext db,AccessService acces
                 ApiError.Require(n.SoTiet==course.SoTietMoiBuoi,"Mỗi buổi phải có cùng thời lượng đã định cho khóa học.");
                 break;
             case LopHoc l:
+                var previousState=update?(string)before["TrangThai"]!:"";
+                if(!update)ApiError.Require(l.TrangThai=="NHAP"&&l.NgayKhaiGiangThucTe is null,"Lớp mới phải là bản nháp; ngày khai giảng thực tế do hệ thống ghi.");
+                if(update)
+                {
+                    ApiError.Require(Equals(before["NgayKhaiGiangThucTe"],l.NgayKhaiGiangThucTe),"Ngày khai giảng thực tế đã ghi không được sửa.");
+                    var allowed=previousState switch {
+                        "NHAP"=>l.TrangThai is "NHAP" or "DANG_TUYEN_SINH",
+                        "DANG_TUYEN_SINH"=>l.TrangThai is "DANG_TUYEN_SINH" or "DANG_HOC",
+                        "DANG_HOC"=>l.TrangThai is "DANG_HOC" or "DA_KET_THUC",
+                        _=>l.TrangThai==previousState};
+                    ApiError.Require(allowed,"Không được chuyển ngược hoặc bỏ qua trạng thái lớp; hoãn/hủy phải dùng nghiệp vụ riêng.");
+                    if(await db.BuoiHoc.AnyAsync(x=>x.LopHocId==l.Id,ct))
+                        ApiError.Require(new[]{"KhoaHocId","SoBuoiKeHoach","NgayKhaiGiangDuKien","NgayKetThucDuKien","LichHocDuKien"}
+                            .All(key=>Equals(before[key],ManagementService.Scalars(l)[key])),"Lớp đã xếp lịch: không sửa trực tiếp ngày, giờ, khóa hoặc số buổi; dùng nghiệp vụ dời lịch có lý do và thông báo.");
+                    if(previousState!="NHAP"||await db.DangKy.AnyAsync(x=>x.LopHocId==l.Id,ct))
+                        ApiError.Require(Equals(before["MoDangKyLuc"],l.MoDangKyLuc)&&Equals(before["DongDangKyLuc"],l.DongDangKyLuc),"Lớp đã công bố hoặc có đăng ký: không sửa trực tiếp thời gian tuyển sinh.");
+                    if(previousState!="NHAP")
+                        ApiError.Require(Equals(before["SiSoToiThieu"],l.SiSoToiThieu)&&Equals(before["SiSoToiDa"],l.SiSoToiDa),
+                            "Lớp đã công bố: sĩ số đã chốt để dự trù họa cụ.");
+                }
                 var c=await db.KhoaHoc.SingleOrDefaultAsync(x=>x.Id==l.KhoaHocId,ct)??throw new ApiError(400,"Khóa không tồn tại.");
                 ApiError.Require(l.SoBuoiKeHoach==c.SoBuoi&&l.SiSoToiThieu>0&&l.SiSoToiDa>=l.SiSoToiThieu&&l.HocPhiApDung>=0
                     &&l.MoDangKyLuc<l.DongDangKyLuc,"Thông số lớp không hợp lệ.");
@@ -55,7 +75,7 @@ public sealed class ManagementValidation(MyThuatDbContext db,AccessService acces
                 if(l.TrangThai!="NHAP")
                 {
                     ApiError.Require(access.User.IsInRole("QUAN_TRI"),"Quản trị duyệt công bố và trạng thái vận hành lớp.",403);
-                    l.NguoiDuyet=access.User.AccountId();
+                    if(l.TrangThai!=previousState)l.NguoiDuyet=access.User.AccountId();
                     ApiError.Require(c.TrangThai=="HOAT_DONG","Khóa chưa công bố.");
                     var sessions=await db.BuoiHoc.Where(x=>x.LopHocId==l.Id&&x.TrangThai!="DA_HUY").ToListAsync(ct);
                     ApiError.Require(sessions.Select(x=>x.NoiDungBuoiId).Distinct().Count()==l.SoBuoiKeHoach,"Lớp cần đủ lịch từng buổi.");
@@ -69,11 +89,12 @@ public sealed class ManagementValidation(MyThuatDbContext db,AccessService acces
                     ApiError.Require(l.DongDangKyLuc<=sessions.Min(x=>x.BatDau).AddHours(-48),"Cần đóng tuyển sinh ít nhất 48 giờ trước buổi đầu.");
                     if(l.TrangThai=="DA_KET_THUC")
                         ApiError.Require(sessions.All(x=>x.TrangThai=="DA_TO_CHUC"),"Cần tổ chức đủ các buổi trước khi kết thúc lớp.");
-                    if(l.TrangThai=="DANG_HOC")
+                    if(l.TrangThai=="DANG_HOC"&&previousState!="DANG_HOC")
                     {
                         ApiError.Require(access.User.IsInRole("QUAN_TRI"),"Quản trị duyệt khai giảng.",403);
+                        ApiError.Require(DateOnly.FromDateTime(sessions.Min(x=>x.BatDau))<=BusinessClock.Today,"Chưa đến ngày buổi học đầu tiên để khai giảng.");
                         ApiError.Require(await db.DangKy.CountAsync(x=>x.LopHocId==l.Id&&x.TrangThai=="DA_XAC_NHAN",ct)>=l.SiSoToiThieu,"Chưa đủ học viên đã thanh toán để khai giảng.");
-                        l.NgayKhaiGiangThucTe=BusinessClock.Today;
+                        l.NgayKhaiGiangThucTe??=BusinessClock.Today;
                     }
                 }
                 break;
@@ -107,7 +128,11 @@ public sealed class ManagementValidation(MyThuatDbContext db,AccessService acces
                     ApiError.Require(Equals(before["DonViCoSo"],h.DonViCoSo)&&Equals(before["NhomHoaCu"],h.NhomHoaCu),"Họa cụ đã có sổ kho: giữ đơn vị và nhóm.");
                 break;
             case DinhMucHoaCu d:
-                ApiError.Require(d.SoLuong>0&&d.CoSoTinh is "HOC_VIEN" or "LOP","Định mức không hợp lệ.");break;
+                ApiError.Require(d.SoLuong>0&&d.CoSoTinh is "HOC_VIEN" or "LOP","Định mức không hợp lệ.");
+                ApiError.Require(await db.NoiDungBuoi.AnyAsync(x=>x.Id==d.NoiDungBuoiId,ct),"Không tìm thấy nội dung buổi.");
+                ApiError.Require(await db.HoaCu.AnyAsync(x=>x.Id==d.HoaCuId&&x.TrangThai=="HOAT_DONG"&&
+                    (x.NhomHoaCu=="TIEU_HAO"||x.NhomHoaCu=="DUNG_CHUNG"),ct),"Chọn họa cụ tiêu hao hoặc dùng chung đang hoạt động.");
+                break;
         }
         var status=item.GetType().GetProperty("TrangThai");
         if(item is HocVien or GiaoVien or ThanhVien or HoaCu or NhaCungCap or LoaiKhoaHoc or PhongHoc)
