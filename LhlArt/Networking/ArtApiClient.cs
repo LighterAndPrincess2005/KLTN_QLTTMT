@@ -44,10 +44,22 @@ public sealed class ArtApiClient : IDisposable
     public Task<JsonElement> Read(string path) => Send(HttpMethod.Get, path);
     public Task<JsonElement> Post(string path, object body) => Send(HttpMethod.Post, path, body);
     public Task<JsonElement> Put(string path, object body, string? version = null) => Send(HttpMethod.Put,path,body,version);
+    public async Task<string> UploadCourseImage(string file)
+    {
+        using var stream = File.OpenRead(file);
+        if (stream.Length is <= 0 or > 5 * 1024 * 1024)
+            throw new InvalidOperationException("Ảnh tối đa 5 MB.");
+        using var content = new MultipartFormDataContent();
+        content.Add(new StreamContent(stream), "file", Path.GetFileName(file));
+        return Text(await Send(HttpMethod.Post, "api/tep/cong-khai/khoa-hoc", content), "url");
+    }
+
+    public Task<byte[]> ReadReviewImage(long id) => http.GetByteArrayAsync($"api/danh-gia-khoa/{id}/anh");
+
     async Task<JsonElement> Send(HttpMethod method, string path, object? body = null, string? version = null)
     {
         using var request = new HttpRequestMessage(method,path);
-        if (body is not null) request.Content = JsonContent.Create(body);
+        if (body is not null) request.Content = body as HttpContent ?? JsonContent.Create(body);
         if (version is not null) request.Headers.TryAddWithoutValidation("If-Match",version);
         HttpResponseMessage response;
         try { response = await http.SendAsync(request); }

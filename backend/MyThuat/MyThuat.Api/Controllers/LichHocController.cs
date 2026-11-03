@@ -25,6 +25,9 @@ public sealed class LichHocController(MyThuatDbContext db,ScheduleService servic
         }
         var rows=await query.OrderBy(x=>x.BatDau).Take(500).ToListAsync(ct);return rows.Select(ManagementService.Scalars);
     }
+    [Authorize(Policy="DaoTao"),HttpGet("tra-ca")]
+    public Task<object> Availability(DateTime batDau,DateTime ketThuc,CancellationToken ct)=>
+        service.Availability(batDau,ketThuc,ct);
     [Authorize(Policy="DaoTao"),HttpPost("lop/{id:long:min(1)}/sinh-lich")]
     public Task<object> Generate(long id,GenerateScheduleRequest r,CancellationToken ct)=>service.Generate(id,r,ct);
     [Authorize(Policy="DaoTao"),HttpPost("lop/{id:long:min(1)}/phan-cong")]

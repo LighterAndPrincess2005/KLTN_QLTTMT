@@ -57,6 +57,16 @@ public class MyThuatDbContext(DbContextOptions<MyThuatDbContext> options) : DbCo
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+    modelBuilder.Entity<DanhGiaKhoaHoc>(e=>{
+        e.ToTable("DanhGiaKhoaHoc");
+        e.HasIndex(x=>x.HoSoTheoHocId).IsUnique();
+        e.HasOne<HoSoTheoHoc>().WithMany().HasForeignKey(x=>x.HoSoTheoHocId).OnDelete(DeleteBehavior.NoAction);
+        e.HasOne<ThanhVien>().WithMany().HasForeignKey(x=>x.NguoiGuiId).OnDelete(DeleteBehavior.NoAction);
+        e.Property(x=>x.NoiDung).HasMaxLength(2000);
+        e.Property(x=>x.GhiChuDuyet).HasMaxLength(500);
+        e.Property(x=>x.LoaiAnh).HasMaxLength(20);
+        e.Property(x=>x.TrangThai).HasMaxLength(20);
+    });
     modelBuilder.Entity<BoDemMa>(e=>{e.ToTable("BoDemMa");e.HasKey(x=>x.TienTo);e.Property(x=>x.TienTo).HasColumnType("varchar(20)");e.Property(x=>x.GiaTriCuoi).HasColumnType("bigint");});
     WebsiteMapping.Configure(modelBuilder);
     modelBuilder.Entity<PhienThanhToan>(e=>{e.ToTable("PhienThanhToan");e.HasKey(x=>x.Id);e.Property(x=>x.MaThanhToan).HasMaxLength(20).IsUnicode(false);e.HasIndex(x=>x.DangKyId).IsUnique();e.HasIndex(x=>x.MaThanhToan).IsUnique();});

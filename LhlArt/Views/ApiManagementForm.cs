@@ -35,7 +35,7 @@ public sealed class ApiManagementForm : Form
     public bool Logout { get; private set; }
     public ApiManagementForm(ArtApiClient client,bool fitToScreen=true)
     {
-        api=client; Text="Mỹ Thuật Bụi | Không gian quản lý · bản 02.11.2026";
+        api=client; Text="Mỹ Thuật Bụi | Không gian quản lý";
         Size=new Size(1440,920); MinimumSize=new Size(1100,740); StartPosition=FormStartPosition.CenterScreen;
         Font=Theme.Font(); BackColor=Theme.Paper; AutoScaleMode=AutoScaleMode.Dpi;
         if(fitToScreen)Load+=(_,_)=>FitWorkArea(Screen.FromControl(this).WorkingArea);
@@ -89,6 +89,7 @@ public sealed class ApiManagementForm : Form
             Item("Hồ sơ học viên","api/quan-ly/hoc-vien",true);
             Item("Người đại diện","api/quan-ly/dai-dien",true);
             Item("Phản hồi & đề nghị","api/phan-hoi");
+            if(api.Role=="QUAN_TRI") Item("Duyệt đánh giá khóa học","api/danh-gia-khoa/quan-ly");
             Item("Tư vấn từ website","api/tu-van",true);
             var signup=NavButton("Đăng ký tài khoản","Quản trị");signup.Click+=async(_,_)=>await Run(async()=>{await new ApiPeopleController(api).Signup(this);if(!home.Visible)await LoadData();});nav.Controls.Add(signup);
         }
@@ -131,7 +132,7 @@ public sealed class ApiManagementForm : Form
         var signOut=NavButton("Đăng xuất","Đăng xuất");signOut.Name="sign-out";signOut.Click+=async(_,_)=>await Run(async()=>{
             await api.Post("api/tai-khoan/dang-xuat",new{}); Logout=true;Close(); });accountActions.Controls.Add(signOut);BuildNavigationGroups();FitSidebarButtons();
         Shown+=async(_,_)=>{await Run(ShowHome);refreshTimer.Start();};
-        refreshTimer.Tick+=async(_,_)=>{if(!busy&&ActiveForm==this&&!search.Focused)await Run(home.Visible?ShowHome:LoadData);};
+        refreshTimer.Tick+=async(_,_)=>{if(!busy&&ActiveForm==this&&!search.Focused)await Run(home.Visible?()=>ShowDashboard(route=="api/bao-cao/tong-quan"):LoadData);};
         FormClosed+=(_,_)=>{refreshTimer.Dispose();searchTimer.Dispose();};
     }
     internal void FitWorkArea(Rectangle area)
@@ -152,7 +153,7 @@ public sealed class ApiManagementForm : Form
     void BuildNavigationGroups()
     {
         static string Group(ActionButton button)=>button.Tag?.ToString() switch{
-            "api/quan-ly/thanh-vien" or "api/quan-ly/hoc-vien" or "api/quan-ly/dai-dien" or "api/phan-hoi" or "api/tu-van"=>"profiles",
+            "api/quan-ly/thanh-vien" or "api/quan-ly/hoc-vien" or "api/quan-ly/dai-dien" or "api/phan-hoi" or "api/tu-van" or "api/danh-gia-khoa/quan-ly"=>"profiles",
             "api/quan-ly/loai-khoa-hoc" or "api/quan-ly/noi-dung-buoi" or "api/quan-ly/khoa-hoc" or "api/quan-ly/lop-hoc" or "api/quan-ly/giao-vien" or "api/quan-ly/phong-hoc" or "api/lich-hoc"=>"training",
             "api/dang-ky/quan-ly" or "api/quan-ly/khuyen-mai" or "api/thay-doi" or "api/giao-dich/cho-doi-chieu" or "api/thanh-toan/bao-chuyen-khoan" or "api/giao-dich/phieu-thu"=>"enrollment",
             "api/quan-ly/hoa-cu" or "api/quan-ly/dinh-muc" or "api/quan-ly/nha-cung-cap" or "api/kho/ton" or "api/kho/phieu"=>"inventory",
@@ -175,14 +176,18 @@ public sealed class ApiManagementForm : Form
     }
     async Task OpenPage(string name,string path,bool pagination)
     {
+        if(path=="api/bao-cao/tong-quan"){await ShowDashboard(true);return;}
         home.Visible=false;body.Visible=true;body.BringToFront();SelectNav(path);breadcrumb.Text="Không gian làm việc  /  "+name;
         route=path;title=name;paged=pagination;page=1;search.Text="";await LoadData();
     }
-    async Task ShowHome()
+    Task ShowHome()=>ShowDashboard(false);
+    async Task ShowDashboard(bool overview)
     {
-        body.Visible=false;home.Visible=true;home.BringToFront();SelectNav("home");breadcrumb.Text="Không gian làm việc  /  Trang chủ";
+        route=overview?"api/bao-cao/tong-quan":"";
+        body.Visible=false;home.Visible=true;home.BringToFront();
+        SelectNav(overview?route:"home");breadcrumb.Text="Không gian làm việc  /  "+(overview?"Tổng quan":"Trang chủ");
         foreach(Control control in home.Controls.Cast<Control>().ToArray())control.Dispose();
-        var dashboard=new StudioDashboard(api,destinations,(name,path,pagination)=>Run(()=>OpenPage(name,path,pagination)));
+        var dashboard=new StudioDashboard(api,destinations,(name,path,pagination)=>Run(()=>OpenPage(name,path,pagination)),overview);
         dashboard.Dock=DockStyle.Top;home.Controls.Add(dashboard);await dashboard.LoadOverview();
     }
     async Task Run(Func<Task> work)
@@ -236,9 +241,11 @@ public sealed class ApiManagementForm : Form
     {
         var table=new DataTable();table.Columns.Add("__index",typeof(int));
         var hidden=new[]{"rowVersion","createdAt","updatedAt","requestFingerprint","phuongAnHoanJson","idempotencyKey"}.ToList();
+        if(route!="api/dang-ky/quan-ly")hidden.Add("id");
+        if(route=="api/quan-ly/loai-khoa-hoc")hidden.Add("maLoai");
         if(route=="api/quan-ly/khoa-hoc")hidden.AddRange(["soTietMoiBuoi","phutMoiTiet"]);
         if(route=="api/quan-ly/noi-dung-buoi")hidden.Add("soTiet");
-        var preferred=new[]{"hoTen","loaiTaiKhoan","tenHocVien","tenNguoiDaiDien","nguoiDaiDien","kenhHienThi","tenKhoa","tenLop","maLop","maHocVien","batDau","ketThuc","trangThai","thuTuTrongLop","nhanXet","noiDung"};
+        var preferred=new[]{"hoTen","loaiTaiKhoan","tenHocVien","tenNguoiDaiDien","nguoiDaiDien","kenhHienThi","tenLoai","tenKhoa","tenLop","tenPhong","tenHoaCu","maLop","maHocVien","batDau","ketThuc","trangThai","thuTuTrongLop","nhanXet","noiDung"};
         var names=records.Where(x=>x.ValueKind==JsonValueKind.Object).SelectMany(x=>x.EnumerateObject()).Select(x=>x.Name).Distinct().Where(x=>!hidden.Contains(x,StringComparer.OrdinalIgnoreCase)).OrderBy(x=>Array.FindIndex(preferred,key=>key.Equals(x,StringComparison.OrdinalIgnoreCase)) is var rank&&rank>=0?rank:100).ToArray();
         foreach(var name in names)table.Columns.Add(name,typeof(string));
         for(var i=0;i<records.Count;i++)
@@ -259,13 +266,15 @@ public sealed class ApiManagementForm : Form
     internal static string Display(JsonElement row,string name)
     {
         var text=ArtApiClient.Text(row,name);
+        if(name is ("maLoai" or "maKhoa" or "maLop" or "maGiaoVien" or "maHocVien" or "maPhong" or "maHoaCu")&&
+            (text.StartsWith("DEMO_",StringComparison.OrdinalIgnoreCase)||text.StartsWith("MAIN_",StringComparison.OrdinalIgnoreCase)))return "—";
         if(ArtApiClient.TryGet(row,name,out var boolean)&&boolean.ValueKind is JsonValueKind.True or JsonValueKind.False)return boolean.GetBoolean()?"Có":"Không";
         if(name.Equals("trangThai",StringComparison.OrdinalIgnoreCase)||name.Equals("trangThaiTuVan",StringComparison.OrdinalIgnoreCase)||name.Equals("trangThaiLuot",StringComparison.OrdinalIgnoreCase)){
             var translated=text switch{
                 "DANG_TUYEN_SINH"=>"Đang tuyển sinh","DANG_HOC"=>"Đang học","DA_KET_THUC"=>"Đã kết thúc",
                 "DANG_THEO_HOC"=>"Đang theo học","DA_HOAN_THANH"=>"Đã hoàn thành","CHO_CHUYEN"=>"Chờ chuyển lớp",
                 "MOI_GUI"=>"Mới gửi","DA_DOC"=>"Đã đọc","DANG_XU_LY"=>"Đang xử lý","DA_TRA_LOI"=>"Đã trả lời","DA_DONG"=>"Đã đóng",
-                "DA_DUYET"=>"Đã duyệt","DA_GHI_SO"=>"Đã ghi sổ","TU_CHOI"=>"Từ chối","DA_TU_CHOI"=>"Đã từ chối","DA_THUC_HIEN"=>"Đã thực hiện",
+                "DA_DUYET"=>"Đã duyệt","CHO_DUYET"=>"Chờ duyệt","RIENG_TU"=>"Gửi riêng","AN"=>"Đã ẩn","DA_GHI_SO"=>"Đã ghi sổ","TU_CHOI"=>"Từ chối","DA_TU_CHOI"=>"Đã từ chối","DA_THUC_HIEN"=>"Đã thực hiện",
                 "GIU_LUOT"=>"Đang giữ lượt","DA_DUNG"=>"Đã sử dụng","DA_SU_DUNG"=>"Đã sử dụng","DA_GIAI_PHONG"=>"Đã giải phóng",
                 _=>null};
             if(translated is not null)return translated;
@@ -301,6 +310,62 @@ public sealed class ApiManagementForm : Form
         var button=Theme.Button(name);if(button is ActionButton action)action.IconKey=name=="Làm mới"?"Làm mới":name.Contains("điểm danh")?"Lịch học":name.Contains("Xác minh")?"Quản trị":"";
         button.Click+=async(_,_)=>await Run(work);actions.Controls.Add(button);
     }
+    async Task EditCourseImages(long id)
+    {
+        var path=$"api/noi-dung/quan-ly/khoa-hoc/{id}/anh";
+        var row=await api.Read(path);
+        using var form=new InputForm("Ảnh khóa học trên website");
+        form.Add("cover","Ảnh bìa",ArtApiClient.Text(row,"anhDaiDien"));
+        form.Add("gallery","Ảnh thành phẩm (mỗi đường dẫn một dòng)",
+            string.Join(Environment.NewLine,ArtApiClient.Get(row,"thanhPham").EnumerateArray().Select(x=>x.GetString())),multiline:true);
+        form.AddAction("Chọn ảnh bìa",()=>PickCourseImages(form,"cover",false));
+        form.AddAction("Thêm ảnh thành phẩm",()=>PickCourseImages(form,"gallery",true));
+        if(form.ShowDialog(this)!=DialogResult.OK)return;
+        var gallery=form.TextValue("gallery").Split('\n',StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries);
+        await api.Put(path,new {AnhDaiDien=form.TextValue("cover"),ThanhPham=gallery,
+            RowVersion=ArtApiClient.Get(row,"rowVersion").GetString()});
+        MessageBox.Show(this,"Đã lưu ảnh khóa học. Tải lại trang khóa học để xem ảnh mới.","Ảnh khóa học");
+    }
+
+    async Task PickCourseImages(InputForm form,string field,bool multiple)
+    {
+        using var picker=new OpenFileDialog{Title="Chọn ảnh được phép đăng công khai",Filter="Ảnh PNG, JPEG, WebP|*.png;*.jpg;*.jpeg;*.webp",Multiselect=multiple};
+        if(picker.ShowDialog(form)!=DialogResult.OK)return;
+        var paths=multiple?form.TextValue(field).Split('\n',StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries).ToList():new List<string>();
+        if(paths.Count+picker.FileNames.Length>20)throw new InvalidOperationException("Tối đa 20 ảnh thành phẩm.");
+        foreach(var file in picker.FileNames)paths.Add(await api.UploadCourseImage(file));
+        if(!form.IsDisposed)form.Set(field,string.Join(Environment.NewLine,paths));
+    }
+
+    async Task ShowReviewImage(JsonElement row)
+    {
+        if(ArtApiClient.Get(row,"coAnh").ValueKind!=JsonValueKind.True)
+            throw new InvalidOperationException("Đánh giá này không đính kèm ảnh.");
+        using var stream=new MemoryStream(await api.ReadReviewImage(Id(row)));
+        using var dialog=new Form{Text="Ảnh thành phẩm đính kèm",Width=700,Height=560,StartPosition=FormStartPosition.CenterParent};
+        using var picture=new PictureBox{Dock=DockStyle.Fill,SizeMode=PictureBoxSizeMode.Zoom};
+        using var image=Image.FromStream(stream);
+        picture.Image=image;
+        dialog.Controls.Add(picture);
+        dialog.ShowDialog(this);
+    }
+
+    async Task ModerateCourseReview(JsonElement row)
+    {
+        var status=ArtApiClient.Text(row,"trangThai");
+        if(status is not ("CHO_DUYET" or "DA_DUYET"))
+            throw new InvalidOperationException("Chỉ xử lý đánh giá đang chờ duyệt hoặc đã công bố.");
+        using var form=new InputForm("Xử lý đánh giá khóa học");
+        form.Add("content","Nội dung",ArtApiClient.Text(row,"noiDung"),readOnly:true,multiline:true);
+        form.Add("decision","Quyết định","",status=="CHO_DUYET"
+            ?new[]{new Choice("","Chọn quyết định"),new Choice("DA_DUYET","Duyệt và công bố"),new Choice("TU_CHOI","Từ chối công bố")}
+            :new[]{new Choice("AN","Ẩn khỏi website")});
+        form.Add("note","Ghi chú cho người gửi","",multiline:true);
+        if(form.ShowDialog(this)!=DialogResult.OK)return;
+        if(string.IsNullOrEmpty(form.TextValue("decision")))throw new InvalidOperationException("Hãy chọn quyết định duyệt hoặc từ chối.");
+        await api.Post($"api/danh-gia-khoa/{Id(row)}/duyet",new {TrangThai=form.TextValue("decision"),GhiChu=form.TextValue("note"),RowVersion=ArtApiClient.Text(row,"rowVersion")});
+    }
+
     void ConfigureActions()
     {
         foreach(Control control in actions.Controls.Cast<Control>().ToArray())control.Dispose();
@@ -316,6 +381,7 @@ public sealed class ApiManagementForm : Form
             var fields=new DataGridView {Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill};
             detail.Controls.Add(fields);
             var selected=Selected();fields.DataSource=selected.EnumerateObject().Where(x=>!x.Name.Equals("rowVersion",StringComparison.OrdinalIgnoreCase)
+                &&!(route=="api/quan-ly/loai-khoa-hoc"&&x.Name is ("maLoai" or "id"))
                 &&!(route=="api/quan-ly/khoa-hoc"&&x.Name is ("soTietMoiBuoi" or "phutMoiTiet"))
                 &&!(route=="api/quan-ly/noi-dung-buoi"&&x.Name=="soTiet")).Select(x=>new{Truong=Label(x.Name),GiaTri=Display(selected,x.Name)}).ToList();
             fields.Columns["Truong"].HeaderText="Thông tin";fields.Columns["GiaTri"].HeaderText="Giá trị";
@@ -379,6 +445,11 @@ public sealed class ApiManagementForm : Form
             Action("Hoàn tất chuyển",async()=>{var row=Selected();if(MessageBox.Show(this,"Hoàn tất chuyển lớp theo phương án đã duyệt?","Xác nhận",MessageBoxButtons.YesNo)!=DialogResult.Yes)return;await api.Post("api/thay-doi/"+Id(row)+"/hoan-tat-chuyen",new{});await LoadData();});
         }
 
+        if(route=="api/quan-ly/khoa-hoc") Action("Ảnh trên website",()=>EditCourseImages(Id(Selected())));
+        if(route=="api/danh-gia-khoa/quan-ly"){
+            Action("Xem ảnh",async()=>await ShowReviewImage(Selected()));
+            Action("Duyệt / ẩn",async()=>{await ModerateCourseReview(Selected());await LoadData();});
+        }
         if(route=="api/phan-hoi") Action("Trả lời",async()=>{
             var row=Selected();var fields=Prompt("Trả lời phản hồi / đề nghị",("Nội dung trả lời",ArtApiClient.Text(row,"traLoi")));if(fields is null)return;
             await api.Post("api/phan-hoi/"+Id(row)+"/tra-loi",new{TraLoi=fields[0]});await LoadData();});
@@ -426,7 +497,10 @@ public sealed class ApiManagementForm : Form
         using var form=new Form {Text="Công nợ đăng ký · "+ArtApiClient.Text(debt,"trangThai"),Size=new Size(850,430),StartPosition=FormStartPosition.CenterParent};
         var table=new DataTable();foreach(var name in new[]{"id","loaiKhoan","thanhTienChot","daThanhToan","phaiThuHieuLuc","conThieu"})table.Columns.Add(name);
         foreach(var charge in ArtApiClient.Get(debt,"khoanThu").EnumerateArray())table.Rows.Add(table.Columns.Cast<DataColumn>().Select(x=>(object)Display(charge,x.ColumnName)).ToArray());
-        form.Controls.Add(new DataGridView {Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,DataSource=table,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill});form.ShowDialog(this);
+        var charges=new DataGridView {Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,DataSource=table,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill};
+        form.Controls.Add(charges);
+        foreach(DataGridViewColumn column in charges.Columns)column.HeaderText=Label(column.Name);
+        form.ShowDialog(this);
     }
     async Task OpenReceipt(long id)
     {

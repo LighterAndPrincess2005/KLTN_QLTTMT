@@ -80,6 +80,13 @@ builder.Services.AddHostedService<ExpiryWorker>();
 builder.Services.AddScoped<NotificationService>();builder.Services.AddScoped<INotificationMail,NotificationMail>();builder.Services.AddHostedService<NotificationWorker>();
 builder.Services.AddScoped<OnlinePaymentService>();
 var app=builder.Build();
+if(args.Contains("--upgrade-course-reviews")){
+    using var scope=app.Services.CreateScope();
+    var db=scope.ServiceProvider.GetRequiredService<MyThuatDbContext>();
+    await MainDatabaseSetup.Backup(db,app.Environment.ContentRootPath);
+    await db.Database.ExecuteSqlRawAsync(await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","015_DanhGiaKhoaHoc.sql")));
+    return;
+}
 if(args.Contains("--upgrade-class-inventory"))
 {
     using var scope=app.Services.CreateScope();
@@ -138,6 +145,7 @@ if(args.Contains("--prepare-main"))
     var sql=await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","007_WebsiteMain.sql"));
     await db.Database.ExecuteSqlRawAsync(sql);
     await db.Database.ExecuteSqlRawAsync(await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","008_TachUuDaiCongKhai.sql")));
+    await db.Database.ExecuteSqlRawAsync(await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath,"Database","015_DanhGiaKhoaHoc.sql")));
     await MainData.Seed(db,app.Environment.ContentRootPath);await MainDataExtras.Seed(db);await MainDataReport.Save(db,app.Environment.ContentRootPath);return;
 }
 if(args.Contains("--check-main"))

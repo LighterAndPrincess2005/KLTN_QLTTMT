@@ -294,6 +294,16 @@ try
     var actualSchedule=JsonSerializer.SerializeToElement((await data.All("api/lich-hoc",false)).Where(x=>Id(x,"lopHocId")==Id(draftClass)).ToArray());
     var scheduledFirst=ArtApiClient.Get(actualSchedule[0],"batDau").GetDateTime();
     Check(actualSchedule.GetArrayLength()==1&&scheduledFirst.DayOfWeek==DayOfWeek.Saturday&&scheduledFirst.Hour==9,"Xếp lịch từ lựa chọn thứ/giờ tạo đúng buổi thực tế");
+    string Availability(DateTime start)=>$"api/lich-hoc/tra-ca?batDau={Stamp(start)}&ketThuc={Stamp(start.AddMinutes(30))}";
+    var busy=await staff.Read(Availability(scheduledFirst));
+    var later=await staff.Read(Availability(scheduledFirst.AddHours(5)));
+    var sessionId=Id(actualSchedule[0]);
+    bool Conflict(JsonElement result)=>ArtApiClient.Get(result,"buoiHoc").EnumerateArray()
+        .Single(x=>Id(x)==sessionId).GetProperty("trungCa").GetBoolean();
+    Check(Conflict(busy)&&!Conflict(later)&&ArtApiClient.Get(busy,"giangDay").EnumerateArray()
+        .Any(x=>Id(x,"buoiHocId")==sessionId&&Id(x,"giaoVienId")==Id(scheduleTeacher)),
+        "Tra ca phân biệt phòng và giáo viên bận đúng khung giờ với ca trống cùng ngày");
+    await Web("GET",Availability(scheduledFirst),expected:HttpStatusCode.Forbidden);
     draftClass=await staff.Read("api/quan-ly/lop-hoc/"+Id(draftClass));
     Check(T(draftClass,"trangThai")=="DANG_TUYEN_SINH","Xác nhận xếp lịch từ Win tự chuyển nháp thành Đang tuyển sinh trên SQL Server");
     var classOnWeb=await Web("GET","api/lop-hoc/"+Id(draftClass));

@@ -33,6 +33,13 @@ internal static class ApiColumnLabels
     DenNgay=Đến ngày
     HanSuDung=Hạn sử dụng
     NgayCap=Ngày cấp
+    Anh=Ảnh đính kèm
+    LoaiAnh=Định dạng ảnh
+    HocVien=Học viên
+    SoSao=Số sao
+    DongYCongKhai=Đồng ý công bố
+    CoAnh=Có ảnh đính kèm
+    GhiChuDuyet=Ghi chú duyệt
     NgayDanhGiaDauVao=Ngày đánh giá đầu vào
     BatDau=Bắt đầu
     KetThuc=Kết thúc

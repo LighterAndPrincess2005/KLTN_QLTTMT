@@ -11,8 +11,10 @@ public class InputForm : Form
     readonly TableLayoutPanel table = new();
     readonly Dictionary<string, Control> controls = new();
     readonly Dictionary<string, Label> errors = new();
+    readonly Dictionary<string,(Label Caption,Control Field)> fieldRows = new();
     readonly Label formError = new() { AutoSize=true,ForeColor=Color.Firebrick,Visible=false,UseMnemonic=false,Margin=new Padding(0,0,0,12) };
     readonly Button saveButton;
+    readonly FlowLayoutPanel footer;
     FormMouseWheelGuard? wheelGuard;
     public bool ShowSaveButton { set=>saveButton.Visible=value; }
     int row;
@@ -50,7 +52,7 @@ public class InputForm : Form
         logo.Width = 60;
         header.Controls.Add(new Label { UseMnemonic = false, Text = title, Dock = DockStyle.Fill, Font = Theme.Font(17, FontStyle.Bold), ForeColor = Theme.Navy, TextAlign = ContentAlignment.MiddleLeft, AutoEllipsis = true });
         header.Controls.Add(logo);
-        var footer = new FlowLayoutPanel
+        footer = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
             Height = 74,
@@ -118,6 +120,30 @@ public class InputForm : Form
         Controls.Add(footer);
         Controls.Add(header);
         wheelGuard=new FormMouseWheelGuard(this);
+    }
+
+    public void AddAction(string caption,Func<Task> action)
+    {
+        var button=Theme.Button(caption);
+        button.AutoSize=true;
+        button.Click+=async(_,_)=>{
+            button.Enabled=false;
+            try{await action();}
+            catch(Exception ex){if(!IsDisposed)MessageBox.Show(this,ex.Message,"Tra lịch",MessageBoxButtons.OK,MessageBoxIcon.Warning);}
+            finally{if(!IsDisposed)button.Enabled=true;}
+        };
+        footer.Controls.Add(button);
+    }
+
+    public void AddSection(string caption)
+    {
+        if(compactPending){row+=2;compactPending=false;}
+        var label=new Label{Name="field-section",Text=caption,AutoSize=false,Height=32,Dock=DockStyle.Fill,
+            BackColor=Theme.Paper,ForeColor=Theme.Navy,Font=Theme.Font(11,FontStyle.Bold),
+            Padding=new Padding(10,0,0,0),TextAlign=ContentAlignment.MiddleLeft,Margin=new Padding(0,9,0,5)};
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        table.Controls.Add(label,0,row++);
+        table.SetColumnSpan(label,table.ColumnCount);
     }
 
     public void Add(string key, string label, object? value = null, IEnumerable<Choice>? options = null, bool readOnly = false, bool password = false, bool multiline = false)
@@ -205,18 +231,35 @@ public class InputForm : Form
             field = moneyField;
         }
 
-        var pair=CompactColumns&&!multiline&&key is not ("TenKhoa" or "TenLop" or "LichHocDuKien" or "ScheduleNote");
-        if(CompactColumns&&table.ColumnCount==2){table.ColumnCount=4;table.ColumnStyles.Clear();table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,140));table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,50));table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,140));table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,50));table.SetColumnSpan(formError,4);}
+        var pair=CompactColumns&&!multiline&&key is not ("TenKhoa" or "TenLop" or "LichHocDuKien" or "ScheduleNote" or "CachTuan");
+        if(CompactColumns&&table.ColumnCount==2)
+        {
+            table.ColumnCount=4;table.ColumnStyles.Clear();
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,132));table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,50));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,142));table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,50));
+            foreach(Control heading in table.Controls.Cast<Control>().Where(x=>x==formError||x.Name=="field-section"))
+                table.SetColumnSpan(heading,4);
+        }
         if(!pair&&compactPending){row+=2;compactPending=false;}
         var column=pair&&compactPending?2:0;
         if(!compactPending){table.RowStyles.Add(new RowStyle(SizeType.AutoSize));table.RowStyles.Add(new RowStyle(SizeType.AutoSize));}
-        table.Controls.Add(new Label { UseMnemonic = false, Text = label, AutoSize = true, MaximumSize = new Size(CompactColumns?130:215, 0), ForeColor = Theme.Ink, Margin = new Padding(0, 15, 12, 12) }, column, row);
+        var caption=new Label { UseMnemonic = false, Text = label, AutoSize = true, MaximumSize = new Size(CompactColumns?130:215, 0),
+            ForeColor = Theme.Ink, Margin = new Padding(column==2?8:0, CompactColumns?10:15, 8, CompactColumns?7:12) };
+        table.Controls.Add(caption,column,row);
+        fieldRows[key]=(caption,field);
         table.Controls.Add(field, column+1, row);
         if(!pair&&CompactColumns)table.SetColumnSpan(field,3);
         var errorLabel=new Label {AutoSize=true,ForeColor=Color.Firebrick,Visible=false,UseMnemonic=false,AccessibleName="Lỗi: "+label,Margin=new Padding(0,0,0,10),MaximumSize=new Size(400,0)};
         errors[key]=errorLabel;table.Controls.Add(errorLabel,column+1,row+1);
         if(!pair&&CompactColumns)table.SetColumnSpan(errorLabel,3);
         if(pair&&!compactPending)compactPending=true;else{compactPending=false;row+=2;}
+    }
+
+    public void ShowField(string key,bool visible)
+    {
+        var (caption,field)=fieldRows[key];
+        caption.Visible=field.Visible=visible;
+        if(!visible)errors[key].Visible=false;
     }
 
     public void Changed(string key, Action action)

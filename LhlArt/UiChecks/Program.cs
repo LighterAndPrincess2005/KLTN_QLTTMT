@@ -35,6 +35,10 @@ internal static class Program
             form.Set("ThuHoc","1");Check(form.Date("NgayKhaiGiangDuKien").DayOfWeek==DayOfWeek.Monday,"Chọn Thứ Hai tự căn ngày khai giảng kế tiếp");
             Check(((NumericUpDown)form.Controls.Find("CachTuan",true).Single()).Minimum==1,"Chu kỳ tuần có giới hạn tối thiểu 1");
             form.Set("SoBuoiMoiTuan",2);form.Set("ThuHoc2","3");Check(form.ValidateFields()&&form.TextValue("LichHocDuKien").Contains("2 buổi/tuần"),"Hai thứ học trong tuần cập nhật lịch dự kiến");
+            var monday=form.Date("NgayKhaiGiangDuKien").Date;
+            Check(form.Date("NgayKetThucDuKien").Date==monday.AddDays(51),"16 buổi học thứ Hai và thứ Tư kết thúc ở thứ Tư tuần thứ tám");
+            form.Set("SoBuoiMoiTuan",3);form.Set("ThuHoc3","5");
+            Check(form.Date("NgayKetThucDuKien").Date==monday.AddDays(35),"Đổi sang ba buổi mỗi tuần tự tính lại ngày kết thúc");
             form.Set("SoBuoiMoiTuan",1);
             form.Set("GioBatDau",new TimeSpan(23,30,0));Check(form.FieldError("GioBatDau")!="","Không cho buổi học vượt qua ngày mới");
             form.Set("GioBatDau",new TimeSpan(9,0,0));form.Set("CachTuan",2);Check(form.ValidateFields(),"Sửa hết lỗi: biểu mẫu hợp lệ trước khi lưu");
@@ -124,7 +128,7 @@ internal static class Program
         Check(ApiManagementForm.Label("LaLienHeChinh")=="Liên hệ chính"&&ApiManagementForm.Label("hieuLucTu")=="Có hiệu lực từ"&&ApiManagementForm.Label("DongYHinhAnh")=="Đồng ý sử dụng hình ảnh","Các cột Người đại diện dùng tiếng Việt có dấu, không phụ thuộc chữ hoa thường");
         Check(ApiManagementForm.Label("SoBuoiKeHoach")=="Số buổi kế hoạch"&&ApiManagementForm.Label("NhaCungCapId")=="ID nhà cung cấp"&&ApiManagementForm.Label("LoaiGiaoDich")=="Loại giao dịch"&&ApiManagementForm.Label("XacNhanDuChuyenMon")=="Đã xác nhận đủ chuyên môn","Cột lớp, kho, thu chi và phân công đều dùng bộ nhãn có dấu");
         var translatedRow=Json(new{trangThai="DANG_TUYEN_SINH",trangThaiTuVan="DA_TRA_LOI",maLop="MAIN_L01"});
-        Check(ApiManagementForm.Display(translatedRow,"trangThai")=="Đang tuyển sinh"&&ApiManagementForm.Display(translatedRow,"trangThaiTuVan")=="Đã trả lời"&&ApiManagementForm.Display(translatedRow,"maLop")=="MAIN_L01","Trạng thái có dấu nhưng mã lớp và dữ liệu gốc không bị đổi");
+        Check(ApiManagementForm.Display(translatedRow,"trangThai")=="Đang tuyển sinh"&&ApiManagementForm.Display(translatedRow,"trangThaiTuVan")=="Đã trả lời"&&ApiManagementForm.Display(translatedRow,"maLop")=="—"&&ArtApiClient.Text(translatedRow,"maLop")=="MAIN_L01","Trạng thái có dấu và ẩn mã mẫu khi hiển thị, dữ liệu gốc vẫn giữ đúng");
         var rememberStore=new RememberedLoginStore("http://remember-check.invalid/"+Guid.NewGuid().ToString("N"));
         try{
             Check(rememberStore.Read() is null,"Chưa chọn ghi nhớ: không có thông tin tự đăng nhập");

@@ -1,3 +1,5 @@
+import {useEffect,useState} from 'react';
+import {publicCourseReviews,courseReviewImage,type PublicCourseReview} from '../services/artCenterService';
 import {pageHref} from '../navigation';
 import { ArrowRight, Quote } from 'lucide-react';
 
@@ -22,15 +24,23 @@ const reviews = [
 ];
 
 export function StudentReviews() {
+  const [published,setPublished]=useState<PublicCourseReview[]>([]);
+  useEffect(()=>{let active=true;publicCourseReviews().then(items=>{if(active)setPublished(items)}).catch(()=>{});return()=>{active=false}},[]);
+
   return <section className="section student-reviews" id="reviews" aria-labelledby="reviews-title">
     <div className="shell reviews-paper">
       <div className="reviews-heading">
         <span className="kicker">ĐÁNH GIÁ & CẢM NHẬN HỌC VIÊN</span>
         <h2 id="reviews-title">Những câu chuyện<br/><em>sau một buổi học.</em></h2>
-        <span className="reviews-sample">Ảnh và nhận xét minh họa</span>
+        {!published.length&&<span className="reviews-sample">Ảnh và nhận xét minh họa</span>}
       </div>
       <div className="reviews-grid">
-        {reviews.map(review => <figure className="student-review" key={review.name}>
+        {published.length?published.map(review=><figure className="student-review" key={review.id}>
+          {review.anh&&<div className="review-portrait"><img src={courseReviewImage(review.anh)} alt="Thành phẩm học viên" width="300" height="300" loading="lazy"/></div>}
+          <p aria-label={`${review.soSao} sao`} className="review-name">{'★'.repeat(review.soSao)}</p>
+          <blockquote><p>{review.noiDung}</p></blockquote>
+          <figcaption><span className="review-name">Học viên Mỹ Thuật Bụi</span><span className="review-role">{review.tenKhoa}</span></figcaption>
+        </figure>):reviews.map(review => <figure className="student-review" key={review.name}>
           <div className="review-portrait">
             <img src={review.image} alt={`Ảnh tham khảo của ${review.name}`} width="300" height="300" loading="lazy"/>
             <Quote className="review-quote" size={30} aria-hidden="true"/>
@@ -39,7 +49,7 @@ export function StudentReviews() {
           <figcaption><span className="review-name">{review.name}</span><span className="review-role">Chia sẻ về trải nghiệm học mỹ thuật</span></figcaption>
         </figure>)}
       </div>
-      <div className="reviews-footer"><p>Mỗi trải nghiệm đều là một dịp để lắng nghe.</p><a className="text-link" href={pageHref('/hoc-tap')}>Gửi phản hồi về lớp học <ArrowRight size={18}/></a></div>
+      <div className="reviews-footer"><p>Mỗi trải nghiệm đều là một dịp để lắng nghe.</p><a className="text-link" href={pageHref('/hoc-tap')}>Đánh giá khóa học <ArrowRight size={18}/></a></div>
     </div>
   </section>;
 }

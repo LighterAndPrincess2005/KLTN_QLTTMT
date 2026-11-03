@@ -8,23 +8,43 @@ internal sealed class WeeklyScheduleFields
     public WeeklyScheduleFields(InputForm form,string dateKey,string existing,Func<int> duration,bool locked=false,DateTime? actual=null)
     {
         this.form=form;this.dateKey=dateKey;this.duration=duration;
-        var parsed=ClassPlanRules.Parse(existing);var day=actual.HasValue?(int?)actual.Value.DayOfWeek:parsed.Day;
+        var parsed=ClassPlanRules.Parse(existing);var day=actual.HasValue?(int?)actual.Value.DayOfWeek:parsed.Day??(int)form.Date(dateKey).DayOfWeek;
         var time=actual?.TimeOfDay??parsed.Start??new TimeSpan(9,0,0);
         if(!locked)time=ClassPlanRules.Period(time) switch{"CHIEU"=>new TimeSpan(14,0,0),"TOI"=>new TimeSpan(18,30,0),_=>new TimeSpan(9,0,0)};
-        form.Add("ThuHoc","Thứ học cố định",day?.ToString()??"",new[]{new Choice("","Chọn thứ học")}.Concat(Enumerable.Range(1,7).Select(i=>i%7).Select(i=>new Choice(i.ToString(),ClassPlanRules.Weekdays[i]))),readOnly:locked);
-        form.Add("CaHoc","Ca học (giờ cố định)",ClassPlanRules.Period(time),[new("SANG","Sáng · 09:00"),new("CHIEU","Chiều · 14:00"),new("TOI","Tối · 18:30")],readOnly:locked);
-        form.Add("GioBatDau","Giờ bắt đầu theo ca",time,readOnly:true);
-        form.Add("CachTuan","Chu kỳ (tuần)",parsed.Weeks,readOnly:locked);
+        form.Add("CaHoc","Ca học",ClassPlanRules.Period(time),[new("SANG","Sáng · 09:00"),new("CHIEU","Chiều · 14:00"),new("TOI","Tối · 18:30")],readOnly:locked);
         var selectedDays=Enumerable.Range(0,7).Where(i=>ClassPlanRules.ContainsDay(ApiDataService.Normalize(existing),i))
             .OrderBy(i=>(i-(day??0)+7)%7).ToArray();
-        form.Add("SoBuoiMoiTuan","Số buổi trong tuần học",Math.Max(1,selectedDays.Length),readOnly:locked);
+        form.Add("SoBuoiMoiTuan","Buổi/tuần học",Math.Max(1,selectedDays.Length),readOnly:locked);
         var weekdays=new[]{new Choice("","Chọn thứ học")}.Concat(Enumerable.Range(1,7).Select(i=>i%7).Select(i=>new Choice(i.ToString(),ClassPlanRules.Weekdays[i]))).ToArray();
-        form.Add("ThuHoc2","Thứ học thứ hai",selectedDays.Length>1?selectedDays[1].ToString():"",weekdays,readOnly:locked);
-        form.Add("ThuHoc3","Thứ học thứ ba",selectedDays.Length>2?selectedDays[2].ToString():"",weekdays,readOnly:locked);
+        form.Add("ThuHoc","Buổi 1 học thứ",day?.ToString()??"",weekdays,readOnly:locked);
+        form.Add("ThuHoc2","Buổi 2 học thứ",selectedDays.Length>1?selectedDays[1].ToString():"",weekdays,readOnly:locked);
+        form.Add("ThuHoc3","Buổi 3 học thứ",selectedDays.Length>2?selectedDays[2].ToString():"",weekdays,readOnly:locked);
+        form.Add("GioBatDau","Giờ thực tế",time,readOnly:true);
+        form.ShowField("GioBatDau",locked);
         form.Add("LichHocDuKien","Lịch học dự kiến (tự tạo)",existing,readOnly:true,multiline:true);
-        form.Changed("ThuHoc",()=>{if(!locked&&int.TryParse(form.TextValue("ThuHoc"),out var selected)){adjusting=true;form.Set(dateKey,ClassPlanRules.NextDay(form.Date(dateKey),selected));adjusting=false;}Refresh();});
+        // New schedules default to weekly. Existing drafts retain their saved interval.
+        form.Add("CachTuan","Khoảng cách giữa hai tuần học",parsed.Weeks,readOnly:true);
+        form.ShowField("CachTuan",false);
+        form.Changed("ThuHoc",()=>{
+            if(!locked&&!adjusting&&int.TryParse(form.TextValue("ThuHoc"),out var selected))
+            {
+                adjusting=true;
+                form.Set(dateKey,ClassPlanRules.NextDay(form.Date(dateKey),selected));
+                adjusting=false;
+            }
+            Refresh();
+        });
+        form.Changed(dateKey,()=>{
+            if(!locked&&!adjusting)
+            {
+                adjusting=true;
+                form.Set("ThuHoc",((int)form.Date(dateKey).DayOfWeek).ToString());
+                adjusting=false;
+            }
+            Refresh();
+        });
         form.Changed("CaHoc",()=>{if(!locked&&!adjusting){adjusting=true;form.Set("GioBatDau",form.TextValue("CaHoc") switch{"CHIEU"=>new TimeSpan(14,0,0),"TOI"=>new TimeSpan(18,30,0),_=>new TimeSpan(9,0,0)});adjusting=false;}Refresh();});
-        foreach(var key in new[]{dateKey,"GioBatDau","CachTuan","SoBuoiMoiTuan","ThuHoc2","ThuHoc3"})form.Changed(key,Refresh);
+        foreach(var key in new[]{"GioBatDau","CachTuan","SoBuoiMoiTuan","ThuHoc2","ThuHoc3"})form.Changed(key,Refresh);
         Refresh();
     }
     public DateTime First=>form.Date(dateKey).Date.Add(form.Time("GioBatDau"));
@@ -41,7 +61,13 @@ internal sealed class WeeklyScheduleFields
     public string Description=>int.TryParse(form.TextValue("ThuHoc"),out var day)&&day is >=0 and <=6&&duration() is >0 and <1440
         ?$"{string.Join(", ",Days.Where(x=>x is >=0 and <=6).Select(x=>ClassPlanRules.Weekdays[x]))} · {form.Time("GioBatDau").ToString(@"hh\:mm")}–{form.Time("GioBatDau").Add(TimeSpan.FromMinutes(duration())).ToString(@"hh\:mm")} · "+(Weeks==1?"Hàng tuần":$"Mỗi {Weeks} tuần")+$" · {Days.Length} buổi/{(Weeks==1?"tuần":$"{Weeks} tuần")}"
         :"Chọn thứ học và khóa học để xem lịch dự kiến.";
-    public void Refresh(){form.Set("LichHocDuKien",Description);if(form.FieldValidation!=null&&!adjusting)form.ValidateFields();}
+    public void Refresh()
+    {
+        form.ShowField("ThuHoc2",Days.Length>=2);
+        form.ShowField("ThuHoc3",Days.Length>=3);
+        form.Set("LichHocDuKien",Description);
+        if(form.FieldValidation!=null&&!adjusting)form.ValidateFields();
+    }
     public Dictionary<string,string> Validate()
     {
         var errors=ClassPlanRules.ValidateSlot(int.TryParse(form.TextValue("ThuHoc"),out var day)?day:null,form.TextValue("CaHoc"),form.Time("GioBatDau"),Weeks,form.Date(dateKey),duration());

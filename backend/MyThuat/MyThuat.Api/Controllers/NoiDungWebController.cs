@@ -41,6 +41,32 @@ public sealed class NoiDungWebController(MyThuatDbContext db,AuditService audit)
     public async Task<object> Courses(CancellationToken ct)=>await db.GioiThieuKhoaHoc.AsNoTracking().Where(x=>x.KhoaHoc!.TrangThai=="HOAT_DONG").ToListAsync(ct);
     [Authorize(Policy="HoSo"),HttpPut("quan-ly/khoa-hoc/{id:long}")]
     public async Task<object> SaveCourse(long id,CourseIntroRequest r,CancellationToken ct){ApiError.Require(await db.KhoaHoc.AnyAsync(x=>x.Id==id,ct)&&SafeUrl(r.AnhDaiDien)&&r.ThanhPham.Count<=20&&r.ThanhPham.All(SafeUrl)&&r.DauRa.Count is >0 and <=20,"Thông tin khóa không hợp lệ.");var row=await db.GioiThieuKhoaHoc.SingleOrDefaultAsync(x=>x.KhoaHocId==id,ct);if(row==null){row=new(){KhoaHocId=id};db.GioiThieuKhoaHoc.Add(row);}else ApiError.Require(Convert.ToBase64String(row.RowVersion)==r.RowVersion,"Thông tin đã thay đổi.",409);row.AnhDaiDien=r.AnhDaiDien;row.DauRaJson=JsonSerializer.Serialize(r.DauRa);row.ThanhPhamJson=JsonSerializer.Serialize(r.ThanhPham);row.HoaCuBaoGom=r.HoaCuBaoGom;row.CanChuanBi=r.CanChuanBi;audit.Add("KhoaHoc",id,"SUA_GIOI_THIEU_KHOA");await db.SaveChangesAsync(ct);return new{row.Id,row.RowVersion};}
+    public sealed record CourseImages(string AnhDaiDien, string[] ThanhPham, string? RowVersion);
+
+    [Authorize(Policy="DaoTao"),HttpGet("quan-ly/khoa-hoc/{id:long}/anh")]
+    public async Task<CourseImages> GetCourseImages(long id,CancellationToken ct)
+    {
+        var row=await db.GioiThieuKhoaHoc.AsNoTracking().SingleOrDefaultAsync(x=>x.KhoaHocId==id,ct);
+        return row is null ? new("",[],null) : new(row.AnhDaiDien,
+            JsonSerializer.Deserialize<string[]>(row.ThanhPhamJson) ?? [],Convert.ToBase64String(row.RowVersion));
+    }
+
+    [Authorize(Policy="DaoTao"),HttpPut("quan-ly/khoa-hoc/{id:long}/anh")]
+    public async Task<IActionResult> SaveCourseImages(long id,CourseImages images,CancellationToken ct)
+    {
+        ApiError.Require(await db.KhoaHoc.AnyAsync(x=>x.Id==id,ct),"Không có khóa học.",404);
+        ApiError.Require((images.AnhDaiDien.Length==0||SafeUrl(images.AnhDaiDien))
+            &&images.ThanhPham.Length<=20&&images.ThanhPham.All(SafeUrl),"Ảnh không hợp lệ hoặc có hơn 20 ảnh thành phẩm.");
+        var row=await db.GioiThieuKhoaHoc.SingleOrDefaultAsync(x=>x.KhoaHocId==id,ct);
+        ApiError.Require((row is null?null:Convert.ToBase64String(row.RowVersion))==images.RowVersion,"Ảnh khóa học đã thay đổi. Hãy tải lại.",409);
+        if(row is null){row=new(){KhoaHocId=id};db.GioiThieuKhoaHoc.Add(row);}
+        row.AnhDaiDien=images.AnhDaiDien;
+        row.ThanhPhamJson=JsonSerializer.Serialize(images.ThanhPham);
+        audit.Add("KhoaHoc",id,"SUA_ANH_KHOA_HOC");
+        await db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
     [AllowAnonymous,HttpGet("quy-dinh")]
     public async Task<object> Policy(CancellationToken ct){var rule=await db.QuyDinh.AsNoTracking().Where(x=>x.TrangThai=="HOAT_DONG"&&x.HieuLucTu<=BusinessClock.Now&&(x.HieuLucDen==null||x.HieuLucDen>BusinessClock.Now)).OrderByDescending(x=>x.HieuLucTu).FirstOrDefaultAsync(ct)??throw new ApiError(404,"Chưa công bố quy định.");return new{rule.Id,rule.MaBoQuyDinh,rule.SoPhienBan,QuyDinh=PolicySettings.Parse(rule.NoiDungJson)};}
 }

@@ -10,11 +10,11 @@ internal sealed class StudioDashboard : TableLayoutPanel
     readonly Label connection=new();
     readonly List<Label> values=new();
     readonly FlowLayoutPanel links=new();
-    public StudioDashboard(ArtApiClient client,IReadOnlyList<(string Name,string Route,bool Paged)> destinations,Func<string,string,bool,Task> open)
+    public StudioDashboard(ArtApiClient client,IReadOnlyList<(string Name,string Route,bool Paged)> destinations,Func<string,string,bool,Task> open,bool overview=false)
     {
         api=client;AutoSize=true;ColumnCount=1;RowCount=6;BackColor=Theme.Paper;Margin=new Padding(0);
         ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
-        foreach(float h in new[]{245f,52f,132f,65f,190f,48f})RowStyles.Add(new RowStyle(SizeType.Absolute,h));
+        foreach(float h in new[]{overview?0f:245f,52f,132f,65f,190f,48f})RowStyles.Add(new RowStyle(SizeType.Absolute,h));
         var hero=new StudioCard {Dock=DockStyle.Fill,Fill=Theme.Navy,Outline=false,Padding=new Padding(30,22,22,22),Margin=new Padding(0)};
         var art=new StudioPhoto {Dock=DockStyle.Right,Width=270};hero.Controls.Add(art);
         var copy=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=4,BackColor=Theme.Navy};
@@ -24,16 +24,17 @@ internal sealed class StudioDashboard : TableLayoutPanel
         copy.Controls.Add(TextLabel("Một ngày mới tại Bụi.",25,Color.White,true),0,1);
         copy.Controls.Add(TextLabel("Cùng tạo nên một ngày thật nhiều cảm hứng\nvà chăm chút từng hành trình học tập.",11,Color.FromArgb(221,232,218)),0,2);
         var date=new Label {Text=Services.BusinessTime.Now.ToString("dddd, dd 'tháng' MM, yyyy",Theme.Culture),AutoSize=true,BackColor=Theme.Navy,ForeColor=Theme.Gold,Font=Theme.Font(9,FontStyle.Bold),Padding=new Padding(0,13,0,0)};copy.Controls.Add(date,0,3);
-        hero.Controls.Add(copy);Controls.Add(hero,0,0);
-        Controls.Add(TextLabel("Nhịp sống trung tâm",15,Theme.Ink,true,16),0,1);
-        var stats=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=4,RowCount=1,Margin=new Padding(0)};
+        hero.Controls.Add(copy);Controls.Add(hero,0,0);hero.Visible=!overview;
+        Controls.Add(TextLabel(overview?"Tổng quan trung tâm":"Nhịp sống trung tâm",15,Theme.Ink,true,16),0,1);
         var names=api.Has(32)?new[]{"Học viên hoạt động","Giáo viên","Lớp tuyển sinh","Lớp đang học"}:api.Has(8)?new[]{"Buổi được phân công","Buổi học hôm nay","Buổi sắp tới","Buổi đã tổ chức"}:new[]{"Vai trò","Không gian","Dữ liệu","Phiên làm việc"};
-        for(int i=0;i<4;i++)
+        if(overview)names=[..names,"Phản hồi quá hạn"];
+        var stats=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=names.Length,RowCount=1,Margin=new Padding(0)};
+        for(int i=0;i<names.Length;i++)
         {
-            stats.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,25));
-            var card=new StudioCard {Dock=DockStyle.Fill,Padding=new Padding(20,16,15,10),Margin=new Padding(i==0?0:7,0,i==3?0:7,0)};
-            var number=new Label {Text="—",Dock=DockStyle.Top,Height=52,Font=Theme.Font(28,FontStyle.Bold),ForeColor=i==2?Theme.Coral:Theme.Teal};values.Add(number);
-            var name=new Label {Text=names[i],Dock=DockStyle.Bottom,Height=28,Font=Theme.Font(9.5f),ForeColor=Theme.Muted};
+            stats.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100f/names.Length));
+            var card=new StudioCard {Dock=DockStyle.Fill,Padding=new Padding(12,16,10,10),Margin=new Padding(i==0?0:7,0,i==names.Length-1?0:7,0)};
+            var number=new Label {Text="—",Dock=DockStyle.Top,Height=52,Font=Theme.Font(28,FontStyle.Bold),ForeColor=i is 2 or 4?Theme.Coral:Theme.Teal};values.Add(number);
+            var name=new Label {Text=names[i],Dock=DockStyle.Bottom,Height=38,Font=Theme.Font(9.5f),ForeColor=Theme.Muted};
             card.Controls.Add(number);card.Controls.Add(name);stats.Controls.Add(card,i,0);
         }
         Controls.Add(stats,0,2);
@@ -62,8 +63,8 @@ internal sealed class StudioDashboard : TableLayoutPanel
             if(api.Has(32))
             {
                 var overview=await api.Read("api/bao-cao/tong-quan");
-                var keys=new[]{"hocVien","giaoVien","lopTuyenSinh","lopDangHoc"};
-                for(int i=0;i<keys.Length;i++)values[i].Text=ArtApiClient.Text(overview,keys[i]);
+                var keys=new[]{"hocVien","giaoVien","lopTuyenSinh","lopDangHoc","phanHoiQuaHan"};
+                for(int i=0;i<values.Count;i++)values[i].Text=ArtApiClient.Text(overview,keys[i]);
             }
             else if(api.Has(8))
             {

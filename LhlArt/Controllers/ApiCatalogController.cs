@@ -16,7 +16,7 @@ internal sealed class ApiCatalogController(ArtApiClient api)
     static Field State(string initial="HOAT_DONG",params string[] options) => new("TrangThai","Trạng thái",initial,Options:options.Length>0?options:["HOAT_DONG","NGUNG","NHAP"]);
     static Field[] Fields(string route) => route.Split('/').Last() switch
     {
-        "loai-khoa-hoc" => [Text("MaLoai","Mã loại"),Text("TenLoai","Tên loại"),Text("MoTa","Mô tả"),State()],
+        "loai-khoa-hoc" => [Text("TenLoai","Tên loại khóa học"),Text("MoTa","Mô tả"),State()],
         "khoa-hoc" => [Link("LoaiKhoaHocId","Loại khóa","loai-khoa-hoc","TenLoai"),Text("MaKhoa","Mã khóa (tự sinh)"),Text("TenKhoa","Tên khóa"),Number("PhienBan","Phiên bản",1),Text("CapDo","Cấp độ"),Number("TuoiToiThieu","Tuổi tối thiểu",6),Text("YeuCauDauVao","Yêu cầu đầu vào"),Text("MucTieu","Mục tiêu"),Number("SoBuoi","Số buổi",16),Number("PhutMoiBuoi","Số phút một buổi",120),Number("HocPhi","Học phí"),new("HieuLucTu","Ngày hiệu lực (tự ghi)",BusinessTime.Now.Date),State("NHAP","NHAP","HOAT_DONG","NGUNG")],
         "noi-dung-buoi" => [Link("KhoaHocId","Khóa học","khoa-hoc","TenKhoa"),Number("ThuTu","Thứ tự buổi",1),Text("ChuDe","Chủ đề"),Text("NoiDung","Nội dung"),Number("PhutBuoi","Số phút buổi học",120),Text("YeuCauSanPham","Yêu cầu sản phẩm")],
         "lop-hoc" => [Link("KhoaHocId","Khóa học","khoa-hoc","TenKhoa"),Text("MaLop","Mã lớp"),Text("TenLop","Tên lớp"),new("NgayKhaiGiangDuKien","Ngày khai giảng",DateTime.Today.AddDays(21)),Number("SoBuoiKeHoach","Số buổi kế hoạch",16),Text("LichHocDuKien","Mô tả lịch học"),Number("SiSoToiThieu","Sĩ số tối thiểu",6),Number("SiSoToiDa","Sĩ số tối đa",12),Number("HocPhiApDung","Học phí áp dụng"),new("MoDangKyLuc","Mở đăng ký lúc",DateTime.Today),new("DongDangKyLuc","Đóng đăng ký lúc",DateTime.Today.AddDays(18)),State("NHAP","NHAP","DANG_TUYEN_SINH","DANG_HOC","DA_KET_THUC")],
@@ -47,7 +47,7 @@ internal sealed class ApiCatalogController(ArtApiClient api)
         }
         return result;
     }
-    public async Task Edit(IWin32Window owner,string route,string title,JsonElement? row)
+    public async Task Edit(IWin32Window owner,string route,string title,JsonElement? row,string? selectedCourse=null,int nextLesson=1)
     {
         if(route=="api/quan-ly/lop-hoc"){await new ApiClassController(api).Edit(owner,row);return;}
         var fields=Fields(route);
@@ -56,8 +56,15 @@ internal sealed class ApiCatalogController(ArtApiClient api)
         var content=route.EndsWith("/noi-dung-buoi",StringComparison.Ordinal);
         using var form=new InputForm((row.HasValue?"Cập nhật ":"Thêm ")+title.ToLowerInvariant()){CompactColumns=true};
         var courseRows=content?await new ApiDataService(api).All("api/quan-ly/khoa-hoc"):new List<JsonElement>();
-        var hasSyllabus=course&&row.HasValue&&(await new ApiDataService(api).All("api/quan-ly/noi-dung-buoi"))
-            .Any(x=>ArtApiClient.Text(x,"khoaHocId")==ArtApiClient.Text(row.Value,"id"));
+        async Task<HashSet<long>> ReadLessons()=> (await new ApiDataService(api).All("api/quan-ly/noi-dung-buoi"))
+            .Where(x=>ArtApiClient.Text(x,"khoaHocId")==ArtApiClient.Text(row!.Value,"id"))
+            .Select(x=>ApiDataService.Id(x,"thuTu")).ToHashSet();
+        var lessons=course&&row.HasValue?await ReadLessons():new HashSet<long>();
+        var hasSyllabus=lessons.Count>0;
+        var draft=course&&(!row.HasValue||ArtApiClient.Text(row.Value,"trangThai")=="NHAP");
+        IEnumerable<Choice> CourseStates(int count)=>draft
+            ? count>0&&lessons.Count==count?[new("NHAP","Bản nháp"),new("HOAT_DONG","Công bố khóa")]:[new("NHAP","Bản nháp")]
+            : [new("HOAT_DONG","Hoạt động"),new("NGUNG","Ngừng sử dụng")];
         if(course&&!row.HasValue)form.Add("TienToMa","Tiền tố mã khóa (3–4 chữ)","",multiline:false);
         int MinutesPerPart()
         {
@@ -69,12 +76,14 @@ internal sealed class ApiCatalogController(ArtApiClient api)
         foreach(var f in fields)
         {
             object value=f.Value;
+            if(content&&selectedCourse!=null&&f.Key=="KhoaHocId")value=selectedCourse;
+            if(content&&selectedCourse!=null&&f.Key=="ThuTu")value=nextLesson;
             if(row.HasValue&&ArtApiClient.TryGet(row.Value,f.Key,out var existing)&&existing.ValueKind!=JsonValueKind.Null)
                 value=f.Value is int?existing.GetInt32():f.Value is decimal?existing.GetDecimal():f.Value is DateTime?DateTime.Parse(existing.GetString()!,CultureInfo.InvariantCulture):existing.ToString();
             if(course&&f.Key=="PhutMoiBuoi")value=row.HasValue?(int)(ArtApiClient.Get(row.Value,"soTietMoiBuoi").GetInt32()*ArtApiClient.Get(row.Value,"phutMoiTiet").GetInt32()):120;
             if(content&&f.Key=="PhutBuoi")
             {
-                var selected=courseRows.FirstOrDefault(x=>ArtApiClient.Text(x,"id")==ArtApiClient.Text(row??default,"khoaHocId"));
+                var selected=courseRows.FirstOrDefault(x=>ArtApiClient.Text(x,"id")== (selectedCourse??ArtApiClient.Text(row??default,"khoaHocId")));
                 value=selected.ValueKind==JsonValueKind.Object?ArtApiClient.Get(selected,"soTietMoiBuoi").GetInt32()*ArtApiClient.Get(selected,"phutMoiTiet").GetInt32():120;
             }
             var generatedCode=f.Key is "MaLoai" or "MaKhoa" or "MaGiaoVien" or "MaPhong" or "MaHoaCu" or "MaNCC";
@@ -90,7 +99,31 @@ internal sealed class ApiCatalogController(ArtApiClient api)
             else if(f.Lookup is not null)choices=await Choices(f.Lookup,f.Name!);
             if(materialPlan&&f.Key=="CoSoTinh")choices=[new("HOC_VIEN","Mỗi học viên"),new("LOP","Cả lớp trong một buổi")];
             if(course&&f.Key=="CapDo")choices=new[]{new Choice("","Chọn cấp độ")}.Concat(levels.Select(x=>new Choice(x,x)));
+            if(course&&f.Key=="TrangThai")choices=CourseStates(row.HasValue?(int)ApiDataService.Id(row.Value,"soBuoi"):0);
             form.Add(f.Key,f.Label,value,choices,readOnly:(generatedCode||(course&&(f.Key is ("MaKhoa" or "HieuLucTu")||hasSyllabus&&f.Key is ("SoBuoi" or "PhutMoiBuoi")))||(content&&f.Key=="PhutBuoi")),multiline:f.Key is "YeuCauDauVao" or "MucTieu" or "MoTa" or "NoiDung");
+        }
+        if(course)
+        {
+            string Progress()=>row.HasValue
+                ? $"Đã nhập {lessons.Count}/{form.Number("SoBuoi")} buổi. Bạn có thể lưu nháp và bổ sung sau. Đủ nội dung mới công bố được."
+                : "Khóa mới lưu ở Bản nháp. Bạn có thể để trống nội dung từng buổi và bổ sung sau.";
+            form.Add("SyllabusProgress","Nội dung khóa",Progress(),readOnly:true,multiline:true);
+            form.Changed("SoBuoi",()=>form.Set("SyllabusProgress",Progress()));
+            if(draft&&row.HasValue)
+                form.AddAction("Thêm nội dung buổi",async()=>{
+                    var total=(int)ApiDataService.Id(row.Value,"soBuoi");
+                    var minutes=ApiDataService.Id(row.Value,"soTietMoiBuoi")*ApiDataService.Id(row.Value,"phutMoiTiet");
+                    if(form.Number("SoBuoi")!=total||form.Number("PhutMoiBuoi")!=minutes)
+                        throw new InvalidOperationException("Hãy lưu số buổi và thời lượng mới trước khi thêm nội dung.");
+                    var missing=Enumerable.Range(1,total).FirstOrDefault(x=>!lessons.Contains(x));
+                    if(missing==0){MessageBox.Show(form,"Khóa đã đủ nội dung từng buổi.");return;}
+                    await Edit(form,"api/quan-ly/noi-dung-buoi","Nội dung buổi",null,ArtApiClient.Text(row.Value,"id"),missing);
+                    lessons=await ReadLessons();
+                    if(lessons.Count>0){form.Enable("SoBuoi",false);form.Enable("PhutMoiBuoi",false);}
+                    form.Options("TrangThai",CourseStates(total));
+                    form.Set("TrangThai","NHAP");
+                    form.Set("SyllabusProgress",Progress());
+                });
         }
         if(materialPlan)form.FieldValidation=()=>
         {

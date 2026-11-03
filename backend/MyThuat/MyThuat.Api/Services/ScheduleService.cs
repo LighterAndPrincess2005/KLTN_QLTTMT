@@ -7,6 +7,27 @@ using MyThuat.Api.Security;
 namespace MyThuat.Api.Services;
 public sealed class ScheduleService(MyThuatDbContext db,AuditService audit,AccessService access,PolicyService policies,NotificationService notifications)
 {
+    public async Task<object> Availability(DateTime start,DateTime end,CancellationToken ct)
+    {
+        access.Need(Permission.DaoTao);
+        ApiError.Require(start.Year>=1900&&start.Year<9999&&start.Kind==DateTimeKind.Unspecified&&
+            end.Kind==DateTimeKind.Unspecified&&end>start&&end.Date==start.Date,"Chọn một ca trong cùng ngày, dùng giờ Việt Nam.");
+        var rule=PolicySettings.Parse((await policies.Current(ct)).NoiDungJson);
+        var conflictFrom=start.AddMinutes(-rule.NghiGiuaCaPhut);
+        var conflictTo=end.AddMinutes(rule.NghiGiuaCaPhut);
+        var dayStart=conflictFrom<start.Date?conflictFrom:start.Date;
+        var nextDay=start.Date.AddDays(1);
+        var dayEnd=conflictTo>nextDay?conflictTo:nextDay;
+        var sessions=await db.BuoiHoc.AsNoTracking().Where(x=>x.TrangThai!="DA_HUY"&&x.BatDau<dayEnd&&x.KetThuc>dayStart)
+            .OrderBy(x=>x.BatDau)
+            .Select(x=>new{x.Id,x.PhongHocId,x.LopHoc!.TenLop,x.BatDau,x.KetThuc,
+                TrungCa=x.BatDau<conflictTo&&x.KetThuc>conflictFrom}).ToListAsync(ct);
+        var ids=sessions.Select(x=>x.Id).ToList();
+        var staff=await db.GiangDayBuoi.AsNoTracking().Where(x=>ids.Contains(x.BuoiHocId))
+            .Select(x=>new{x.BuoiHocId,x.GiaoVienId}).ToListAsync(ct);
+        return new {NgayNghi=rule.NgayNghi.Contains(DateOnly.FromDateTime(start)),rule.NghiGiuaCaPhut,BuoiHoc=sessions,GiangDay=staff};
+    }
+
     public async Task CheckSlot(long classId,long roomId,DateTime start,DateTime end,IEnumerable<long> teacherIds,long? ignore,CancellationToken ct)
     {
         ApiError.Require(start.Kind!=DateTimeKind.Utc&&start.Year>=1900&&end>start,"Giờ học phải là giờ Việt Nam hợp lệ.");
