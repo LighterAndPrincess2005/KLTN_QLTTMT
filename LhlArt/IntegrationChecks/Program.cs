@@ -116,7 +116,7 @@ try
     var detail=await staff.Read("api/dang-ky/"+enrollmentId);Check(Id(ArtApiClient.Get(detail,"dangKy"))==enrollmentId,"Tra cứu ID đăng ký bằng API mới");
     var debt=await staff.Read($"api/dang-ky/{enrollmentId}/cong-no");var charge=ArtApiClient.Get(debt,"khoanThu")[0];
     Check(ArtApiClient.Get(charge,"conThieu").GetDecimal()==85000,"Công nợ sau ưu đãi khớp báo giá web");
-    await staff.Post("api/giao-dich/thu",new{DangKyId=enrollmentId,KhoanThuId=Id(charge),SoTien=85000,PhuongThuc="TIEN_MAT",MaChungTu="PT-CHECK-01",IdempotencyKey="WIN-RECEIPT-0001"});
+    var receiptPayment=await staff.Post("api/giao-dich/thu",new{DangKyId=enrollmentId,KhoanThuId=Id(charge),SoTien=85000,PhuongThuc="TIEN_MAT",MaChungTu="PT-CHECK-01",IdempotencyKey="WIN-RECEIPT-0001"});
     var registrations=await Web("GET","api/dang-ky/toi");Check(registrations.EnumerateArray().Any(x=>Id(x)==enrollmentId&&T(x,"trangThai")=="DA_XAC_NHAN"),"WinForms thu đủ học phí, web chuyển sang đã xác nhận");
     var webStudent=await Web("POST","api/hoc-vien/toi",new{HoTen="Nguyễn Bảo An",NgaySinh="2010-05-12",QuanHe="ME",LienHeKhanCapTen="Nguyễn Thị Ánh",LienHeKhanCapSDT="0900000000",MucTieuHoc="Học vẽ"});
     var webRegistration=await Web("POST","api/dang-ky",new{HocVienId=Id(webStudent),LopHocId=classId,NguoiDangKyId=memberId,IdempotencyKey="WEB-INTEGRATION-0001"});
@@ -364,6 +364,12 @@ try
     Check(invalidCodeRejected,"Recovery template rejects non-digit code input");
     await BusinessIntegrityChecks.Run(staff,options,Check);
     await ClassInventoryChecks.Run(staff,app.Services,options,Check);
+    var receipt=await staff.Read("api/giao-dich/phieu-thu/"+Id(receiptPayment));
+    Check(T(receipt,"maChungTu")=="PT-CHECK-01"&&ArtApiClient.Get(receipt,"soTien").GetDecimal()==85000&&
+        T(receipt,"tenHocVien")!=""&&T(receipt,"tenLop")!="","PT01 Phiếu thu đọc đúng số tiền, chứng từ, học viên và lớp");
+    var receiptList=await staff.Read("api/giao-dich/phieu-thu");
+    Check(receiptList.EnumerateArray().Count(x=>Id(x)==Id(receiptPayment))==1&&
+        !receiptList.EnumerateArray().Any(x=>T(x,"maChungTu")=="SP910005"),"PT02 Có thể mở lại phiếu đã thu, không in khoản tiền đang đối chiếu");
     Console.WriteLine($"ALL {checks} WINFORMS/API INTEGRATION CHECKS PASSED ({(sql?"SQL Server":"SQLite temporary store")}).");
 }
 finally

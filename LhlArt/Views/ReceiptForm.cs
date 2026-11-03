@@ -3,9 +3,9 @@ using LhlArt.Views.Shared;
 namespace LhlArt.Views;
 public sealed class ReceiptForm : Form
 {
-    public ReceiptForm(string text)
+    public ReceiptForm(string text,string title="Phiếu đăng ký")
     {
-        Text = "Phiếu đăng ký | Mỹ Thuật Bụi";
+        Text = title+" | Mỹ Thuật Bụi";
         Size = new Size(760, 780);
         MinimumSize = new Size(650, 550);
         StartPosition = FormStartPosition.CenterParent;

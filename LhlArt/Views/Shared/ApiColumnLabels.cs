@@ -232,6 +232,7 @@ internal static class ApiColumnLabels
     LyDoQuyetDinh=Lý do quyết định
     LyDoThayThe=Lý do thay thế
     MaChungTu=Mã chứng từ
+    NoiDungThu=Nội dung thu
     MaLo=Mã lô
     MaThamChieu=Mã tham chiếu
     MauSac=Màu sắc

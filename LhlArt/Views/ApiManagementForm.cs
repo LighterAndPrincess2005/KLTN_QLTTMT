@@ -104,6 +104,7 @@ public sealed class ApiManagementForm : Form
         if(api.Has(16)) {Item("Họa cụ","api/quan-ly/hoa-cu",true);Item("Định mức theo buổi","api/quan-ly/dinh-muc",true);Item("Nhà cung cấp","api/quan-ly/nha-cung-cap",true);Item("Tồn kho","api/kho/ton");Item("Phiếu kho","api/kho/phieu");}
         if(api.Has(4)) Item("Thu tiền chờ đối chiếu","api/giao-dich/cho-doi-chieu");
         if(api.Has(4)) Item("Học viên báo chuyển khoản","api/thanh-toan/bao-chuyen-khoan");
+        if(api.Has(4)) Item("Phiếu thu học phí","api/giao-dich/phieu-thu");
         if(api.Has(64)) Item("Tài khoản & vai trò","api/tai-khoan");
         if(api.Role=="QUAN_TRI")
         {
@@ -121,18 +122,9 @@ public sealed class ApiManagementForm : Form
         }
         if(api.Has(32)&&api.Has(4))
         {
-            var chart=NavButton("Báo cáo thu / hoàn","Báo cáo");chart.Click+=async(_,_)=>await Run(async()=>{
-                var values=new List<Models.MonthlyFigures>();
-                var month=new DateTime(BusinessTime.Now.Year,BusinessTime.Now.Month,1).AddMonths(-5);
-                for(var i=0;i<6;i++)
-                {
-                    var from=month.AddMonths(i);var to=from.AddMonths(1).AddDays(-1);
-                    var result=await api.Read($"api/bao-cao/thu-hoan?tuNgay={from:yyyy-MM-dd}&denNgay={to:yyyy-MM-dd}");
-                    values.Add(new Models.MonthlyFigures(from,ArtApiClient.Get(result,"thuDaPhanBo").GetDecimal(),ArtApiClient.Get(result,"hoanDaPhanBo").GetDecimal(),0));
-                }
-                using var dialog=new Form {Text="Thu và hoàn tiền đã phân bổ",Size=new Size(1040,640),StartPosition=FormStartPosition.CenterParent};
-                dialog.Controls.Add(new StatisticsView(values,true));dialog.ShowDialog(this);
-            });nav.Controls.Add(chart);
+            var chart=NavButton("Báo cáo thu / hoàn","Báo cáo");
+            chart.Click+=(_,_)=>{using var report=new CashReportForm(api);report.ShowDialog(this);};
+            nav.Controls.Add(chart);
         }
         if(api.Has(128)) Item("Nhật ký thao tác","api/bao-cao/nhat-ky");
         var passwordButton=NavButton("Đổi mật khẩu của tôi","Quản trị");passwordButton.Name="change-password";passwordButton.Click+=async(_,_)=>await Run(async()=>{var accounts=new ApiAccountsController(api);await accounts.ChangeOwnPassword(this);if(accounts.PasswordChanged){MessageBox.Show(this,"Đã đổi mật khẩu. Vui lòng đăng nhập lại.");Logout=true;Close();}});accountActions.Controls.Add(passwordButton);
@@ -162,7 +154,7 @@ public sealed class ApiManagementForm : Form
         static string Group(ActionButton button)=>button.Tag?.ToString() switch{
             "api/quan-ly/thanh-vien" or "api/quan-ly/hoc-vien" or "api/quan-ly/dai-dien" or "api/phan-hoi" or "api/tu-van"=>"profiles",
             "api/quan-ly/loai-khoa-hoc" or "api/quan-ly/noi-dung-buoi" or "api/quan-ly/khoa-hoc" or "api/quan-ly/lop-hoc" or "api/quan-ly/giao-vien" or "api/quan-ly/phong-hoc" or "api/lich-hoc"=>"training",
-            "api/dang-ky/quan-ly" or "api/quan-ly/khuyen-mai" or "api/thay-doi" or "api/giao-dich/cho-doi-chieu" or "api/thanh-toan/bao-chuyen-khoan"=>"enrollment",
+            "api/dang-ky/quan-ly" or "api/quan-ly/khuyen-mai" or "api/thay-doi" or "api/giao-dich/cho-doi-chieu" or "api/thanh-toan/bao-chuyen-khoan" or "api/giao-dich/phieu-thu"=>"enrollment",
             "api/quan-ly/hoa-cu" or "api/quan-ly/dinh-muc" or "api/quan-ly/nha-cung-cap" or "api/kho/ton" or "api/kho/phieu"=>"inventory",
             "api/bao-cao/tong-quan"=>"reports",
             _=>button.Text=="Đăng ký tài khoản"?"profiles":button.Text=="Báo cáo thu / hoàn"?"reports":"administration"
@@ -392,6 +384,7 @@ public sealed class ApiManagementForm : Form
             await api.Post("api/phan-hoi/"+Id(row)+"/tra-loi",new{TraLoi=fields[0]});await LoadData();});
         if(route=="api/tu-van") Action("Xem / trả lời tư vấn",async()=>{await new ApiConsultationController(api).Open(this,Selected());await LoadData();});
         if(route=="api/thanh-toan/bao-chuyen-khoan") Action("Đối chiếu và ghi nhận tiền",Receive);
+        if(route=="api/giao-dich/phieu-thu") Action("Xem / in phiếu thu",()=>OpenReceipt(Id(Selected())));
         if(route=="api/dang-ky/quan-ly")
         {
             var enrollments=new ApiEnrollmentController(api);
@@ -435,6 +428,25 @@ public sealed class ApiManagementForm : Form
         foreach(var charge in ArtApiClient.Get(debt,"khoanThu").EnumerateArray())table.Rows.Add(table.Columns.Cast<DataColumn>().Select(x=>(object)Display(charge,x.ColumnName)).ToArray());
         form.Controls.Add(new DataGridView {Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,DataSource=table,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill});form.ShowDialog(this);
     }
+    async Task OpenReceipt(long id)
+    {
+        var receipt=await api.Read("api/giao-dich/phieu-thu/"+id);
+        using var form=new ReceiptForm(ReceiptText(receipt),"Phiếu thu");
+        form.ShowDialog(this);
+    }
+    internal static string ReceiptText(JsonElement receipt)
+    {
+        string Field(string key)=>Display(receipt,key);
+        var method=Field("phuongThuc") switch {"TIEN_MAT"=>"Tiền mặt","CHUYEN_KHOAN"=>"Chuyển khoản",var other=>other};
+        var reference=Field("maThamChieu");
+        var number=Field("maChungTu");
+        if(string.IsNullOrWhiteSpace(number))number="PT-"+Field("id");
+        return $"PHIẾU THU\n\nSố chứng từ: {number}\nNgày thu: {Field("thoiDiem")}\n"+
+            $"Học viên: {Field("tenHocVien")}\nLớp: {Field("tenLop")}\nMã đăng ký: {Field("maDangKy")}\n\n"+
+            $"Nội dung thu: {Field("noiDungThu")}\nSố tiền thực nhận: {Field("soTien")}\nPhương thức: {method}\n"+
+            (string.IsNullOrWhiteSpace(reference)?"":$"Mã tham chiếu: {reference}\n")+
+            "\nChứng từ ghi nhận khoản thu của trung tâm.";
+    }
     async Task Receive()
     {
         var row=Selected();var id=Id(row);var debt=await api.Read("api/dang-ky/"+id+"/cong-no");
@@ -447,6 +459,7 @@ public sealed class ApiManagementForm : Form
         form.Add("document","Mã chứng từ duy nhất");form.Add("reference","Mã tham chiếu (nếu có)");form.Add("received","Đã thực nhận số tiền trên",false);
         form.Changed("charge",()=>form.Set("SoTien",ArtApiClient.Get(charges.Single(x=>Id(x).ToString()==form.TextValue("charge")),"conThieu").GetDecimal()));
         var key=Guid.NewGuid().ToString("N");string? previousBody=null;
+        JsonElement? payment=null;
         form.SaveAsync=async()=>
         {
             if(!form.Flag("received"))throw new InvalidOperationException("Chỉ xác nhận sau khi đã thực nhận tiền.");
@@ -454,12 +467,13 @@ public sealed class ApiManagementForm : Form
             if(amount<=0||amount>ArtApiClient.Get(charges.Single(x=>Id(x)==charge),"conThieu").GetDecimal())throw new InvalidOperationException("Số tiền phải lớn hơn 0 và không vượt công nợ.");
             var body=new{DangKyId=id,KhoanThuId=charge,SoTien=amount,PhuongThuc=form.TextValue("method"),MaChungTu=ProfileRules.Required(form.TextValue("document"),"Mã chứng từ",50),MaThamChieu=form.TextValue("reference")};
             var fingerprint=JsonSerializer.Serialize(body);if(previousBody!=null&&previousBody!=fingerprint)key=Guid.NewGuid().ToString("N");previousBody=fingerprint;
-            await api.Post("api/giao-dich/thu",new{body.DangKyId,body.KhoanThuId,body.SoTien,body.PhuongThuc,body.MaChungTu,body.MaThamChieu,IdempotencyKey="WIN-"+key});
+            payment=await api.Post("api/giao-dich/thu",new{body.DangKyId,body.KhoanThuId,body.SoTien,body.PhuongThuc,body.MaChungTu,body.MaThamChieu,IdempotencyKey="WIN-"+key});
         };
         if(form.ShowDialog(this)==DialogResult.OK)
         {
-            var current=await api.Read("api/dang-ky/"+id+"/cong-no");
-            MessageBox.Show(this,"Đã lưu khoản thu. Trạng thái đăng ký: "+Display(current,"trangThai")+". Tải lại danh sách đăng ký trên website để xem cập nhật.","Đã ghi nhận");
+            if(payment is JsonElement saved&&ArtApiClient.Text(saved,"trangThai")=="DA_XAC_NHAN")
+                await OpenReceipt(Id(saved));
+            else MessageBox.Show(this,"Khoản thu đã lưu để đối chiếu. Phiếu thu có thể in sau khi khoản tiền được xác nhận.","Chờ đối chiếu");
         }
         await LoadData();
     }

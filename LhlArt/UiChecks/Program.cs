@@ -149,6 +149,14 @@ internal static class Program
         }
         Check(ApiPeopleController.RequiredEmail("TEST@example.invalid")=="test@example.invalid","Email hợp lệ được chuẩn hóa trước khi tạo tài khoản");
         NativeFlowChecks.Run(Check);
+        using(var sample=JsonDocument.Parse("""{"id":15,"maChungTu":"PT-15","soTien":85000,"tenHocVien":"Nguyễn Bảo An","tenLop":"Lớp vẽ","phuongThuc":"CHUYEN_KHOAN","maThamChieu":"ACB123"}"""))
+        using(var receipt=new ReceiptForm(ApiManagementForm.ReceiptText(sample.RootElement),"Phiếu thu"))
+        {
+            var box=receipt.Controls.OfType<Panel>().SelectMany(x=>x.Controls.OfType<TextBox>()).Single();
+            Check(receipt.Text.StartsWith("Phiếu thu")&&box.ReadOnly&&box.Text.Contains("PT-15")&&
+                box.Text.Contains("Nguyễn Bảo An")&&box.Text.Contains("Chuyển khoản")&&box.Text.Contains("ACB123"),
+                "PT03 Form WinForms hiển thị đúng phiếu thu đã ghi nhận");
+        }
         Console.WriteLine($"ALL {passed} WINDOWS FORM CHECKS PASSED");
     }
     static void Pump(Func<bool> done){var until=DateTime.UtcNow.AddSeconds(5);while(!done()&&DateTime.UtcNow<until){Application.DoEvents();Thread.Sleep(5);}if(!done())throw new Exception("Timed out waiting for form save");}

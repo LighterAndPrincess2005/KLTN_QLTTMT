@@ -7,18 +7,20 @@ public sealed class StatisticsView : Control
 {
     readonly IReadOnlyList<MonthlyFigures> data;
     readonly bool combinedReceipts;
+    readonly bool daily;
     readonly ToolTip tip = new();
     readonly List<(RectangleF Bounds, string Text)> bars = new();
     string hover = "";
-    public StatisticsView(IReadOnlyList<MonthlyFigures> data, bool combinedReceipts = false)
+    public StatisticsView(IReadOnlyList<MonthlyFigures> data, bool combinedReceipts = false, bool daily = false)
     {
         this.data = data;
         this.combinedReceipts = combinedReceipts;
+        this.daily = daily;
         Dock = DockStyle.Fill;
         BackColor = Color.White;
         DoubleBuffered = true;
         SetStyle(ControlStyles.ResizeRedraw, true);
-        AccessibleName = combinedReceipts ? "Tổng thu và hoàn tiền đã phân bổ trong sáu tháng" : "Thu và hoàn học phí, doanh thu họa cụ trong sáu tháng gần nhất";
+        AccessibleName = combinedReceipts ? "Tổng thu và hoàn tiền đã phân bổ theo kỳ" : "Thu và hoàn học phí, doanh thu họa cụ trong sáu tháng gần nhất";
         MouseMove += (_, e) =>
         {
             string value = bars.FirstOrDefault(x => x.Bounds.Contains(e.Location)).Text ?? "";
@@ -85,6 +87,7 @@ public sealed class StatisticsView : Control
         float group = plot.Width / Math.Max(1, data.Count), barWidth = group * .18f;
         for (int i = 0; i < data.Count; i++)
         {
+            var periodLabel=data[i].Month.ToString(daily?"dd/MM":"MM/yyyy");
             decimal[] values =
             {
                 data[i].Tuition,
@@ -97,15 +100,16 @@ public sealed class StatisticsView : Control
                 var bar = new RectangleF(plot.Left + i * group + group * .19f + j * barWidth, plot.Bottom - h, barWidth * .8f, h);
                 using var fill = new SolidBrush(colors[j]);
                 e.Graphics.FillRectangle(fill, bar);
-                bars.Add((new RectangleF(bar.X, bar.Y - S(3), bar.Width, Math.Max(S(6), h)), $"{data[i].Month:MM/yyyy} · {names[j]}: {Theme.Money(values[j])}"));
+                bars.Add((new RectangleF(bar.X, bar.Y - S(3), bar.Width, Math.Max(S(6), h)), $"{periodLabel} · {names[j]}: {Theme.Money(values[j])}"));
             }
 
-            TextRenderer.DrawText(e.Graphics, data[i].Month.ToString("MM/yyyy"), label, new Rectangle((int)(plot.Left + i * group), (int)plot.Bottom + S(9), (int)group, S(25)), Theme.Ink, TextFormatFlags.HorizontalCenter);
+            if(group>=S(55)||i%2==0)
+                TextRenderer.DrawText(e.Graphics, periodLabel, label, new Rectangle((int)(plot.Left + i * group), (int)plot.Bottom + S(9), (int)group, S(25)), Theme.Ink, TextFormatFlags.HorizontalCenter);
         }
 
         if (totals.All(x => x == 0))
             TextRenderer.DrawText(e.Graphics, "Chưa có giao dịch trong kỳ này.", label, Rectangle.Round(plot), Theme.Muted, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-        TextRenderer.DrawText(e.Graphics, "Số liệu 6 tháng gần nhất · Giá trị chuyển lớp không tính vào tiền thu mới.", label, new Rectangle(S(24), Height - S(31), Width - S(48), S(25)), Theme.Muted, TextFormatFlags.EndEllipsis);
+        TextRenderer.DrawText(e.Graphics, combinedReceipts?"Giá trị chuyển lớp không tính vào tiền thu mới.":"Số liệu 6 tháng gần nhất · Giá trị chuyển lớp không tính vào tiền thu mới.", label, new Rectangle(S(24), Height - S(31), Width - S(48), S(25)), Theme.Muted, TextFormatFlags.EndEllipsis);
     }
 
     protected override void Dispose(bool disposing)
