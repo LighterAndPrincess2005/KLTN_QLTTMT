@@ -318,13 +318,52 @@ public sealed class ApiManagementForm : Form
         form.Add("cover","Ảnh bìa",ArtApiClient.Text(row,"anhDaiDien"));
         form.Add("gallery","Ảnh thành phẩm (mỗi đường dẫn một dòng)",
             string.Join(Environment.NewLine,ArtApiClient.Get(row,"thanhPham").EnumerateArray().Select(x=>x.GetString())),multiline:true);
-        form.AddAction("Chọn ảnh bìa",()=>PickCourseImages(form,"cover",false));
+        form.AddAction("Tải ảnh bìa",()=>PickCourseImages(form,"cover",false));
         form.AddAction("Thêm ảnh thành phẩm",()=>PickCourseImages(form,"gallery",true));
+        form.AddAction("Ảnh có sẵn",()=>ReuseCourseImage(form,id));
         if(form.ShowDialog(this)!=DialogResult.OK)return;
         var gallery=form.TextValue("gallery").Split('\n',StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries);
         await api.Put(path,new {AnhDaiDien=form.TextValue("cover"),ThanhPham=gallery,
             RowVersion=ArtApiClient.Get(row,"rowVersion").GetString()});
         MessageBox.Show(this,"Đã lưu ảnh khóa học. Tải lại trang khóa học để xem ảnh mới.","Ảnh khóa học");
+    }
+
+    async Task ReuseCourseImage(InputForm target,long courseId)
+    {
+        var library=await api.Read("api/noi-dung/quan-ly/khoa-hoc/thu-vien-anh");
+        if(target.IsDisposed)return;
+        var choices=new List<Choice>();
+        foreach(var course in library.EnumerateArray().Where(x=>ApiDataService.Id(x,"khoaHocId")!=courseId))
+        {
+            var title=$"{ArtApiClient.Text(course,"tenKhoa")} ({ArtApiClient.Text(course,"maKhoa")})";
+            var cover=ArtApiClient.Text(course,"anhDaiDien");
+            if(cover.Length>0)choices.Add(new Choice(cover,$"{title} · Ảnh bìa"));
+            var gallery=ArtApiClient.Get(course,"thanhPham").EnumerateArray().Select(x=>x.GetString()).ToArray();
+            for(var i=0;i<gallery.Length;i++)
+                if(!string.IsNullOrWhiteSpace(gallery[i]))
+                    choices.Add(new Choice(gallery[i]!,$"{title} · Thành phẩm {i+1}"));
+        }
+        if(choices.Count==0)
+        {
+            MessageBox.Show(target,"Các khóa khác chưa có ảnh để chọn.","Ảnh có sẵn");
+            return;
+        }
+
+        using var picker=new InputForm("Chọn ảnh từ khóa khác");
+        picker.Add("image","Ảnh có sẵn",choices[0].Id,choices);
+        picker.Add("purpose","Dùng làm","cover",[new Choice("cover","Ảnh bìa"),new Choice("gallery","Ảnh thành phẩm")]);
+        if(picker.ShowDialog(target)!=DialogResult.OK)return;
+        var image=picker.TextValue("image");
+        if(picker.TextValue("purpose")=="cover")
+        {
+            target.Set("cover",image);
+            return;
+        }
+
+        var paths=target.TextValue("gallery").Split('\n',StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries);
+        if(paths.Contains(image,StringComparer.Ordinal))return;
+        if(paths.Length>=20)throw new InvalidOperationException("Tối đa 20 ảnh thành phẩm.");
+        target.Set("gallery",string.Join(Environment.NewLine,paths.Append(image)));
     }
 
     async Task PickCourseImages(InputForm form,string field,bool multiple)
@@ -515,7 +554,8 @@ public sealed class ApiManagementForm : Form
         var reference=Field("maThamChieu");
         var number=Field("maChungTu");
         if(string.IsNullOrWhiteSpace(number))number="PT-"+Field("id");
-        return $"PHIẾU THU\n\nSố chứng từ: {number}\nNgày thu: {Field("thoiDiem")}\n"+
+        var simulated=number.StartsWith("DEMO-",StringComparison.OrdinalIgnoreCase);
+        return (simulated?"PHIẾU THU MÔ PHỎNG · ĐỒ ÁN\nKhông xác nhận giao dịch ngân hàng thật.\n\n":"PHIẾU THU\n\n")+$"Số chứng từ: {number}\nNgày thu: {Field("thoiDiem")}\n"+
             $"Học viên: {Field("tenHocVien")}\nLớp: {Field("tenLop")}\nMã đăng ký: {Field("maDangKy")}\n\n"+
             $"Nội dung thu: {Field("noiDungThu")}\nSố tiền thực nhận: {Field("soTien")}\nPhương thức: {method}\n"+
             (string.IsNullOrWhiteSpace(reference)?"":$"Mã tham chiếu: {reference}\n")+
@@ -526,23 +566,8 @@ public sealed class ApiManagementForm : Form
         var row=Selected();var id=Id(row);var debt=await api.Read("api/dang-ky/"+id+"/cong-no");
         var charges=ArtApiClient.Get(debt,"khoanThu").EnumerateArray().Where(x=>ArtApiClient.Get(x,"conThieu").GetDecimal()>0).Select(x=>x.Clone()).ToList();
         if(charges.Count==0)throw new InvalidOperationException("Đăng ký này không còn khoản phải thu.");
-        using var form=new InputForm("Ghi nhận học phí · đăng ký "+id);
-        form.Add("charge","Khoản thu","",charges.Select(x=>new Choice(Id(x).ToString(),$"#{Id(x)} · {ArtApiClient.Text(x,"loaiKhoan")} · còn {Theme.Money(ArtApiClient.Get(x,"conThieu").GetDecimal())}")));
-        form.Add("SoTien","Số tiền thu",ArtApiClient.Get(charges[0],"conThieu").GetDecimal());
-        form.Add("method","Phương thức",route=="api/thanh-toan/bao-chuyen-khoan"?"CHUYEN_KHOAN":"TIEN_MAT",new[]{new Choice("TIEN_MAT","Tiền mặt"),new Choice("CHUYEN_KHOAN","Chuyển khoản")});
-        form.Add("document","Mã chứng từ duy nhất");form.Add("reference","Mã tham chiếu (nếu có)");form.Add("received","Đã thực nhận số tiền trên",false);
-        form.Changed("charge",()=>form.Set("SoTien",ArtApiClient.Get(charges.Single(x=>Id(x).ToString()==form.TextValue("charge")),"conThieu").GetDecimal()));
-        var key=Guid.NewGuid().ToString("N");string? previousBody=null;
         JsonElement? payment=null;
-        form.SaveAsync=async()=>
-        {
-            if(!form.Flag("received"))throw new InvalidOperationException("Chỉ xác nhận sau khi đã thực nhận tiền.");
-            var amount=form.Number("SoTien");var charge=long.Parse(form.TextValue("charge"));
-            if(amount<=0||amount>ArtApiClient.Get(charges.Single(x=>Id(x)==charge),"conThieu").GetDecimal())throw new InvalidOperationException("Số tiền phải lớn hơn 0 và không vượt công nợ.");
-            var body=new{DangKyId=id,KhoanThuId=charge,SoTien=amount,PhuongThuc=form.TextValue("method"),MaChungTu=ProfileRules.Required(form.TextValue("document"),"Mã chứng từ",50),MaThamChieu=form.TextValue("reference")};
-            var fingerprint=JsonSerializer.Serialize(body);if(previousBody!=null&&previousBody!=fingerprint)key=Guid.NewGuid().ToString("N");previousBody=fingerprint;
-            payment=await api.Post("api/giao-dich/thu",new{body.DangKyId,body.KhoanThuId,body.SoTien,body.PhuongThuc,body.MaChungTu,body.MaThamChieu,IdempotencyKey="WIN-"+key});
-        };
+        using var form=CreateReceiptForm(id,charges,saved=>payment=saved);
         if(form.ShowDialog(this)==DialogResult.OK)
         {
             if(payment is JsonElement saved&&ArtApiClient.Text(saved,"trangThai")=="DA_XAC_NHAN")
@@ -550,6 +575,30 @@ public sealed class ApiManagementForm : Form
             else MessageBox.Show(this,"Khoản thu đã lưu để đối chiếu. Phiếu thu có thể in sau khi khoản tiền được xác nhận.","Chờ đối chiếu");
         }
         await LoadData();
+    }
+    internal InputForm CreateReceiptForm(long id,List<JsonElement> charges,Action<JsonElement> saved)
+    {
+        var form=new InputForm("Ghi nhận học phí · đăng ký "+id);
+        form.Add("charge","Khoản thu","",charges.Select(x=>new Choice(Id(x).ToString(),$"#{Id(x)} · {ArtApiClient.Text(x,"loaiKhoan")} · còn {Theme.Money(ArtApiClient.Get(x,"conThieu").GetDecimal())}")));
+        form.Add("SoTien","Số tiền thu",ArtApiClient.Get(charges[0],"conThieu").GetDecimal());
+        form.Add("method","Phương thức",route=="api/thanh-toan/bao-chuyen-khoan"?"CHUYEN_KHOAN":"TIEN_MAT",new[]{new Choice("TIEN_MAT","Tiền mặt"),new Choice("CHUYEN_KHOAN","Chuyển khoản")});
+        var demoCode=Guid.NewGuid().ToString("N")[..16].ToUpperInvariant();
+        form.Add("document","Mã chứng từ duy nhất",api.DemoPayments?"DEMO-PT-"+demoCode:null,readOnly:api.DemoPayments);
+        form.Add("reference","Mã tham chiếu chuyển khoản",api.DemoPayments?"DEMO-CK-"+demoCode:null,readOnly:api.DemoPayments);
+        if(api.DemoPayments)form.SetSaveStatus("MÔ PHỎNG ĐỒ ÁN · Bấm Xác nhận để ghi nhận học phí mẫu, không cần chuyển tiền thật.");
+        else form.Add("received","Đã thực nhận số tiền trên",false);
+        form.Changed("charge",()=>form.Set("SoTien",ArtApiClient.Get(charges.Single(x=>Id(x).ToString()==form.TextValue("charge")),"conThieu").GetDecimal()));
+        var key=Guid.NewGuid().ToString("N");string? previousBody=null;
+        form.SaveAsync=async()=>
+        {
+            if(!api.DemoPayments&&!form.Flag("received"))throw new InvalidOperationException("Chỉ xác nhận sau khi đã thực nhận tiền.");
+            var amount=form.Number("SoTien");var charge=long.Parse(form.TextValue("charge"));
+            if(amount<=0||amount>ArtApiClient.Get(charges.Single(x=>Id(x)==charge),"conThieu").GetDecimal())throw new InvalidOperationException("Số tiền phải lớn hơn 0 và không vượt công nợ.");
+            var body=new{DangKyId=id,KhoanThuId=charge,SoTien=amount,PhuongThuc=form.TextValue("method"),MaChungTu=ProfileRules.Required(form.TextValue("document"),"Mã chứng từ",50),MaThamChieu=form.TextValue("reference")};
+            var fingerprint=JsonSerializer.Serialize(body);if(previousBody!=null&&previousBody!=fingerprint)key=Guid.NewGuid().ToString("N");previousBody=fingerprint;
+            saved(await api.Post("api/giao-dich/thu",new{body.DangKyId,body.KhoanThuId,body.SoTien,body.PhuongThuc,body.MaChungTu,body.MaThamChieu,IdempotencyKey="WIN-"+key}));
+        };
+        return form;
     }
     async Task Attend()
     {

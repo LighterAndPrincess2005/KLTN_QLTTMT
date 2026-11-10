@@ -9,7 +9,8 @@ namespace MyThuat.Api.Services;
 public sealed record SePayEvent(long Id,string AccountNumber,string TransferType,decimal TransferAmount,string? Content,string? Code,string? ReferenceCode,string? TransactionDate);
 public sealed class OnlinePaymentService(MyThuatDbContext db,AccessService access,EnrollmentService enrollments,FinanceService finance,IConfiguration config,AuditService audit)
 {
-    bool Enabled=>config.GetValue<bool>("SePay:Enabled")&&!string.IsNullOrWhiteSpace(config["SePay:AccountNumber"])&&!string.IsNullOrWhiteSpace(config["SePay:BankCode"])&&!string.IsNullOrWhiteSpace(config["SePay:WebhookKey"]);
+    bool TransferConfigured=>!string.IsNullOrWhiteSpace(config["SePay:AccountNumber"])&&!string.IsNullOrWhiteSpace(config["SePay:BankCode"]);
+    bool Enabled=>config.GetValue<bool>("SePay:Enabled")&&TransferConfigured&&!string.IsNullOrWhiteSpace(config["SePay:WebhookKey"]);
     public void Authenticate(string header){
         ApiError.Require(Enabled,"Thanh toán tự động chưa được cấu hình.",503);
         var token=header.StartsWith("Apikey ",StringComparison.OrdinalIgnoreCase)?header[7..].Trim():"";
@@ -23,7 +24,7 @@ public sealed class OnlinePaymentService(MyThuatDbContext db,AccessService acces
         ApiError.Require(e.TrangThai is "CHO_THANH_TOAN" or "DA_XAC_NHAN","Phiếu đã hết hiệu lực; liên hệ trung tâm nếu đã chuyển tiền.",409);
         if(due==0&&e.TrangThai=="CHO_THANH_TOAN"){await finance.Confirm(e,ct);await db.SaveChangesAsync(ct);}
         var intent=await db.Set<PhienThanhToan>().SingleOrDefaultAsync(x=>x.DangKyId==id,ct);
-        if(due>0&&Enabled&&intent==null){intent=new(){DangKyId=id,MaThanhToan="BUI"+Convert.ToHexString(RandomNumberGenerator.GetBytes(6))};db.Add(intent);audit.Add("DangKy",id,"TAO_PHIEN_THANH_TOAN",new{SoTien=due});await db.SaveChangesAsync(ct);}
+        if(due>0&&TransferConfigured&&intent==null){intent=new(){DangKyId=id,MaThanhToan="BUI"+Convert.ToHexString(RandomNumberGenerator.GetBytes(6))};db.Add(intent);audit.Add("DangKy",id,"TAO_PHIEN_THANH_TOAN",new{SoTien=due});await db.SaveChangesAsync(ct);}
         await tx.CommitAsync(ct);return await View(e,due,free,intent,ct);
     }
     public async Task<object> Status(long id,CancellationToken ct){var e=await Own(id,ct);return await View(e,await Due(id,ct),await db.KhoanThuDangKy.Where(x=>x.DangKyId==id).SumAsync(x=>x.ThanhTienChot,ct)==0,await db.Set<PhienThanhToan>().AsNoTracking().SingleOrDefaultAsync(x=>x.DangKyId==id,ct),ct);}
@@ -50,10 +51,11 @@ public sealed class OnlinePaymentService(MyThuatDbContext db,AccessService acces
 
     async Task<object> View(DangKy e,decimal due,bool free,PhienThanhToan? intent,CancellationToken ct){
         var expired=e.TrangThai=="HET_HAN"||e.TrangThai=="CHO_THANH_TOAN"&&e.HanGiuCho<=BusinessClock.Now;
-        var payable=!expired&&e.TrangThai=="CHO_THANH_TOAN"&&due>0&&Enabled&&intent!=null;
+        var payable=!expired&&e.TrangThai=="CHO_THANH_TOAN"&&due>0&&TransferConfigured&&intent!=null;
         var code=payable?intent!.MaThanhToan:null;
         var qr=payable?$"https://vietqr.app/img?acc={Uri.EscapeDataString(config["SePay:AccountNumber"]!)}&bank={Uri.EscapeDataString(config["SePay:BankCode"]!)}&amount={due:0}&des={Uri.EscapeDataString(code!)}":null;
-        return new{DangKyId=e.Id,TenLop=e.LopHoc!.TenLop,TenHocVien=await db.HocVien.Where(x=>x.Id==e.HoSoTheoHoc!.HocVienId).Select(x=>x.HoTen).SingleAsync(ct),ConPhaiTra=due,MienPhi=free,DaXacNhan=e.TrangThai=="DA_XAC_NHAN",HetHan=expired,HanGiuCho=e.HanGiuCho,SanSang=payable,MaThanhToan=code,QrUrl=qr,NganHang=payable?config["SePay:BankCode"]:null,SoTaiKhoan=payable?config["SePay:AccountNumber"]:null,ChuTaiKhoan=payable?config["SePay:AccountName"]:null,ThongBao=free?"Lớp miễn phí không phát sinh giao dịch ngân hàng.":!Enabled?"Trung tâm chưa cấu hình thanh toán tự động. Bạn có thể liên hệ trung tâm để thanh toán tại quầy.":"Quét QR và giữ nguyên số tiền, nội dung. Chỉ xác nhận khi hệ thống nhận được thông báo giao dịch hợp lệ."};
+        var reported=await db.NhatKyThayDoi.AnyAsync(x=>x.LoaiDoiTuong=="DangKy"&&x.IdDoiTuong==e.Id&&x.HanhDong==TransferReportAction,ct);
+        return new{DangKyId=e.Id,TenLop=e.LopHoc!.TenLop,TenHocVien=await db.HocVien.Where(x=>x.Id==e.HoSoTheoHoc!.HocVienId).Select(x=>x.HoTen).SingleAsync(ct),ConPhaiTra=due,MienPhi=free,DaXacNhan=e.TrangThai=="DA_XAC_NHAN",DaBaoChuyenKhoan=reported,HetHan=expired,HanGiuCho=e.HanGiuCho,SanSang=payable,MaThanhToan=code,QrUrl=qr,NganHang=payable?config["SePay:BankCode"]:null,SoTaiKhoan=payable?config["SePay:AccountNumber"]:null,ChuTaiKhoan=payable?config["SePay:AccountName"]:null,ThongBao=free?"Lớp miễn phí không phát sinh giao dịch ngân hàng.":!TransferConfigured?"Trung tâm chưa cấu hình tài khoản nhận chuyển khoản. Bạn có thể liên hệ trung tâm để thanh toán tại quầy.":reported?"Đã gửi xác nhận chuyển khoản. Trung tâm sẽ đối chiếu và duyệt học phí.":"Quét QR, chuyển đúng số tiền và nội dung, sau đó bấm Xác nhận đã chuyển khoản để gửi trung tâm duyệt."};
     }
     public async Task<object> Receive(SePayEvent r,CancellationToken ct){
         ApiError.Require(r.Id>0&&r.TransferAmount>0&&r.TransferAmount==decimal.Truncate(r.TransferAmount)&&r.TransferAmount<=1000000000000m,"Giao dịch không hợp lệ.");

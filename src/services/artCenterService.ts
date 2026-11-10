@@ -1,16 +1,18 @@
 import {apiErrorLabel} from '../displayLabels';
 import type { ArtClass, Course, StudentProfile } from '../types';
 import { courseImage } from '../data/courseImages';
-import {demoMode,demoRequest,demoCourses,demoClasses} from './demo';
 const base=(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 type Session={token:string;expires:number};
 let session:Session|null=null;
-try{session=JSON.parse(sessionStorage.getItem('artora.session')||'null')}catch{sessionStorage.removeItem('artora.session')}
+// Remove only browser state left by the retired trial mode.
+for(const key of Object.keys(sessionStorage)){
+ if(key.startsWith('bui.demo.'))sessionStorage.removeItem(key);
+}
+try{session=JSON.parse(sessionStorage.getItem('artora.session')||'null');if(session?.token==='demo-local'){session=null;sessionStorage.removeItem('artora.session')}}catch{sessionStorage.removeItem('artora.session')}
 export class ApiError extends Error { constructor(message:string,public status:number){super(message)} }
 export const clearSession=()=>{session=null;sessionStorage.removeItem('artora.session')};
 export const signedIn=()=>!!session&&session.expires>Date.now();
 export async function request<T>(path:string,body?:unknown,method=body===undefined?'GET':'POST'):Promise<T>{
- if(demoMode)return demoRequest(path,body,method) as T;
  const headers:Record<string,string>={'Accept':'application/json'};
  if(body!==undefined && !(body instanceof FormData))headers['Content-Type']='application/json';
  if(signedIn())headers.Authorization=`Bearer ${session!.token}`;
@@ -40,10 +42,10 @@ const field=(o:Record<string,unknown>,name:string)=>o[name]??o[name[0].toLowerCa
 export const vnTime=(v:string)=>new Date(/(?:Z|[+-]\d\d:\d\d)$/.test(v)?v:v+'+07:00');
 export const dateTime=(v:string)=>vnTime(v).toLocaleString('vi-VN');
 export const artCenterService={
- async getCourses():Promise<Course[]>{if(demoMode)return demoCourses;
+ async getCourses():Promise<Course[]>{
  const [rows,types,intros]=await Promise.all([all<CourseDto>('/api/khoa-hoc'),request<{id:number;tenLoai:string}[]>('/api/loai-khoa-hoc'),request<{khoaHocId:number;anhDaiDien:string;dauRaJson:string;hoaCuBaoGom:string;canChuanBi:string;thanhPhamJson:string}[]>('/api/noi-dung/khoa-hoc')]);
- return rows.map((c,i)=>{const intro=intros.find(x=>x.khoaHocId===c.id);return{id:String(c.id),title:c.tenKhoa,ageMin:c.tuoiToiThieu||0,level:c.capDo,sessions:c.soBuoi,minutesPerSession:c.soTietMoiBuoi*c.phutMoiTiet,minutesPerPeriod:c.phutMoiTiet,maxStudents:0,tuitionFee:c.hocPhi,materialFee:0,category:types.find(x=>x.id===c.loaiKhoaHocId)?.tenLoai?.replace(/^Core$/i,'Chính khóa')||'Mỹ thuật',color:['#ce6249','#327562','#bd8b34'][i%3],image:intro?.anhDaiDien?courseMediaUrl(intro.anhDaiDien):courseImage(c.capDo),skills:[c.mucTieu],prerequisites:c.yeuCauDauVao?[c.yeuCauDauVao]:[],outcomes:intro?JSON.parse(intro.dauRaJson):[],includedMaterials:intro?.hoaCuBaoGom,preparation:intro?.canChuanBi,showcase:intro?(JSON.parse(intro.thanhPhamJson) as string[]).map(courseMediaUrl):[]}})},
- async getClasses():Promise<ArtClass[]>{if(demoMode)return demoClasses;const rows=await all<ClassDto>('/api/lop-hoc');const promotions=await request<{tenKhuyenMai:string;khoaApDungId:number|null;loaiGiam:string;giaTriGiam:number;tranGiam:number|null;soNgayTuXacNhanTV:number|null}[]>('/api/khuyen-mai').catch(()=>[]);return rows.map(c=>{const now=Date.now();const promo=promotions.filter(p=>p.soNgayTuXacNhanTV==null).sort((a,b)=>Math.min(b.loaiGiam==='PHAN_TRAM'?c.hocPhiApDung*b.giaTriGiam/100:b.giaTriGiam,b.tranGiam??Infinity)-Math.min(a.loaiGiam==='PHAN_TRAM'?c.hocPhiApDung*a.giaTriGiam/100:a.giaTriGiam,a.tranGiam??Infinity)).find(p=>(p.khoaApDungId==null||p.khoaApDungId===c.khoaHocId)&&['PHAN_TRAM','SO_TIEN'].includes(p.loaiGiam)&&p.giaTriGiam>0&&c.hocPhiApDung>0);return{promotion:promo?{code:'',label:promo.tenKhuyenMai,percent:Math.min(promo.loaiGiam==='PHAN_TRAM'?promo.giaTriGiam:promo.giaTriGiam/c.hocPhiApDung*100,promo.tranGiam!=null?promo.tranGiam/c.hocPhiApDung*100:100)}:undefined,id:String(c.id),code:c.maLop,title:c.tenLop,courseId:String(c.khoaHocId),schedule:c.lichHocDuKien,startDateISO:c.ngayKhaiGiangDuKien,endDateISO:c.ngayKetThucDuKien,startDate:new Date(c.ngayKhaiGiangDuKien+'T00:00:00+07:00').toLocaleDateString('vi-VN'),registrationDeadline:dateTime(c.dongDangKyLuc),deadline:c.dongDangKyLuc,teacher:c.giaoVien||'Đang cập nhật giáo viên',room:c.phongHoc||'Đang cập nhật phòng',capacity:c.siSoToiDa,enrolled:c.soChoDaGiu,tuitionFee:c.hocPhiApDung,mode:'Trực tiếp',status:now<vnTime(c.moDangKyLuc).getTime()?'Chưa mở đăng ký':now>=vnTime(c.dongDangKyLuc).getTime()?'Đã khóa đăng ký':c.soChoDaGiu>=c.siSoToiDa?'Đủ chỗ':'Đang nhận đăng ký'}})},
+ return rows.map((c,i)=>{const intro=intros.find(x=>x.khoaHocId===c.id);return{id:String(c.id),title:c.tenKhoa,ageMin:c.tuoiToiThieu||0,level:c.capDo,sessions:c.soBuoi,minutesPerSession:c.soTietMoiBuoi*c.phutMoiTiet,minutesPerPeriod:c.phutMoiTiet,maxStudents:0,tuitionFee:c.hocPhi,materialFee:0,category:types.find(x=>x.id===c.loaiKhoaHocId)?.tenLoai?.replace(/^Core$/i,'Chính khóa')||'Mỹ thuật',color:['#ce6249','#327562','#bd8b34'][i%3],image:intro?.anhDaiDien?publicMediaUrl(intro.anhDaiDien):courseImage(c.capDo),skills:[c.mucTieu],prerequisites:c.yeuCauDauVao?[c.yeuCauDauVao]:[],outcomes:intro?JSON.parse(intro.dauRaJson):[],includedMaterials:intro?.hoaCuBaoGom,preparation:intro?.canChuanBi,showcase:intro?(JSON.parse(intro.thanhPhamJson) as string[]).map(publicMediaUrl):[]}})},
+ async getClasses():Promise<ArtClass[]>{const rows=await all<ClassDto>('/api/lop-hoc');const promotions=await request<{tenKhuyenMai:string;khoaApDungId:number|null;loaiGiam:string;giaTriGiam:number;tranGiam:number|null;soNgayTuXacNhanTV:number|null}[]>('/api/khuyen-mai').catch(()=>[]);return rows.map(c=>{const now=Date.now();const promo=promotions.filter(p=>p.soNgayTuXacNhanTV==null).sort((a,b)=>Math.min(b.loaiGiam==='PHAN_TRAM'?c.hocPhiApDung*b.giaTriGiam/100:b.giaTriGiam,b.tranGiam??Infinity)-Math.min(a.loaiGiam==='PHAN_TRAM'?c.hocPhiApDung*a.giaTriGiam/100:a.giaTriGiam,a.tranGiam??Infinity)).find(p=>(p.khoaApDungId==null||p.khoaApDungId===c.khoaHocId)&&['PHAN_TRAM','SO_TIEN'].includes(p.loaiGiam)&&p.giaTriGiam>0&&c.hocPhiApDung>0);return{promotion:promo?{code:'',label:promo.tenKhuyenMai,percent:Math.min(promo.loaiGiam==='PHAN_TRAM'?promo.giaTriGiam:promo.giaTriGiam/c.hocPhiApDung*100,promo.tranGiam!=null?promo.tranGiam/c.hocPhiApDung*100:100)}:undefined,id:String(c.id),code:c.maLop,title:c.tenLop,courseId:String(c.khoaHocId),schedule:c.lichHocDuKien,startDateISO:c.ngayKhaiGiangDuKien,endDateISO:c.ngayKetThucDuKien,startDate:new Date(c.ngayKhaiGiangDuKien+'T00:00:00+07:00').toLocaleDateString('vi-VN'),registrationDeadline:dateTime(c.dongDangKyLuc),deadline:c.dongDangKyLuc,teacher:c.giaoVien||'Đang cập nhật giáo viên',room:c.phongHoc||'Đang cập nhật phòng',capacity:c.siSoToiDa,enrolled:c.soChoDaGiu,tuitionFee:c.hocPhiApDung,mode:'Trực tiếp',status:now<vnTime(c.moDangKyLuc).getTime()?'Chưa mở đăng ký':now>=vnTime(c.dongDangKyLuc).getTime()?'Đã khóa đăng ký':c.soChoDaGiu>=c.siSoToiDa?'Đủ chỗ':'Đang nhận đăng ký'}})},
  async login(name:string,password:string){const x=await request<{accessToken:string;expiresIn:number}>('/api/tai-khoan/dang-nhap',{TenDangNhap:name,MatKhau:password});session={token:x.accessToken,expires:Date.now()+x.expiresIn*1000};sessionStorage.setItem('artora.session',JSON.stringify(session));return this.me()},
  signup:(body:unknown)=>request('/api/tai-khoan/dang-ky',body),
  forgotPassword:(name:string)=>request<{maYeuCau:string;thongBao:string;emailNhanDaAn?:string|null}>('/api/tai-khoan/quen-mat-khau',{TenDangNhap:name}),
@@ -75,7 +77,7 @@ export const artCenterService={
  closeSession:(id:number)=>request(`/api/hoc-tap/buoi/${id}/hoan-thanh`,{})
 };
 
-export type PublicCourseReview={id:number;soSao:number;noiDung:string;tenKhoa:string;anh:string|null};
-export const publicCourseReviews=()=>demoMode?Promise.resolve([]):request<PublicCourseReview[]>('/api/danh-gia-khoa/cong-khai');
+export type PublicCourseReview={id:number;soSao:number;noiDung:string;tenKhoa:string;anh:string|null;tenNguoiDangCongKhai?:string|null};
+export const publicCourseReviews=()=>request<PublicCourseReview[]>('/api/danh-gia-khoa/cong-khai');
 export const courseReviewImage=(path:string)=>base+path;
-const courseMediaUrl=(path:string)=>path.startsWith("/api/tep/cong-khai/")?base+path:path;
+export const publicMediaUrl=(path:string)=>path.startsWith("/api/tep/cong-khai/")?base+path:path;

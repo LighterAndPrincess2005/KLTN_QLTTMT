@@ -161,7 +161,33 @@ internal static class Program
                 box.Text.Contains("Nguyễn Bảo An")&&box.Text.Contains("Chuyển khoản")&&box.Text.Contains("ACB123"),
                 "PT03 Form WinForms hiển thị đúng phiếu thu đã ghi nhận");
         }
+        using(var paymentHandler=new Handler{AllowSave=true})
+        using(var demoApi=CreateDemoPaymentClient(paymentHandler))
+        using(var paymentMain=new ApiManagementForm(demoApi,fitToScreen:false)){
+            Check(demoApi.DemoPayments,"Cấu hình đồ án bật ghi nhận mô phỏng");
+            var charges=new List<JsonElement>{Json(new{id=30044,loaiKhoan="HOC_PHI",conThieu=3800000m})};
+            JsonElement? savedReceipt=null;
+            using var paymentForm=paymentMain.CreateReceiptForm(30044,charges,saved=>savedReceipt=saved);
+            Check(paymentForm.TextValue("document").StartsWith("DEMO-PT-")&&paymentForm.TextValue("reference").StartsWith("DEMO-CK-"),"Phiếu mô phỏng tự điền mã chứng từ và tham chiếu riêng");
+            paymentForm.StartPosition=FormStartPosition.Manual;paymentForm.Location=new Point(-5000,-5000);paymentForm.ShowInTaskbar=false;paymentForm.Show();Application.DoEvents();
+            ((Button)paymentForm.AcceptButton!).PerformClick();Pump(()=>paymentForm.IsDisposed);
+            Check(savedReceipt.HasValue&&paymentHandler.Writes==1&&ArtApiClient.Get(paymentHandler.Saved!.Value,"soTien").GetDecimal()==3800000m,"Bấm Xác nhận một lần không nhập mã hay tích ô: ghi đủ 3,8 triệu mô phỏng");
+            using var actualForm=new ApiManagementForm(api,fitToScreen:false);
+            using var actualReceipt=actualForm.CreateReceiptForm(30044,charges,_=>{});
+            Check(!api.DemoPayments&&actualReceipt.TextValue("document")==""&&!actualReceipt.Flag("received"),"Tắt mô phỏng vẫn yêu cầu chứng từ và xác nhận thực nhận như cũ");
+            Check(ApiManagementForm.ReceiptText(Json(new{maChungTu="DEMO-PT-TEST"})).Contains("PHIẾU THU MÔ PHỎNG"),"Phiếu thu mẫu có nhãn mô phỏng rõ ràng");
+        }
         Console.WriteLine($"ALL {passed} WINDOWS FORM CHECKS PASSED");
+    }
+    static ArtApiClient CreateDemoPaymentClient(HttpMessageHandler handler)
+    {
+        var path=Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path,"""{"BaseUrl":"http://payment-check.invalid","DemoPayments":true}""");
+            return new ArtApiClient(handler,null,path);
+        }
+        finally { File.Delete(path); }
     }
     static void Pump(Func<bool> done){var until=DateTime.UtcNow.AddSeconds(5);while(!done()&&DateTime.UtcNow<until){Application.DoEvents();Thread.Sleep(5);}if(!done())throw new Exception("Timed out waiting for form save");}
     sealed class ScheduleHandler:HttpMessageHandler

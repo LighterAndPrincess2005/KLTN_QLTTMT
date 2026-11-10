@@ -18,20 +18,22 @@ public sealed class DanhGiaKhoaHocController(MyThuatDbContext db, AccessService 
     [HttpGet("cua-toi/{profileId:long}")]
     public async Task<object> Mine(long profileId, CancellationToken ct)
     {
-        await CheckProfile(profileId, ct);
+        var member = await CheckProfile(profileId, ct);
         var review = await Reviews.Where(x => x.HoSoTheoHocId == profileId)
-            .Select(x => new { x.TrangThai, x.GhiChuDuyet }).SingleOrDefaultAsync(ct);
+            .Select(x => new { x.TrangThai, x.GhiChuDuyet, CoTheHienTen = x.NguoiGuiId == member && x.DongYCongKhai, x.TenNguoiDangCongKhai }).SingleOrDefaultAsync(ct);
         return new { review };
     }
 
     [HttpPost, RequestSizeLimit(6 * 1024 * 1024)]
     public async Task<object> Submit([FromForm] long profileId, [FromForm] int soSao, [FromForm] string noiDung,
-        [FromForm] bool dongYCongKhai, IFormFile? anh, CancellationToken ct)
+        [FromForm] bool dongYCongKhai, [FromForm] bool hienTen, IFormFile? anh, CancellationToken ct)
     {
         var member = await CheckProfile(profileId, ct);
         ApiError.Require(soSao is >= 1 and <= 5 && noiDung.Trim().Length is > 0 and <= 2000, "Chọn số sao và nhập tối đa 2.000 ký tự.");
         var row = new DanhGiaKhoaHoc { HoSoTheoHocId = profileId, NguoiGuiId = member, SoSao = soSao,
             NoiDung = noiDung.Trim(), DongYCongKhai = dongYCongKhai, TrangThai = dongYCongKhai ? "CHO_DUYET" : "RIENG_TU" };
+        if (dongYCongKhai && hienTen)
+            row.TenNguoiDangCongKhai = await db.ThanhVien.Where(x => x.Id == member).Select(x => x.HoTen).SingleAsync(ct);
         if (anh is not null)
         {
             ApiError.Require(anh.Length is > 0 and <= 5 * 1024 * 1024, "Ảnh tối đa 5 MB.");
@@ -47,7 +49,22 @@ public sealed class DanhGiaKhoaHocController(MyThuatDbContext db, AccessService 
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 })
         { throw new ApiError(409, "Hồ sơ này đã gửi đánh giá khóa học."); }
-        return new { row.TrangThai };
+        return new { row.TrangThai, CoTheHienTen = row.DongYCongKhai, row.TenNguoiDangCongKhai };
+    }
+
+    public sealed record NameConsent(bool HienTen);
+
+    [HttpPut("cua-toi/{profileId:long}/ten")]
+    public async Task<object> SetPublicName(long profileId, NameConsent consent, CancellationToken ct)
+    {
+        var member = await CheckProfile(profileId, ct);
+        var row = await Reviews.SingleOrDefaultAsync(x => x.HoSoTheoHocId == profileId && x.NguoiGuiId == member && x.DongYCongKhai, ct)
+            ?? throw new ApiError(404, "Không tìm thấy đánh giá công khai của bạn.");
+        row.TenNguoiDangCongKhai = consent.HienTen
+            ? await db.ThanhVien.Where(x => x.Id == member).Select(x => x.HoTen).SingleAsync(ct)
+            : null;
+        await db.SaveChangesAsync(ct);
+        return new { row.TrangThai, row.GhiChuDuyet, CoTheHienTen = true, row.TenNguoiDangCongKhai };
     }
 
     [AllowAnonymous, HttpGet("cong-khai")]
@@ -56,9 +73,9 @@ public sealed class DanhGiaKhoaHocController(MyThuatDbContext db, AccessService 
                 join h in db.HoSoTheoHoc on r.HoSoTheoHocId equals h.Id
                 where r.TrangThai == "DA_DUYET" && r.DongYCongKhai && h.KhoaHoc!.TrangThai == "HOAT_DONG"
                 orderby r.UpdatedAt descending
-                select new { r.Id, r.SoSao, r.NoiDung, TenKhoa = h.KhoaHoc!.TenKhoa, CoAnh = r.Anh != null })
+                select new { r.Id, r.SoSao, r.NoiDung, r.TenNguoiDangCongKhai, TenKhoa = h.KhoaHoc!.TenKhoa, CoAnh = r.Anh != null })
             .Take(12).ToListAsync(ct))
-        .Select(x => new { x.Id, x.SoSao, x.NoiDung, x.TenKhoa, Anh = x.CoAnh ? Photo(x.Id) : null });
+        .Select(x => new { x.Id, x.SoSao, x.NoiDung, x.TenKhoa, x.TenNguoiDangCongKhai, Anh = x.CoAnh ? Photo(x.Id) : null });
 
     [Authorize(Roles = Admin), HttpGet("quan-ly")]
     public async Task<object> Queue(CancellationToken ct) =>

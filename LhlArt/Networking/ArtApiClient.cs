@@ -9,17 +9,21 @@ public sealed class ArtApiClient : IDisposable
 {
     readonly HttpClient http;
     public string BaseUrl { get; }
+    public bool DemoPayments { get; }
     public string Username { get; private set; } = "";
     public string Role { get; private set; } = "";
     public long Permissions { get; private set; }
     public bool Has(long permission) => (Permissions & permission) == permission;
     public ArtApiClient(HttpMessageHandler? handler = null, string? baseUrl = null)
+        : this(handler, baseUrl, Path.Combine(AppContext.BaseDirectory, "api.config.json")) { }
+
+    internal ArtApiClient(HttpMessageHandler? handler, string? baseUrl, string configPath)
     {
-        var file = Path.Combine(AppContext.BaseDirectory, "api.config.json");
-        if (baseUrl is null && File.Exists(file))
+        if (baseUrl is null && File.Exists(configPath))
         {
-            using var config = JsonDocument.Parse(File.ReadAllText(file));
+            using var config = JsonDocument.Parse(File.ReadAllText(configPath));
             baseUrl = config.RootElement.GetProperty("BaseUrl").GetString();
+            DemoPayments = config.RootElement.TryGetProperty("DemoPayments", out var demo) && demo.ValueKind == JsonValueKind.True;
         }
         BaseUrl = (baseUrl ?? "http://127.0.0.1:5080").TrimEnd('/') + "/";
         if (!Uri.TryCreate(BaseUrl, UriKind.Absolute, out var address) || address.Scheme is not ("http" or "https"))

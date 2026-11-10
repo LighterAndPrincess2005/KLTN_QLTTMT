@@ -16,3 +16,6 @@ BEGIN
         RowVersion rowversion NOT NULL
     );
 END;
+
+IF COL_LENGTH(N'dbo.DanhGiaKhoaHoc', N'TenNguoiDangCongKhai') IS NULL
+    ALTER TABLE dbo.DanhGiaKhoaHoc ADD TenNguoiDangCongKhai nvarchar(150) NULL;

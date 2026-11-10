@@ -1,15 +1,14 @@
 import {useEffect,useState} from 'react';
-import {request} from './artCenterService';
-import {demoMode} from './demo';
-import {artArticles as demoArticles,type ArtArticle} from '../data/artArticles';
+import {publicMediaUrl,request} from './artCenterService';
+import type {ArtArticle} from '../data/artArticles';
 export type PublicTeacher={id:number;name:string;location:string;image:string;description:string;specialty:string;works:string};
 export type AdviceReceipt={maTraCuu:string;khoaTraCuu:string;trangThai:string;guiLuc:string};
 export type AdviceDetail={maTraCuu:string;chuDe:string;trangThai:string;guiLuc:string;docLuc:string|null;rowVersion:string;tinNhan:{id:number;noiDung:string;tuNhanVien:boolean;guiLuc:string}[]};
 export type AdviceRow={id:number;maTraCuu:string;hoTen:string;email:string;dienThoai:string|null;chuDe:string;trangThai:string;guiLuc:string;rowVersion:string};
 export type Quote={giamKhoaHoc?:number;giamMaCaNhan?:number;hocPhiGoc:number;tienGiam:number;tongPhaiTra:number;maGiamHocPhi:string|null;hanGiuChoDuKien:string;quyDinh:{hanGiuChoGio:number;baoNghiTruocGio:number;soLuotHocBu:number;hanHocBuNgay:number;soLanChuyen:number};thongBao:string};
 export const websiteApi={
- articles:()=>demoMode?Promise.resolve(demoArticles):request<ArtArticle[]>('/api/noi-dung/bai-viet'),
- teachers:()=>request<PublicTeacher[]>('/api/noi-dung/giao-vien'),
+ articles:()=>request<ArtArticle[]>('/api/noi-dung/bai-viet'),
+ teachers:async()=>(await request<PublicTeacher[]>('/api/noi-dung/giao-vien')).map(teacher=>({...teacher,image:publicMediaUrl(teacher.image)})),
  sendAdvice:(body:unknown)=>request<AdviceReceipt>('/api/tu-van',body),
  lookup:(code:string,secret:string)=>request<AdviceDetail>('/api/tu-van/tra-cuu',{MaTraCuu:code,KhoaTraCuu:secret}),
  followup:(code:string,secret:string,text:string)=>request('/api/tu-van/bo-sung',{MaTraCuu:code,KhoaTraCuu:secret,NoiDung:text}),

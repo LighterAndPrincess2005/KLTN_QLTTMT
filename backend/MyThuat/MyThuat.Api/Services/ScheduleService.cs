@@ -105,7 +105,9 @@ public sealed class ScheduleService(MyThuatDbContext db,AuditService audit,Acces
         // The published class timetable must describe the actual recurring slot.
         var first=sessions[0];
         var weekdays=new[]{"Chủ nhật","Thứ Hai","Thứ Ba","Thứ Tư","Thứ Năm","Thứ Sáu","Thứ Bảy"};
-        cls.LichHocDuKien=$"{string.Join(", ",days.Select(x=>weekdays[x]))} · {first.BatDau:HH:mm}–{first.KetThuc:HH:mm} · "+(request.CachTuan==1?"Hàng tuần":$"Mỗi {request.CachTuan} tuần")+(days.Length>1?$" · {days.Length} buổi/{(request.CachTuan==1?"tuần":$"{request.CachTuan} tuần")}":"");
+        cls.LichHocDuKien=sessions.Count==1
+            ?$"{weekdays[(int)first.BatDau.DayOfWeek]} {first.BatDau:dd/MM/yyyy} · {first.BatDau:HH:mm}–{first.KetThuc:HH:mm}"
+            :$"{string.Join(", ",days.Select(x=>weekdays[x]))} · {first.BatDau:HH:mm}–{first.KetThuc:HH:mm} · "+(request.CachTuan==1?"Hàng tuần":$"Mỗi {request.CachTuan} tuần")+(days.Length>1?$" · {days.Length} buổi/{(request.CachTuan==1?"tuần":$"{request.CachTuan} tuần")}":"");
         audit.Add("LopHoc",classId,"SINH_LICH",new {SoBuoi=sessions.Count});await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);
         return sessions.Select(ManagementService.Scalars);
     }

@@ -36,6 +36,7 @@ public sealed class HocVienController(MyThuatDbContext db,AuditService audit):Co
         ApiError.Require(student.TrangThai=="HOAT_DONG","Hồ sơ không hoạt động.",403);
         ApiError.Require(Convert.ToBase64String(student.RowVersion)==r.RowVersion,"Hồ sơ đã thay đổi. Đóng và mở lại để tải bản mới nhất.",409);
         if(student.NgaySinh!=r.NgaySinh){
+            RequireSelfServiceAge(r.NgaySinh);
             var registrations=await db.DangKy.Where(x=>x.HoSoTheoHoc!.HocVienId==id&&(x.TrangThai=="DA_XAC_NHAN"||((x.TrangThai=="CHO_THANH_TOAN"||x.TrangThai=="CHO_CHUYEN")&&x.HanGiuCho>now)))
                 .Select(x=>new {Date=x.LopHoc!.NgayKhaiGiangDuKien,MinAge=x.LopHoc.KhoaHoc!.TuoiToiThieu}).ToListAsync(ct);
             foreach(var registration in registrations){
@@ -51,6 +52,7 @@ public sealed class HocVienController(MyThuatDbContext db,AuditService audit):Co
     {
         var member=User.MemberId();ApiError.Require(member.HasValue,"Tài khoản không liên kết thành viên.",403);
         ApiError.Require(r.NgaySinh.Year>=1900&&r.NgaySinh<=BusinessClock.Today&&r.QuanHe is "CHA" or "ME" or "GIAM_HO" or "TU_BAN_THAN","Ngày sinh hoặc quan hệ không hợp lệ.");
+        RequireSelfServiceAge(r.NgaySinh);
         await using var tx=await db.Database.BeginTransactionAsync(IsolationLevel.Serializable,ct);
         var owner=await db.ThanhVien.SingleOrDefaultAsync(x=>x.Id==member,ct)??throw new ApiError(403,"Không có thành viên tương ứng.");
         ApiError.Require(owner.TrangThai is "HOAT_DONG" or "CHO_XAC_NHAN","Tài khoản thành viên không hoạt động.",403);
@@ -64,6 +66,9 @@ public sealed class HocVienController(MyThuatDbContext db,AuditService audit):Co
         db.DaiDienHocVien.Add(new(){ThanhVienId=member!.Value,HocVienId=student.Id,QuanHe=r.QuanHe,QuyenDaiDien="DAY_DU",LaLienHeChinh=true,HieuLucTu=now,XacNhanLuc=now,NguoiXacNhan=User.AccountId()});
         audit.Add("HocVien",student.Id,"TAO_HO_SO_TU_PHUC_VU");await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return new {student.Id,student.MaHocVien,student.HoTen,student.TrangThai};
     }
+    static void RequireSelfServiceAge(DateOnly birthday) =>
+        ApiError.Require(birthday.AddYears(3)<=BusinessClock.Today,"Học viên phải từ đủ 3 tuổi.");
+
     [HttpPost("{id:long:min(1)}/danh-gia")]
     public async Task<IActionResult> Assess(long id,AssessRequest r,CancellationToken ct)
     {

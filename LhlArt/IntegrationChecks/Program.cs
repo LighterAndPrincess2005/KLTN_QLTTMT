@@ -29,7 +29,7 @@ var folder=Path.Combine(Path.GetTempPath(),"LhlWinFormsChecks-"+Guid.NewGuid().T
 var sql=args.Contains("--sqlserver");var database="LhlWinFormsChecks_"+Guid.NewGuid().ToString("N");
 var options=sql?new DbContextOptionsBuilder<MyThuatDbContext>().UseSqlServer($"Server=(localdb)\\MSSQLLocalDB;Database={database};Trusted_Connection=True;TrustServerCertificate=True").Options
     :new DbContextOptionsBuilder<MyThuatDbContext>().UseSqlite("Data Source="+Path.Combine(folder,"checks.db")).Options;
-var builder=WebApplication.CreateBuilder(new WebApplicationOptions{EnvironmentName="Development",ApplicationName=typeof(AuthController).Assembly.FullName});
+var builder=WebApplication.CreateBuilder(new WebApplicationOptions{EnvironmentName="Development",ApplicationName=typeof(AuthController).Assembly.FullName,ContentRootPath=folder});
 builder.WebHost.UseUrls("http://127.0.0.1:0");builder.Logging.ClearProviders();
 builder.Services.AddControllers().AddApplicationPart(typeof(AuthController).Assembly);
 builder.Services.AddScoped<MyThuatDbContext>(_=>new CheckDbContext(options));
@@ -97,6 +97,17 @@ try
     var login=await Web("POST","api/tai-khoan/dang-nhap",new{TenDangNhap="phuhuynh",MatKhau=password});web.DefaultRequestHeaders.Authorization=new AuthenticationHeaderValue("Bearer",T(login,"accessToken"));
     var me=await Web("GET","api/tai-khoan/toi");Check(T(me,"hoTen")=="Nguyễn Thị Ánh"&&T(me,"ngaySinh")=="1985-06-17","Tạo tài khoản qua WinForms, web đăng nhập ngay và đọc đúng tiếng Việt / ngày sinh");
     Check((await Web("GET","api/hoc-vien/toi")).GetArrayLength()==0&&(await Web("GET","api/dang-ky/toi")).GetArrayLength()==0,"Tạo tài khoản không tự tạo học viên hoặc đăng ký lớp");
+    object StudentProfile(DateOnly birthday) => new { HoTen="Học viên kiểm tra tuổi", NgaySinh=birthday, QuanHe="ME",
+        LienHeKhanCapTen="Nguyễn Thị Ánh", LienHeKhanCapSDT="0900000000" };
+    var today=BusinessClock.Today;
+    foreach (var years in new[]{0,1,2})
+    {
+        var underage=await Web("POST","api/hoc-vien/toi",StudentProfile(today.AddYears(-years)),HttpStatusCode.BadRequest);
+        Check(T(underage,"error").Contains("đủ 3 tuổi"),$"Hồ sơ web chặn học viên {years} tuổi");
+    }
+    var junior=await Web("POST","api/hoc-vien/toi",StudentProfile(today.AddYears(-3)));
+    Check(Id(junior)>0,"Hồ sơ web cho phép học viên vừa đủ 3 tuổi");
+    await Web("DELETE","api/hoc-vien/toi/"+Id(junior),expected:HttpStatusCode.NoContent);
     var student=await staff.Post("api/quan-ly/hoc-vien",new{MaHocVien="HVTEST01",HoTen="Võ Huỳnh Gia Huy",NgaySinh="2005-06-17",LienHeKhanCapTen="Nguyễn Thị Ánh",LienHeKhanCapSDT="0900000000",TrangThai="HOAT_DONG"});
     var link=await staff.Post("api/quan-ly/dai-dien",new{ThanhVienId=memberId,HocVienId=Id(student),QuanHe="ME",QuyenDaiDien="DAY_DU",LaLienHeChinh=true,HieuLucTu=Stamp(BusinessClock.Now.AddMinutes(-1))});
     var mine=await Web("GET","api/hoc-vien/toi");Check(mine.GetArrayLength()==1&&T(mine[0],"hoTen")=="Võ Huỳnh Gia Huy","Hồ sơ và quan hệ tạo từ WinForms hiện trên web ngay");
@@ -126,9 +137,11 @@ try
     // Local mock webhooks only: no request to SePay or a real bank is made.
     var paymentId=Id(webRegistration);var paymentConfig=app.Services.GetRequiredService<IConfiguration>();
     paymentConfig["SePay:Enabled"]="false";
+    paymentConfig["SePay:BankCode"]="";
     var offlineCheckout=await Web("POST",$"api/thanh-toan/{paymentId}/phien",new{});
-    Check(!ArtApiClient.Get(offlineCheckout,"sanSang").GetBoolean(),"PAY01 Chưa cấu hình SePay: không tạo QR hoặc tự xác nhận tiền");
-    paymentConfig["SePay:Enabled"]="true";
+    Check(!ArtApiClient.Get(offlineCheckout,"sanSang").GetBoolean(),"PAY01 Thiếu tài khoản nhận: không tạo QR hoặc tự xác nhận tiền");
+    paymentConfig["SePay:BankCode"]="ACB";
+    paymentConfig["SePay:WebhookKey"]="";
     var checkout=await Web("POST",$"api/thanh-toan/{paymentId}/phien",new{});var paymentCode=T(checkout,"maThanhToan");var expectedDue=ArtApiClient.Get(checkout,"conPhaiTra").GetDecimal();
     Check(paymentCode.StartsWith("BUI")&&ArtApiClient.Get(checkout,"sanSang").GetBoolean()&&expectedDue>0,"PAY02 Tạo QR với mã riêng và công nợ đã trừ ưu đãi từ server");
     Check(T(await Web("POST",$"api/thanh-toan/{paymentId}/phien",new{}),"maThanhToan")==paymentCode,"PAY03 Mở lại thanh toán dùng cùng phiên, không tạo thêm mã");
@@ -140,8 +153,12 @@ try
     Check(reported.EnumerateArray().Count(x=>Id(x)==paymentId)==1&&
         !ArtApiClient.Get(afterReport,"daXacNhan").GetBoolean()&&ArtApiClient.Get(afterReport,"conPhaiTra").GetDecimal()==expectedDue,
         "Báo chuyển khoản hai lần chỉ có một phiếu cho thu ngân và không tự ghi nhận tiền");
+    Check(T(checkout,"qrUrl").StartsWith("https://vietqr.app/img?")&&T(checkout,"qrUrl").Contains(paymentCode)&&ArtApiClient.Get(afterReport,"daBaoChuyenKhoan").GetBoolean(),"QR và báo chuyển khoản vẫn hoạt động khi tắt webhook và chưa có khóa");
     await Web("GET","api/thanh-toan/bao-chuyen-khoan",expected:HttpStatusCode.Forbidden);
     async Task<JsonElement> Hook(object body,string secret="local-only-payment-secret",HttpStatusCode expected=HttpStatusCode.OK){using var client=new HttpClient{BaseAddress=new Uri(address)};client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization","Apikey "+secret);using var response=await client.PostAsJsonAsync("api/thanh-toan/sepay/webhook",body);var json=await response.Content.ReadAsStringAsync();if(response.StatusCode!=expected)throw new Exception("Webhook: "+response.StatusCode+" "+json);return string.IsNullOrWhiteSpace(json)?JsonSerializer.SerializeToElement(new{}):JsonDocument.Parse(json).RootElement.Clone();}
+    await Hook(new{Id=910000,AccountNumber="0000000000",TransferType="in",TransferAmount=1,Content=paymentCode},expected:HttpStatusCode.ServiceUnavailable);
+    paymentConfig["SePay:Enabled"]="true";
+    paymentConfig["SePay:WebhookKey"]="local-only-payment-secret";
     var half=decimal.Floor(expectedDue/2);var event1=new{Id=910001,AccountNumber="0000000000",TransferType="in",TransferAmount=half,Content=paymentCode,ReferenceCode="MOCK01"};
     await Hook(event1,"wrong-key",HttpStatusCode.Unauthorized);
     Check(true,"PAY04 Webhook sai khóa bị từ chối trước khi ghi giao dịch");
@@ -250,6 +267,40 @@ try
     await Web("GET","api/lop-hoc/"+Id(draftClass),expected:HttpStatusCode.NotFound);Check(true,"Lớp nháp từ WinForms không bị công khai nhầm trên web");
     var scheduleTeacher=await staff.Post("api/quan-ly/giao-vien",new{MaGiaoVien="GVSCHEDULE",HoTen="Giáo viên xếp lịch",DienThoai="0900000033",TrinhDo="Đại học",ChuyenMon="Hội họa",CapDoCoTheDay="BASIC",TrangThai="HOAT_DONG"});
     await staff.Post("api/tai-khoan",new{TenDangNhap="teacher_name_test",MatKhau=password,HoTen="Tên nhân sự dự phòng",VaiTro="GIAO_VIEN",GiaoVienId=Id(scheduleTeacher),QuyenBoSung=0,Email="teacher-name@example.invalid"});
+    const string teacherPhotoPath="api/tep/cong-khai/giao-vien/toi";
+    await Web("GET",teacherPhotoPath,expected:HttpStatusCode.Forbidden);
+    using(var photoClient=new HttpClient{BaseAddress=new Uri(address)})
+    {
+        using var anonymous=await photoClient.GetAsync(teacherPhotoPath);
+        Check(anonymous.StatusCode==HttpStatusCode.Unauthorized,"Ảnh cá nhân của giáo viên yêu cầu đăng nhập");
+        using var teacherLogin=await photoClient.PostAsJsonAsync("api/tai-khoan/dang-nhap",new{TenDangNhap="teacher_name_test",MatKhau=password});
+        teacherLogin.EnsureSuccessStatusCode();
+        var token=T(await teacherLogin.Content.ReadFromJsonAsync<JsonElement>(),"accessToken");
+        photoClient.DefaultRequestHeaders.Authorization=new AuthenticationHeaderValue("Bearer",token);
+        var png=Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+plZkAAAAASUVORK5CYII=");
+        using var body=new MultipartFormDataContent();
+        body.Add(new ByteArrayContent(png),"file","portrait.png");
+        body.Add(new StringContent("999999"),"giaoVienId");
+        using var uploaded=await photoClient.PostAsync(teacherPhotoPath,body);
+        var result=await uploaded.Content.ReadFromJsonAsync<JsonElement>();
+        var url=T(result,"url");
+        Check(uploaded.IsSuccessStatusCode&&url.Length>0,"Giáo viên tải ảnh bằng tài khoản của mình");
+        var ownPhoto=await photoClient.GetFromJsonAsync<JsonElement>(teacherPhotoPath);
+        var publicTeachers=await photoClient.GetFromJsonAsync<JsonElement>("api/noi-dung/giao-vien");
+        Check(T(ownPhoto,"url")==url&&publicTeachers.EnumerateArray().Single(x=>T(x,"image")==url).GetProperty("id").GetInt64()==Id(scheduleTeacher),
+            "Ảnh công khai ngay và chỉ cập nhật giáo viên trong phiên đăng nhập");
+        photoClient.DefaultRequestHeaders.Authorization=null;
+        Check((await photoClient.GetByteArrayAsync(url)).SequenceEqual(png),"Khách truy cập đọc được ảnh công khai");
+    }
+    var librarySource=$"api/noi-dung/quan-ly/khoa-hoc/{courseId}/anh";
+    var libraryTarget=$"api/noi-dung/quan-ly/khoa-hoc/{Id(tempCourse)}/anh";
+    const string sharedCover="/bui/teacher.webp";
+    await staff.Put(librarySource,new{AnhDaiDien=sharedCover,ThanhPham=Array.Empty<string>(),RowVersion=ArtApiClient.Get(await staff.Read(librarySource),"rowVersion").GetString()});
+    var imageLibrary=await staff.Read("api/noi-dung/quan-ly/khoa-hoc/thu-vien-anh");
+    var sourceImage=T(imageLibrary.EnumerateArray().Single(x=>Id(x,"khoaHocId")==courseId),"anhDaiDien");
+    await staff.Put(libraryTarget,new{AnhDaiDien=sourceImage,ThanhPham=Array.Empty<string>(),RowVersion=ArtApiClient.Get(await staff.Read(libraryTarget),"rowVersion").GetString()});
+    Check(sourceImage==sharedCover&&T(await staff.Read(libraryTarget),"anhDaiDien")==sourceImage&&T(await staff.Read(librarySource),"anhDaiDien")==sourceImage,
+        "Khóa học dùng lại ảnh từ thư viện mà vẫn giữ ảnh của khóa gốc");
     using(var teacherClient=new ArtApiClient(baseUrl:address)){
         await teacherClient.Login("teacher_name_test",password);
         Check(T(await teacherClient.Read("api/tai-khoan/toi"),"hoTen")=="Giáo viên xếp lịch","Lời chào giáo viên dùng họ tên hồ sơ liên kết thay vì tên đăng nhập hoặc tên nhân sự dự phòng");
@@ -307,7 +358,7 @@ try
     draftClass=await staff.Read("api/quan-ly/lop-hoc/"+Id(draftClass));
     Check(T(draftClass,"trangThai")=="DANG_TUYEN_SINH","Xác nhận xếp lịch từ Win tự chuyển nháp thành Đang tuyển sinh trên SQL Server");
     var classOnWeb=await Web("GET","api/lop-hoc/"+Id(draftClass));
-    Check(T(classOnWeb,"lichHocDuKien")==ClassPlanRules.Describe(6,new TimeSpan(9,0,0),90,1),"Web nhận đúng Thứ Bảy 09:00–10:30, khớp lịch điểm danh");
+    Check(T(classOnWeb,"lichHocDuKien")==$"Thứ Bảy {scheduledFirst:dd/MM/yyyy} · 09:00–10:30","Web hiện ngày và giờ thực tế của lớp một buổi");
     await staff.Put("api/quan-ly/khoa-hoc/"+Id(tempCourse),new{TrangThai="NGUNG"},T(tempCourse,"rowVersion"));
     await Web("GET","api/khoa-hoc/"+Id(tempCourse),expected:HttpStatusCode.NotFound);Check(true,"Ngừng khóa trên WinForms: web không còn công khai khóa");
     var tempOffer=await staff.Post("api/quan-ly/khuyen-mai",new{MaKhuyenMai="CRUD_OFFER",TenKhuyenMai="Ưu đãi thử",TuDongApDung=true,KhoaApDungId=courseId,NhomKhoanThu="HOC_PHI",LoaiGiam="PHAN_TRAM",GiaTriGiam=5,TongLuot=100,BatDau=Stamp(BusinessClock.Now.AddDays(-1)),KetThuc=Stamp(BusinessClock.Now.AddDays(1)),TrangThai="HOAT_DONG"});
@@ -380,6 +431,16 @@ try
     var receiptList=await staff.Read("api/giao-dich/phieu-thu");
     Check(receiptList.EnumerateArray().Count(x=>Id(x)==Id(receiptPayment))==1&&
         !receiptList.EnumerateArray().Any(x=>T(x,"maChungTu")=="SP910005"),"PT02 Có thể mở lại phiếu đã thu, không in khoản tiền đang đối chiếu");
+    web.DefaultRequestHeaders.Authorization=new AuthenticationHeaderValue("Bearer",T(newLogin,"accessToken"));
+    paymentConfig["SePay:Enabled"]="false";
+    var manualStudent=await Web("POST","api/hoc-vien/toi",new{HoTen="Học viên duyệt chuyển khoản",NgaySinh="2011-01-01",QuanHe="ME",LienHeKhanCapTen="Nguyễn Thị Ánh",LienHeKhanCapSDT="0900000000"});
+    var manualRegistration=await Web("POST","api/dang-ky",new{HocVienId=Id(manualStudent),LopHocId=classId,NguoiDangKyId=memberId,IdempotencyKey="PAY-MANUAL-00001"});var manualId=Id(manualRegistration);
+    await Web("POST",$"api/thanh-toan/{manualId}/phien",new{});
+    await Web("POST",$"api/thanh-toan/{manualId}/bao-chuyen-khoan",new{});
+    var manualDebt=await staff.Read($"api/dang-ky/{manualId}/cong-no");var manualCharge=ArtApiClient.Get(manualDebt,"khoanThu")[0];
+    await staff.Post("api/giao-dich/thu",new{DangKyId=manualId,KhoanThuId=Id(manualCharge),SoTien=ArtApiClient.Get(manualCharge,"conThieu").GetDecimal(),PhuongThuc="CHUYEN_KHOAN",MaChungTu="PT-MANUAL-01",MaThamChieu="BANK-MANUAL-01",IdempotencyKey="WIN-MANUAL-00001"});
+    Check(ArtApiClient.Get(await Web("GET",$"api/thanh-toan/{manualId}/trang-thai"),"daXacNhan").GetBoolean()&&!(await staff.Read("api/thanh-toan/bao-chuyen-khoan")).EnumerateArray().Any(x=>Id(x)==manualId),"Thu ngân duyệt chuyển khoản: web xác nhận và phiếu rời danh sách chờ duyệt");
+
     Console.WriteLine($"ALL {checks} WINFORMS/API INTEGRATION CHECKS PASSED ({(sql?"SQL Server":"SQLite temporary store")}).");
 }
 finally

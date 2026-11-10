@@ -16,7 +16,7 @@ Trang `/hoc-tap` được thiết kế thành dashboard riêng, không gắn và
 - `/goc-sang-tao`: hình ảnh và cảm nhận học viên.
 - `/hoc-tap`, `/giao-vien`: các khu vực riêng cho người dùng tương ứng.
 
-Menu sử dụng đường dẫn thật, tải trang riêng. Trạng thái đăng nhập được khôi phục và không tự mở popup khi tải lại. Logo luôn về trang chủ. Tham số `demo=1` được giữ khi điều hướng để thử giao diện; lựa chọn học viên được truyền bằng `hoc-vien` và vẫn đối chiếu với hồ sơ tài khoản.
+Menu sử dụng đường dẫn thật, tải trang riêng. Trạng thái đăng nhập được khôi phục và không tự mở popup khi tải lại. Logo luôn về trang chủ. Lựa chọn học viên được truyền bằng `hoc-vien` và vẫn đối chiếu với hồ sơ tài khoản.
 
 Khi triển khai lên hosting, cấu hình fallback các đường dẫn giao diện không khớp tệp về `index.html`; `/api` vẫn chuyển đến backend. Vite dev và Vite preview đã hỗ trợ fallback.
 
@@ -40,9 +40,6 @@ Nguồn yêu cầu: `D:\long2026\reportweb.docx`, gồm nội dung góp ý và 1
 
 - Người đại diện được tự điền tên và điện thoại liên hệ từ tài khoản. API `/api/tai-khoan/toi` bổ sung các trường này.
 - Chọn bản thân tự điền tên, ngày sinh đã nhập khi tạo tài khoản trên trình duyệt, tên liên hệ; điện thoại khẩn cấp để trống. Nếu tài khoản cũ chưa có ngày sinh thì người dùng bổ sung, không tự suy đoán.
-- Phiên bản API hiện có vẫn xác minh hồ sơ và thanh toán. Để chạy thử xuyên suốt ngay, mở `http://127.0.0.1:5173/?demo=1` hoặc bấm “Dùng thử không cần duyệt” trên thanh đầu trang khi chạy phát triển.
-- Chế độ trình diễn lưu hồ sơ và đăng ký trong sessionStorage, xác nhận vào lớp ngay, không ghi nhận giao dịch tiền thật. Chỉ hoạt động trong Vite development; build production dùng API.
-- Trong trình diễn có thể đăng nhập bằng tên và mật khẩu bất kỳ không rỗng; tạo tài khoản vẫn dùng quy tắc biểu mẫu.
 - Muốn dùng các trường hồ sơ và danh sách ưu đãi mới với dữ liệu thật cần khởi động lại API sau khi build.
 
 ## Nguồn hình ảnh

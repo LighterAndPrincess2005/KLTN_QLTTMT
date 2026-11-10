@@ -36,6 +36,7 @@ internal static class ApiColumnLabels
     Anh=Ảnh đính kèm
     LoaiAnh=Định dạng ảnh
     HocVien=Học viên
+    TenNguoiDangCongKhai=Tên người đăng công khai
     SoSao=Số sao
     DongYCongKhai=Đồng ý công bố
     CoAnh=Có ảnh đính kèm

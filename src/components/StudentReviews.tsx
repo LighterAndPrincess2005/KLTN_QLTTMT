@@ -28,11 +28,16 @@ export function StudentReviews() {
   const track=useRef<HTMLDivElement>(null);
   const [page,setPage]=useState(0);
   const pageSize=3;
-  const items=published.length?published.map(review=>({
-    ...review, anh:review.anh?courseReviewImage(review.anh):null, name:'Học viên Mỹ Thuật Bụi',
-  })):reviews.map((review,index)=>({
-    id:index, anh:review.image, name:review.name, noiDung:review.comment, soSao:null, tenKhoa:'Chia sẻ về trải nghiệm học mỹ thuật',
-  }));
+  const items=[
+    ...published.map(review=>({
+      ...review, key:`published-${review.id}`, anh:review.anh?courseReviewImage(review.anh):null,
+      name:review.tenNguoiDangCongKhai||'Học viên Mỹ Thuật Bụi', imageAlt:'Thành phẩm học viên',
+    })),
+    ...reviews.map(review=>({
+      key:`featured-${review.name}`, anh:review.image, name:review.name, imageAlt:review.name,
+      noiDung:review.comment, soSao:null, tenKhoa:'',
+    })),
+  ];
   const pages=Array.from({length:Math.ceil(items.length/pageSize)},(_,index)=>items.slice(index*pageSize,(index+1)*pageSize));
   const move=(index:number)=>{
     const element=track.current;
@@ -45,16 +50,15 @@ export function StudentReviews() {
       <div className="reviews-heading">
         <span className="kicker">ĐÁNH GIÁ & CẢM NHẬN HỌC VIÊN</span>
         <h2 id="reviews-title">Những câu chuyện<br/><em>sau một buổi học.</em></h2>
-        {!published.length&&<p>Cảm nhận tham khảo</p>}
       </div>
       {pages.length>0&&<div className="reviews-track" ref={track} aria-label="Các nhóm đánh giá"
         onScroll={event=>{const element=event.currentTarget;if(element.clientWidth)setPage(Math.round(element.scrollLeft/element.clientWidth));}}>
-        {pages.map(group=><div className="reviews-grid" key={group[0].id}>
-        {group.map(review=><figure className="student-review" key={review.id}>
-          {review.anh&&<div className="review-portrait"><img src={review.anh} alt={published.length?"Thành phẩm học viên":review.name} width="300" height="300" loading="lazy"/></div>}
+        {pages.map(group=><div className="reviews-grid" key={group[0].key}>
+        {group.map(review=><figure className="student-review" key={review.key}>
+          {review.anh&&<div className="review-portrait"><img src={review.anh} alt={review.imageAlt} width="300" height="300" loading="lazy"/></div>}
           {review.soSao!==null&&<p aria-label={`${review.soSao} sao`} className="review-name">{'★'.repeat(review.soSao)}</p>}
           <blockquote><p>{review.noiDung}</p></blockquote>
-          <figcaption><span className="review-name">{review.name}</span><span className="review-role">{review.tenKhoa}</span></figcaption>
+          <figcaption><span className="review-name">{review.name}</span>{review.tenKhoa&&<span className="review-role">{review.tenKhoa}</span>}</figcaption>
         </figure>)}
         </div>)}
       </div>}

@@ -62,9 +62,14 @@ function LearningPanel({enrollment,classes,onEnrollmentChange}:{enrollment:Enrol
  </article>;
 }
 
+function holdDeadline(row:Enrollment){
+ return ['CHO_THANH_TOAN','CHO_CHUYEN'].includes(row.trangThai)?vnTime(row.hanGiuCho).getTime():NaN;
+}
+
 export function MemberArea({member,onLogin,onRegister,studentFocus,version,classes,authReady=true}:{member:Member|null;onLogin:()=>void;onRegister:(studentId?:string)=>void;studentFocus:{id:string}|null;version:number;classes:ArtClass[];authReady?:boolean}){
  const [editing,setEditing]=useState<StudentProfile|null>(null);
- const [view,setView]=useState<'week'|'class'>('week');
+ const [requestedView,setView]=useState<'week'|'class'>('week');
+ const [now,setNow]=useState(Date.now);
  const [rows,setRows]=useState<Enrollment[]>([]),[students,setStudents]=useState<StudentProfile[]>([]);
  const [studentId,setStudentId]=useState<string|null>(null),[selectedId,setSelectedId]=useState<number|null>(null);
  const [loadedFor,setLoadedFor]=useState<number|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(false),[reload,setReload]=useState(0);
@@ -76,7 +81,16 @@ export function MemberArea({member,onLogin,onRegister,studentFocus,version,class
  },[member?.id,member?.thanhVienId,version,reload]);
  useEffect(()=>{setStudentId(studentFocus?.id??null);setSelectedId(null);setView('week')},[studentFocus,member?.id]);
  useEffect(()=>{document.title='Khu vực học tập · Mỹ Thuật Bụi'},[]);
- const ready=loadedFor===member?.id,enrollments=ready?rows:[],profiles=ready?students:[];
+ useEffect(()=>{
+  const next=rows.map(holdDeadline).filter(deadline=>deadline>now).sort((a,b)=>a-b)[0];
+  if(next===undefined)return;
+  const timer=window.setTimeout(()=>setNow(Date.now()),Math.min(2_147_483_647,Math.max(0,next-Date.now())));
+  return()=>window.clearTimeout(timer);
+ },[rows,now]);
+ const ready=loadedFor===member?.id,profiles=ready?students:[];
+ const currentTime=Math.max(now,Date.now());
+ const enrollments=ready?rows.filter(row=>row.trangThai!=='HET_HAN'&&!(holdDeadline(row)<=currentTime)):[];
+ const view=requestedView==='class'&&selectedId!==null&&!enrollments.some(row=>row.id===selectedId)?'week':requestedView;
  const student=profiles.find(s=>s.id===studentId)||profiles[0];
  const visibleRows=student?enrollments.filter(row=>row.hocVienId===Number(student.id)):[];
  const selected=visibleRows.find(row=>row.id===selectedId)||visibleRows.find(row=>row.trangThai==='DA_XAC_NHAN')||visibleRows[0];

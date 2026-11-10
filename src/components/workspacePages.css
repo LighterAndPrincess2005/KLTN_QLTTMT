@@ -3,6 +3,12 @@
 .teacher-sidebar .study-profile-card h2,.account-sidebar .study-profile-card h2{font-size:20px;line-height:1.6;margin:12px 0;overflow-wrap:anywhere}
 .teacher-sidebar .study-profile-card p,.account-sidebar .study-profile-card p{font-size:13px;line-height:1.8;color:#60715c;overflow-wrap:anywhere}
 .teacher-sidebar .study-profile-card .text-link{width:100%;margin-top:12px;font-size:12px}
+.teacher-public-photo{margin-top:16px;padding-top:14px;border-top:1px solid #d6ded0}
+.teacher-public-photo summary{cursor:pointer;font-weight:700;color:#216653}
+.teacher-public-photo form{display:grid;gap:12px;margin-top:14px}
+.teacher-public-photo form p{margin:0}
+.teacher-public-photo img{object-fit:cover;border-radius:50%}
+.teacher-public-photo input[type=file]{width:100%;min-width:0;padding:8px;font-size:12px}
 .teacher-calendar-search{margin:0 0 18px;padding:18px;background:white;border:1px solid #d8e1d0;border-radius:14px}
 .teacher-calendar-search input{width:100%;min-width:0}
 .teacher-calendar .week-heading h2{font-size:25px;line-height:1.5;margin:10px 0}

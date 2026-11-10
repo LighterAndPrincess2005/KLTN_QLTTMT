@@ -64,6 +64,7 @@ public class MyThuatDbContext(DbContextOptions<MyThuatDbContext> options) : DbCo
         e.HasOne<ThanhVien>().WithMany().HasForeignKey(x=>x.NguoiGuiId).OnDelete(DeleteBehavior.NoAction);
         e.Property(x=>x.NoiDung).HasMaxLength(2000);
         e.Property(x=>x.GhiChuDuyet).HasMaxLength(500);
+        e.Property(x=>x.TenNguoiDangCongKhai).HasMaxLength(150);
         e.Property(x=>x.LoaiAnh).HasMaxLength(20);
         e.Property(x=>x.TrangThai).HasMaxLength(20);
     });

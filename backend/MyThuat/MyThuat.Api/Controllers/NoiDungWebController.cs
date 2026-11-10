@@ -43,6 +43,18 @@ public sealed class NoiDungWebController(MyThuatDbContext db,AuditService audit)
     public async Task<object> SaveCourse(long id,CourseIntroRequest r,CancellationToken ct){ApiError.Require(await db.KhoaHoc.AnyAsync(x=>x.Id==id,ct)&&SafeUrl(r.AnhDaiDien)&&r.ThanhPham.Count<=20&&r.ThanhPham.All(SafeUrl)&&r.DauRa.Count is >0 and <=20,"Thông tin khóa không hợp lệ.");var row=await db.GioiThieuKhoaHoc.SingleOrDefaultAsync(x=>x.KhoaHocId==id,ct);if(row==null){row=new(){KhoaHocId=id};db.GioiThieuKhoaHoc.Add(row);}else ApiError.Require(Convert.ToBase64String(row.RowVersion)==r.RowVersion,"Thông tin đã thay đổi.",409);row.AnhDaiDien=r.AnhDaiDien;row.DauRaJson=JsonSerializer.Serialize(r.DauRa);row.ThanhPhamJson=JsonSerializer.Serialize(r.ThanhPham);row.HoaCuBaoGom=r.HoaCuBaoGom;row.CanChuanBi=r.CanChuanBi;audit.Add("KhoaHoc",id,"SUA_GIOI_THIEU_KHOA");await db.SaveChangesAsync(ct);return new{row.Id,row.RowVersion};}
     public sealed record CourseImages(string AnhDaiDien, string[] ThanhPham, string? RowVersion);
 
+    [Authorize(Policy="DaoTao"),HttpGet("quan-ly/khoa-hoc/thu-vien-anh")]
+    public async Task<object> CourseImageLibrary(CancellationToken ct)
+    {
+        var rows=await db.GioiThieuKhoaHoc.AsNoTracking()
+            .Where(x=>x.AnhDaiDien!=""||x.ThanhPhamJson!="[]")
+            .OrderBy(x=>x.KhoaHoc!.TenKhoa)
+            .Select(x=>new { x.KhoaHocId,x.KhoaHoc!.TenKhoa,x.KhoaHoc.MaKhoa,x.AnhDaiDien,x.ThanhPhamJson })
+            .ToListAsync(ct);
+        return rows.Select(x=>new { x.KhoaHocId,x.TenKhoa,x.MaKhoa,x.AnhDaiDien,
+            ThanhPham=JsonSerializer.Deserialize<string[]>(x.ThanhPhamJson)??[] });
+    }
+
     [Authorize(Policy="DaoTao"),HttpGet("quan-ly/khoa-hoc/{id:long}/anh")]
     public async Task<CourseImages> GetCourseImages(long id,CancellationToken ct)
     {
