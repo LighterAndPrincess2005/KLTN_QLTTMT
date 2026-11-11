@@ -1,15 +1,15 @@
-﻿# API Trung tâm Mỹ thuật
+# API quản lý trung tâm Mỹ Thuật Bụi
 
-Project chính: `D:\long2026\MyThuat`. API C# ASP.NET Core, Entity Framework Core và SQL Server LocalDB, dùng chung cho WinForms quản lý và website đăng ký.
+Mã nguồn API nằm tại `backend/MyThuat/MyThuat.Api/`. API dùng C# ASP.NET Core, Entity Framework Core và SQL Server, phục vụ website và ứng dụng WinForms của khóa luận CNTT-KLCN082.
 
-## Bật lần sau
+## Chạy API
 
-1. Bấm **Bat_API_MyThuat** trên Desktop. Nút tự khởi động LocalDB, kiểm tra database rồi bật API và mở `http://localhost:5080`.
+1. Cài đặt và chạy theo [README chính](../../README.md), gồm thiết lập database và khởi động API tại `http://127.0.0.1:5080`. Nút Desktop được tạo bởi `Tao_Nut_Desktop.cmd` là lựa chọn bổ sung.
 2. Lần đầu tạo tài khoản quản trị trên trang vừa mở. Tự chọn mật khẩu từ 8 ký tự, có chữ và số; nên dùng mật khẩu dài, riêng biệt khi vận hành thật. Bộ tài khoản MAIN được khởi tạo riêng theo lệnh, không phải mật khẩu mặc định của API.
 3. Đăng nhập, sao chép token, mở Swagger → Authorize → dán token để gọi API có phân quyền.
 4. Khi cần tắt API, bấm `Tat_API.cmd` trong thư mục project. Đóng tab trình duyệt chỉ đóng trang, API vẫn chạy.
 
-Không cần mở Visual Studio hoặc cửa sổ SQL Server để sử dụng. Project hiện tại đã được publish để chạy trực tiếp. Nếu đổi vị trí project, chạy `Tao_Nut_Desktop.cmd` để tạo lại nút trỏ đúng thư mục. Không chuyển riêng file `.sln` hoặc một thư mục con: giữ cả thư mục MyThuat.
+Có thể chạy bằng `dotnet run` từ mã nguồn sau khi cài SDK và cấu hình SQL Server. Nếu dùng bản publish và nút Desktop, publish lại khi thay đổi code và tạo lại nút khi đổi thư mục.
 
 ## Quyền mặc định
 
@@ -36,7 +36,7 @@ Quản trị cấp thêm quyền nghiệp vụ cho nhân viên khi cần. Quyề
 - Kho: nhập, tiêu hao, bán riêng, cấp/trả dụng cụ, hỏng mất, dự trù, kiểm kê, điều chỉnh có chứng từ.
 - Phản hồi, báo cáo và nhật ký thay đổi.
 
-Đây là backend và trang thử API. Giao diện WinForms quản lý và website đăng ký đầy đủ cần xây tiếp dựa vào các endpoint này. Chưa tích hợp cổng thanh toán, SMTP/xác thực email hoặc triển khai Internet. Các quy định nháp khởi tạo là phương án đề xuất từ tài liệu: quản trị cần xem và kích hoạt trước khi nhận đăng ký thật.
+Website và WinForms đã kết nối các endpoint nghiệp vụ. API có tích hợp SMTP cho khôi phục mật khẩu và thông báo, cùng webhook SePay để ghi nhận chuyển khoản. Cần cấu hình dịch vụ tương ứng trên máy chạy API. Quản trị xem và kích hoạt quy định trung tâm trước khi nhận đăng ký.
 
 ## Quy ước gọi API
 
@@ -50,16 +50,16 @@ Quản trị cấp thêm quyền nghiệp vụ cho nhân viên khi cần. Quyề
 
 ## Database và mã nguồn
 
-31 bảng nghiệp vụ có khóa ngoại, chỉ mục, RowVersion và thời điểm tạo/cập nhật. Không có tuổi tối đa, lớp phổ thông hoặc trường đang học của học viên. Chuyên môn/năng lực giảng dạy nằm trong thuộc tính giáo viên.
+Các bảng nghiệp vụ có khóa ngoại, chỉ mục, RowVersion và thời điểm tạo/cập nhật. Không có tuổi tối đa, lớp phổ thông hoặc trường đang học của học viên. Chuyên môn/năng lực giảng dạy nằm trong thuộc tính giáo viên.
 
 `MyThuat.Api/Database/002_SchemaHoanThien.sql` là script schema hiện tại để xem xét. `001_SchemaBanDau.sql` chỉ là bản lưu cũ, không dùng để tạo database cho phiên bản này. Khi database mới chưa tồn tại, nút Desktop gọi `--initialize` để tạo bằng model hiện tại. Database cũ không bị xóa. API tự bổ sung cột ngày sinh còn thiếu của `ThanhVien` (cho phép NULL, giữ nguyên dữ liệu). Các khác biệt schema khác vẫn cần xem log để xử lý riêng. Không chạy script tạo bảng lên database đang có dữ liệu.
 
-Mã nguồn ở Controllers, Contracts, Services, Models, Data và Security. Mở `MyThuat.sln` trong Visual Studio 2022 để sửa. Target .NET 8; global.json chọn SDK 9.0.304 đang có trên máy.
+Mã nguồn ở Controllers, Contracts, Services, Models, Data và Security. Mở `MyThuat.sln` trong Visual Studio 2022 để sửa. Ứng dụng target .NET 8. Tệp `global.json` trong thư mục này yêu cầu SDK 9.0.304 và cho phép các bản vá cùng nhánh theo `latestPatch`.
 
 Sửa code xong cần publish lại trước khi nút Desktop dùng bản mới:
 
 ```powershell
-cd D:\long2026\MyThuat
+Set-Location backend/MyThuat
 dotnet build MyThuat.sln -c Release
 dotnet publish MyThuat.Api/MyThuat.Api.csproj -c Release --no-restore -o MyThuat.Api/.local/publish
 ```
@@ -79,7 +79,7 @@ Nhật ký: `MyThuat.Api/.local/khoi-dong.log`, `api.log`, `api-error.log`. Nế
 
 ## Nạp dữ liệu mẫu từ Word
 
-Bộ mẫu LHL Art có 6 khóa, 6 lớp, 88 buổi cùng phòng/giáo viên/học viên mẫu. Tạo quản trị trước, rồi chạy `Nap_DuLieuMau.cmd`. Xem [DU_LIEU_MAU.md](DU_LIEU_MAU.md) để biết học phí, lịch và cách nạp trên máy khác. Mật khẩu sinh riêng trên máy nạp, không đưa lên Git.
+Bộ mẫu DemoData có 6 khóa, 6 lớp và 88 buổi cùng phòng, giáo viên và học viên mẫu. Tạo quản trị trước, rồi chạy `Nap_DuLieuMau.cmd`. Xem [DU_LIEU_MAU.md](DU_LIEU_MAU.md) để biết học phí, lịch và cách nạp trên máy khác. Mật khẩu sinh riêng trên máy nạp, không đưa lên Git.
 
 ## Đối chiếu dữ liệu và mã hồ sơ
 

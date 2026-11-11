@@ -1,6 +1,6 @@
-# LHL ART — WinForms quản lý trung tâm
+# Mỹ Thuật Bụi — WinForms quản lý trung tâm
 
-Bản ngày 22/10/2026: lấy API và website từ `main` tại `2b8237d`, ghép WinForms của nhánh `dong-bo-api-web-winform` tại `e9eb760`, rồi sửa trong thư mục `LhlArt`. Không thay mã nguồn backend, website hoặc schema database của nhóm.
+Ứng dụng Windows Forms phục vụ cán bộ trung tâm trong khóa luận CNTT-KLCN082. WinForms sử dụng API ASP.NET Core và SQL Server dùng chung với website.
 
 ## Mở và chạy trong VS Code
 
@@ -21,7 +21,7 @@ Nếu chỉ mở thư mục `LhlArt`, chạy `dotnet run --project LhlArt.csproj
 
 Ứng dụng khởi động bằng API; không mở kho JSON cũ khi truyền `--local`. Các lớp xử lý JSON cũ còn lưu trong source để tham khảo, không tham gia luồng chạy chính.
 
-## Các mục mới
+## Các chức năng
 
 - **Đăng ký tài khoản**: tạo tài khoản người học/phụ huynh độc lập. API mới cho đăng nhập ngay, không cần duyệt và chưa tự đăng ký lớp.
 - **Người học / phụ huynh**: thêm/sửa hồ sơ người liên hệ. Hồ sơ liên hệ chưa chắc đã có tài khoản đăng nhập; tạo tài khoản tại mục riêng.
@@ -30,7 +30,7 @@ Nếu chỉ mở thư mục `LhlArt`, chạy `dotnet run --project LhlArt.csproj
 - **Tài khoản & vai trò**: quản trị xem tài khoản người học/phụ huynh/giám hộ/nhân viên, tạo nhân viên, đổi vai trò/khóa và đặt lại mật khẩu. Loại người học/phụ huynh được suy ra từ quan hệ còn hiệu lực; một người có thể vừa học vừa đại diện cho con. Người chưa liên kết được ghi rõ.
 - **Mã giảm giá / ưu đãi**: tạo/sửa mã, chọn khóa, phần trăm/số tiền, mức trần, lượt, ngày áp dụng. Có nút kiểm tra danh sách công khai mà website đang đọc.
 - **Đăng ký & học phí**: đăng ký tại trung tâm, tra cứu ID, xem công nợ và thu tiền. Thu tiền chọn khoản thu bằng danh sách; gửi lại cùng nội dung giữ cùng khóa chống trùng.
-- **Tư vấn từ website**: đọc, trả lời, đang xử lý hoặc đóng cuộc trao đổi qua `/api/tu-van`; tách khỏi phản hồi học viên. Phản hồi lưu trên web, chưa gửi email.
+- **Tư vấn từ website**: đọc, trả lời, đang xử lý hoặc đóng cuộc trao đổi qua `/api/tu-van`; tách khỏi phản hồi học viên. Phản hồi được lưu trên web; email gửi qua hàng đợi khi dịch vụ thư đã được cấu hình.
 - **Đổi mật khẩu của tôi**: dùng mật khẩu hiện tại, xác nhận mật khẩu mới và đăng nhập lại sau khi đổi thành công.
 - Tìm tên có dấu/không dấu, chữ đ/Đ, Unicode tổ hợp; tải đủ trang từ API trước khi lọc. Không còn tìm trên chuỗi JSON thô hoặc chỉ trang hiện tại.
 - Ngày sinh từ 01/01/1900 đến hôm nay theo giờ Việt Nam. Bản thân tự đại diện cần đủ 18 tuổi; tuổi tối thiểu của khóa vẫn được API kiểm tra khi ghi danh.

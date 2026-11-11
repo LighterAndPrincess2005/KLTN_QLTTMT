@@ -24,7 +24,7 @@ Lịch sử năm 2014, số cơ sở, cộng đồng và danh sách giảng viê
 
 Thành phẩm trang khóa học hiện là hình tham khảo theo chất liệu, không khẳng định thuộc một lớp cụ thể khi chưa có dữ liệu sản phẩm công khai liên kết theo khóa từ API.
 
-Nguồn yêu cầu: `D:\long2026\reportweb.docx`, gồm nội dung góp ý và 11 ảnh chụp.
+Nguồn yêu cầu: tài liệu `reportweb.docx`, gồm nội dung góp ý và 11 ảnh chụp.
 
 ## Giao diện
 
@@ -39,7 +39,7 @@ Nguồn yêu cầu: `D:\long2026\reportweb.docx`, gồm nội dung góp ý và 1
 ## Hồ sơ và trình diễn
 
 - Người đại diện được tự điền tên và điện thoại liên hệ từ tài khoản. API `/api/tai-khoan/toi` bổ sung các trường này.
-- Chọn bản thân tự điền tên, ngày sinh đã nhập khi tạo tài khoản trên trình duyệt, tên liên hệ; điện thoại khẩn cấp để trống. Nếu tài khoản cũ chưa có ngày sinh thì người dùng bổ sung, không tự suy đoán.
+- Chọn bản thân tự điền họ tên, ngày sinh và thông tin liên hệ từ tài khoản. Khi chọn quan hệ cha/mẹ, biểu mẫu tự điền tên và số điện thoại liên hệ của người đại diện. Các trường cho phép chỉnh sửa trước khi lưu.
 - Muốn dùng các trường hồ sơ và danh sách ưu đãi mới với dữ liệu thật cần khởi động lại API sau khi build.
 
 ## Nguồn hình ảnh

@@ -1,9 +1,15 @@
-# Mục đánh giá và cảm nhận học viên
+# Đánh giá và cảm nhận học viên
 
-Mục `#reviews` được thêm sau khu thành phẩm, trước các câu hỏi thường gặp. Dùng ba ảnh gốc đã tải theo yêu cầu từ mục “Nói về chúng tôi” của PPA. Nhận xét là các đoạn trích trong ảnh chụp tham khảo do người dùng cung cấp; giữ nguyên tên và không đổi tên PPA trong lời nhận xét thành LHL Art. Giao diện ghi rõ “Ảnh và nhận xét minh họa”.
+Học viên gửi đánh giá sau khi hoàn thành khóa học tại khu vực **Học tập**. Biểu mẫu có số sao, nội dung, ảnh thành phẩm và lựa chọn đồng ý công khai.
 
-Các tệp: `public/testimonials/tran-yen-lan.jpg`, `huong-giang.jpg`, `bao-chau.jpg`. Ảnh giữ nguyên ở kích thước 300 × 300, không chỉnh mặt hoặc xóa chi tiết ảnh. Nguồn gốc nằm trong `student-review-sources.json`.
+Quản trị xử lý trong WinForms → **Hồ sơ & tư vấn → Duyệt đánh giá khóa học**. Màn hình cho phép xem ảnh, duyệt, từ chối và ẩn đánh giá đã công bố. API công khai chỉ trả các đánh giá đủ điều kiện hiển thị.
 
-Đây là phần minh họa giao diện. Không đọc hoặc công khai dữ liệu phản hồi riêng từ API `/api/phan-hoi`; không thêm điểm sao hoặc số đánh giá giả. Nút gửi phản hồi dẫn đến khu vực thành viên hiện có, nơi người đăng ký lớp gửi phản hồi qua API.
+Website lấy đánh giá từ `GET /api/danh-gia-khoa/cong-khai` và hiển thị trong mục **Đánh giá & cảm nhận học viên**. Tên hiển thị lấy từ trường `tenNguoiDangCongKhai`; khi thiếu tên, giao diện dùng “Học viên Mỹ Thuật Bụi”. Mỗi nhóm có tối đa ba đánh giá, có nút chuyển nhóm khi danh sách dài.
 
-Khi có phản hồi được phép công bố của LHL Art, thay danh sách trong `src/components/StudentReviews.tsx`, dùng đúng người gửi/ảnh và bỏ nhãn minh họa cho các nội dung thật.
+## Nội dung có sẵn trên giao diện
+
+Ba cảm nhận của Trần Yến Lan, Hương Giang và Bảo Châu trong `StudentReviews.tsx` được giữ cùng danh sách đánh giá từ API. Các ảnh nằm trong `public/testimonials/`. Nguồn của bộ ảnh và cảm nhận này là PPA, được ghi tại [student-review-sources.json](student-review-sources.json).
+
+## Phân biệt với tư vấn và đề nghị
+
+Tư vấn khóa học dùng `/api/tu-van`. Phản hồi và đề nghị nghiệp vụ dùng `/api/phan-hoi`. Đánh giá khóa học công khai dùng `/api/danh-gia-khoa` và có bước duyệt riêng.

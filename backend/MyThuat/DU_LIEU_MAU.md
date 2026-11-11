@@ -1,6 +1,6 @@
-# Dữ liệu mẫu LHL Art
+# Dữ liệu mẫu cho hệ thống Mỹ Thuật Bụi
 
-Bộ mẫu dựa trên các bảng khóa/lớp trong `CNTT-KLCN082_Tuan4.docx`. Mã tạo dữ liệu nằm tại `MyThuat.Api/Services/DemoData.cs`, đi cùng API trong Git. Không cần nhận database cá nhân của người khác.
+Bộ DemoData dựa trên các bảng khóa và lớp trong `CNTT-KLCN082_Tuan4.docx`. Mã tạo dữ liệu nằm tại `MyThuat.Api/Services/DemoData.cs`, đi cùng API trong Git. Không cần nhận database cá nhân của người khác.
 
 ## Nạp trên máy khác
 

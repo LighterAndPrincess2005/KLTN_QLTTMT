@@ -1,36 +1,76 @@
-# LHL Art — giao diện website trung tâm mỹ thuật
+# Mỹ Thuật Bụi — Hệ thống quản lý trung tâm mỹ thuật
 
-Frontend React + TypeScript được dựng trước theo nghiệp vụ đồ án. Website hiện đã gọi API thật. Đọc [hướng dẫn nối API và chạy web](NOI_API.md). Các file dữ liệu mẫu được giữ để tham khảo nhưng không được dùng trong ứng dụng đang chạy.
+**Khóa luận tốt nghiệp · Mã đề tài CNTT-KLCN082**
 
-## Chạy dự án
+Hệ thống hỗ trợ trung tâm quản lý khóa học, lớp học, học viên, giáo viên, học phí và họa cụ. Website và ứng dụng quản lý WinForms cùng đọc và cập nhật dữ liệu qua ASP.NET Core Web API và SQL Server.
+
+| Thành phần | Công nghệ | Chức năng chính |
+| --- | --- | --- |
+| Website (`src/`) | React, TypeScript, Vite | Tra cứu khóa và lớp, đăng ký học, theo dõi học phí và lịch học, gửi tư vấn và đánh giá. Giáo viên xem lịch dạy và điểm danh. |
+| Quản lý (`LhlArt/`) | Windows Forms, .NET 8 | Quản lý hồ sơ, đào tạo, đăng ký, đối chiếu học phí, kho họa cụ và báo cáo. |
+| API (`backend/MyThuat/MyThuat.Api/`) | ASP.NET Core, Entity Framework Core, SQL Server | Xử lý nghiệp vụ, phân quyền và lưu dữ liệu dùng chung. |
+
+## Chạy trên máy Windows
+
+Cần **.NET 8 SDK** cho WinForms và **.NET SDK 9.0.304** theo `backend/MyThuat/global.json` để chạy các lệnh trong thư mục backend, **SQL Server Express LocalDB** (instance `MSSQLLocalDB`), **Node.js 22.12+ hoặc 24 LTS** và **pnpm**. Lần đầu cần kết nối Internet để tải thư viện NuGet và JavaScript. Giải nén toàn bộ mã nguồn trước khi chạy.
+
+### 1. Tạo cơ sở dữ liệu và bật API
+
+Mở PowerShell ở thư mục gốc dự án. Các lệnh dưới đây dùng một cơ sở dữ liệu riêng cho buổi chấm trong phiên PowerShell này.
 
 ```powershell
-cd D:\long2026\KLTN_QLTTMT
-npm install
-npm run dev
+Set-Location backend/MyThuat/MyThuat.Api
+$env:ConnectionStrings__MyThuat = 'Server=(localdb)\MSSQLLocalDB;Database=MyThuatKhoaLuan;Trusted_Connection=True;TrustServerCertificate=True'
+dotnet run -c Release --no-launch-profile -- --initialize
+dotnet run -c Release --no-launch-profile -- --urls http://127.0.0.1:5080 --environment Development
 ```
 
-Nếu máy chưa cài Node.js/npm, có thể mở `preview.html` qua một web server tĩnh để xem giao diện ngay. Không mở trực tiếp bằng `file://` nếu trình duyệt chặn tài nguyên.
+Mở [trang thiết lập API](http://127.0.0.1:5080/) để tạo tài khoản quản trị lần đầu. [Trang kiểm tra API](http://127.0.0.1:5080/health) trả về trạng thái `ok` khi API đã chạy.
 
-## Cấu trúc chính
+### 2. Chạy website và WinForms
 
-- `src/App.tsx`: trang chủ, bộ lọc lớp và luồng đăng ký 3 bước.
-- `src/components/MemberArea.tsx`: khu học tập với lịch/điểm danh, nhận xét, học bù, đổi lịch/lớp và phản hồi. Xem [hướng dẫn](docs/member-learning.md).
-- `src/components/LearningStudentPicker.tsx`: chọn học viên có lớp đã xác nhận từ nút Học tập.
-- `src/components/TeacherCorner.tsx`: trang giáo viên với lịch phân công, điểm danh và nhận xét từng buổi.
-- `src/data/mockData.ts`: khóa học, lớp học, đánh giá và ảnh mẫu.
-- `src/services/artCenterService.ts`: lớp truy cập dữ liệu, điểm thay thế bằng API sau này.
-- `src/types.ts`: kiểu dữ liệu nghiệp vụ dùng chung.
-- `src/styles.css`: toàn bộ hệ thống giao diện responsive.
-- `src/animations/`: hiệu ứng SVG hoa, lá và cánh hoa bay ngang màn hình.
-- `src/animations/`: hiệu ứng SVG hoa, lá và cánh hoa bay ngang màn hình.
-- `preview.html`: bản xem trước tĩnh, dùng khi chưa cài được thư viện npm.
+Mở PowerShell mới tại thư mục gốc dự án để chạy website.
 
-## Tích hợp API sau này
+```powershell
+pnpm install --frozen-lockfile
+pnpm run dev
+```
 
-Giữ nguyên chữ ký các hàm `getCourses`, `getClasses` và `submitRegistration` trong service. Thay dữ liệu mẫu bằng các lệnh `fetch`/Axios và cấu hình URL qua biến môi trường, ví dụ `VITE_API_BASE_URL`.
+Mở [website](http://127.0.0.1:5173/). Vite chuyển các yêu cầu `/api` tới cổng 5080.
 
+Mở PowerShell khác tại thư mục gốc để chạy ứng dụng quản lý.
 
-## Bản nối API
+```powershell
+dotnet run --project LhlArt/LhlArt.csproj -c Release
+```
 
-Đọc [NOI_API.md](NOI_API.md) để biết cách bật API, chạy web, xác minh hồ sơ và cấu hình triển khai. Mã nguồn API tách riêng ở `backend/MyThuat`.
+Có thể mở `LhlArt/CHAY_UNG_DUNG.bat` sau khi đã cài .NET 8 SDK và bật API. WinForms mặc định kết nối `http://127.0.0.1:5080/` theo `LhlArt/api.config.json`.
+
+### 3. Nạp dữ liệu minh họa
+
+Sau khi đã tạo tài khoản quản trị, dừng API bằng **Ctrl+C**. Chạy trong chính cửa sổ PowerShell đã cấu hình database ở bước 1.
+
+```powershell
+dotnet run -c Release --no-launch-profile -- --seed-demo
+dotnet run -c Release --no-launch-profile -- --urls http://127.0.0.1:5080 --environment Development
+```
+
+Tài khoản thành viên mẫu được tạo trong `.local/Tai_khoan_mau.txt` của API. Để thử đăng ký lớp, dùng tài khoản quản trị kích hoạt quy định trung tâm, sau đó đăng nhập web bằng tài khoản thành viên mẫu.
+
+Nếu đề bài yêu cầu tái hiện đúng dữ liệu lúc báo cáo, khôi phục bản sao lưu SQL Server đã chuẩn bị cho buổi chấm và đổi tên database trong chuỗi kết nối ở bước 1. Với bản sao lưu từ phiên bản cũ, xem các lệnh nâng cấp trong [hướng dẫn đồng bộ dữ liệu](HUONG_DAN_DONG_BO_MAIN.md). Ảnh đã tải lên và được tham chiếu bằng `/api/tep/cong-khai/…` nằm trong `.local/public-media/` của API. Khi chuyển bản sao dữ liệu sang máy chấm, gửi kèm những ảnh được phép chia sẻ.
+
+## Kiểm thử
+
+Chạy từ thư mục gốc dự án.
+
+```powershell
+pnpm run build
+dotnet run --project LhlArt/IntegrationChecks/IntegrationChecks.csproj -c Release -- --sqlserver
+dotnet run --project LhlArt/UiChecks/LhlArt.UiChecks.csproj -c Release
+```
+
+Kiểm thử tích hợp dùng cơ sở dữ liệu tạm. Các thao tác kiểm thử thanh toán và gửi thư dùng dữ liệu giả lập. Xem [kịch bản trình diễn](docs/kich-ban-demo-de-cuong.md) và [cấu hình SePay](docs/sepay.md) khi cần.
+
+## Thành phần gói nộp
+
+Dùng mã nguồn của commit nộp cùng báo cáo và tài liệu kiểm thử theo thông báo của Khoa. Nếu cần dữ liệu chấm, bổ sung bản sao lưu đã chuẩn bị riêng. Loại khỏi gói các thư mục `.git`, `node_modules`, `bin`, `obj`, `dist`, `work`, các file log, file `.pdb` và cấu hình riêng chứa khóa hoặc mật khẩu.
